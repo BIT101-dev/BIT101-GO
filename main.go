@@ -1,13 +1,14 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-15 16:53:51
+ * @LastEditTime: 2023-03-18 11:54:07
  * @Description: _(:з」∠)_
  */
 package main
 
 import (
 	"BIT101-GO/router"
+	"BIT101-GO/util/config"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -16,10 +17,11 @@ import (
 
 func main() {
 	// webvpn.Test()
+	config.Init()
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:3000"},
-		AllowHeaders: []string{"Content-Type", "fake-cookie"},
+		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
 		// ExposeHeaders:    []string{"Content-Length"},
 		// AllowCredentials: true,
 		// AllowOriginFunc: func(origin string) bool {

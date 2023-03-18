@@ -1,14 +1,14 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-15 18:14:18
+ * @LastEditTime: 2023-03-18 11:41:56
  * @Description: 用户模块业务响应
  */
 package controller
 
 import (
+	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/util/cache"
-	"BIT101-GO/util/webvpn"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
@@ -62,7 +62,7 @@ func UserWebvpnVerifyInit(c *gin.Context) {
 			c.JSON(500, gin.H{"msg": "获取验证码图片失败Orz"})
 			return
 		}
-		captcha = base64.StdEncoding.EncodeToString(img)
+		captcha = "data:image/png;base64," + base64.StdEncoding.EncodeToString(img)
 	}
 	c.JSON(200, gin.H{
 		"salt":      data.Salt,
