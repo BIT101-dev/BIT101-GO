@@ -1,21 +1,24 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-20 09:30:08
+ * @LastEditTime: 2023-03-20 14:23:25
  * @Description: 用户模块业务响应
  */
 package controller
 
 import (
 	"BIT101-GO/controller/webvpn"
+	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/jwt"
+	"BIT101-GO/util/mail"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // 登录请求结构
@@ -31,7 +34,14 @@ func UserLogin(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	c.JSON(200, gin.H{"fake_cookie": "2333"})
+	var user database.User
+	database.DB.Limit(1).Find(&user, "sid = ?", query.Sid)
+	if user.ID == 0 || user.Password != query.Password {
+		c.JSON(500, gin.H{"msg": "登录失败Orz"})
+		return
+	}
+	token := jwt.GetUserToken(query.Sid, config.Config.LoginExpire, config.Config.Key)
+	c.JSON(200, gin.H{"msg": "登录成功OvO", "fake_cookie": token})
 }
 
 // webvpn验证初始化请求结构
@@ -91,12 +101,88 @@ func UserWebvpnVerify(c *gin.Context) {
 	}
 	err := webvpn.Login(query.Sid, query.Password, query.Execution, query.Cookie, query.Captcha)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "登陆失败Orz"})
+		c.JSON(500, gin.H{"msg": "统一身份认证失败Orz"})
 		return
 	}
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
 	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code)
-	c.JSON(200, gin.H{"token": token, "code": code})
+	c.JSON(200, gin.H{"msg": "统一身份认证成功OvO", "token": token, "code": code})
+}
+
+// 发送邮件验证码请求结构
+type UserMailVerifyQuery struct {
+	Sid string `form:"sid" binding:"required"` // 学号
+}
+
+// 发送邮件验证码
+func UserMailVerify(c *gin.Context) {
+	var query UserMailVerifyQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	//生成验证码
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code)
+	//发送邮件
+	err := mail.Send(query.Sid+"@bit.edu.cn", "[BIT101]验证码", fmt.Sprintf("【%v】 是你的验证码ヾ(^▽^*)))", code))
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "发送邮件失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "发送成功OvO", "token": token})
+}
+
+// 注册请求结构
+type UserRegisterQuery struct {
+	Password string `form:"password" binding:"required"` // MD5密码
+	Token    string `form:"token" binding:"required"`    // token
+	Code     string `form:"code" binding:"required"`     // 验证码
+}
+
+// 注册
+func UserRegister(c *gin.Context) {
+	var query UserRegisterQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
+	// 验证token
+	sid, ok := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
+	if !ok {
+		c.JSON(500, gin.H{"msg": "验证码无效Orz"})
+		return
+	}
+
+	// 查询用户是否已经注册过
+	var user database.User
+	database.DB.Limit(1).Find(&user, "sid = ?", sid)
+	if user.ID == 0 {
+		// 未注册过
+		user.Sid = sid
+		user.Password = query.Password
+		user.Motto = "I offer you the BITterness of a man who has looked long and long at the lonely moon." // 默认格言
+
+		// 生成昵称
+		user_ := database.User{}
+		for {
+			nickname := "BIT101-" + uuid.New().String()[:8]
+			database.DB.Limit(1).Find(&user_, "nickname = ?", nickname)
+			if user_.ID == 0 {
+				user.Nickname = nickname
+				break
+			}
+		}
+
+		database.DB.Create(&user)
+	} else {
+		// 已经注册过 修改密码
+		database.DB.Model(&user).Update("password", query.Password)
+	}
+	token := jwt.GetUserToken(sid, config.Config.LoginExpire, config.Config.Key)
+	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
 }

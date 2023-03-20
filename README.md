@@ -1,7 +1,7 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-03-20 09:39:02
+ * @LastEditTime: 2023-03-20 10:19:58
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
@@ -9,6 +9,16 @@
 BIT101的新后端，基于GO。
 
 项目仍在开发中，敬请期待。
+
+## 数据库配置
+
+使用`postgresql`作为数据库。
+
+```sql
+CREATE USER bit101 WITH PASSWORD '*****';
+CREATE DATABASE bit101 OWNER bit101;
+GRANT ALL PRIVILEGES ON DATABASE bit101 TO bit101;
+```
 
 ## 部署到Serverless以及代理请求
 

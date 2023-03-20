@@ -1,12 +1,13 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-20 02:13:15
+ * @LastEditTime: 2023-03-20 14:27:50
  * @Description: _(:з」∠)_
  */
 package main
 
 import (
+	"BIT101-GO/database"
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
 	"time"
@@ -17,6 +18,7 @@ import (
 
 func main() {
 	config.Init()
+	database.Init()
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:3000"},
