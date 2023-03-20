@@ -1,14 +1,15 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-18 11:41:56
+ * @LastEditTime: 2023-03-20 09:30:08
  * @Description: 用户模块业务响应
  */
 package controller
 
 import (
 	"BIT101-GO/controller/webvpn"
-	"BIT101-GO/util/cache"
+	"BIT101-GO/util/config"
+	"BIT101-GO/util/jwt"
 	"encoding/base64"
 	"fmt"
 	"math/rand"
@@ -96,6 +97,6 @@ func UserWebvpnVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	cache.Instance.Set("verify"+query.Sid, code, 60)
-	c.JSON(200, gin.H{"verify_code": code})
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code)
+	c.JSON(200, gin.H{"token": token, "code": code})
 }

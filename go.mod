@@ -8,6 +8,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/gin-contrib/cors v1.4.0 // indirect
+	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1 // indirect
 	github.com/jinzhu/configor v1.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

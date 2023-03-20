@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-18 11:54:07
+ * @LastEditTime: 2023-03-20 02:13:15
  * @Description: _(:з」∠)_
  */
 package main
@@ -16,7 +16,6 @@ import (
 )
 
 func main() {
-	// webvpn.Test()
 	config.Init()
 	app := gin.Default()
 	app.Use(cors.New(cors.Config{
