@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-20 14:27:50
+ * @LastEditTime: 2023-03-20 17:53:43
  * @Description: _(:з」∠)_
  */
 package main
@@ -17,9 +17,11 @@ import (
 )
 
 func main() {
+	// controller.Test()
 	config.Init()
 	database.Init()
 	app := gin.Default()
+	app.MaxMultipartMemory = 24 << 20
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:3000"},
 		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
