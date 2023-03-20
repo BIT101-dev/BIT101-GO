@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-20 14:28:49
+ * @LastEditTime: 2023-03-21 00:48:38
  * @Description: 路由配置
  */
 package router
@@ -27,11 +27,18 @@ func SetRouter(router *gin.Engine) {
 		user.POST("/webvpn_verify", controller.UserWebvpnVerify)
 		user.POST("/mail_verify", controller.UserMailVerify)
 		user.POST("/register", controller.UserRegister)
+		user.GET("/info", middleware.CheckLogin(false), controller.UserGetInfo)
+		user.POST("/info", middleware.CheckLogin(true), controller.UserSetInfo)
 	}
 	// 成绩模块
 	score := router.Group("/score")
 	{
 		score.GET("", controller.Score)
 		score.GET("/report", controller.Report)
+	}
+	// 上传模块
+	upload := router.Group("/upload")
+	{
+		upload.POST("/image", middleware.CheckLogin(true), controller.ImageUpload)
 	}
 }

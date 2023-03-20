@@ -2,9 +2,23 @@ proxy: #代理请求
   enable: false #是否开启代理
   url: https://service-h5igxl6r-1255944436.bj.apigw.tencentcs.com/release #代理服务链接
 key: "BIT101" #加密密钥
-verifyCodeExpire: 300 #验证码有效期 单位秒
-loginExpire: 2073600 #登录有效期 单位秒
+verify_code_expire: 300 #验证码有效期 单位秒
+login_expire: 2073600 #登录有效期 单位秒
 mail: #邮箱
   host: smtp.qq.com
   user: bit101@qq.com
   password:
+dsn: host=localhost user=bit101 password=BIT101 dbname=bit101 port=5432 sslmode=disable TimeZone=Asia/Shanghai #数据库源
+saver: #文件保存相关
+  url: "https://bit101-test-1255944436.cos.ap-beijing.myqcloud.com"
+  local:
+    enable: true
+    path: "./data/"
+  cos:
+    enable: true
+    secret_id: ""
+    secret_key: ""
+    region: "ap-beijing"
+    bucket: "bit101-test-1255944436"
+    path: "/"
+default_avatar: "4e513b23f0f8357ebe9c808e16991a71.jpeg" #默认头像
