@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-21 08:04:18
+ * @LastEditTime: 2023-03-21 22:56:33
  * @Description: _(:з」∠)_
  */
 package config
@@ -43,6 +43,7 @@ var Config = struct {
 		}
 	}
 	DefaultAvatar string `yaml:"default_avatar"`
+	PaperPageSize int    `yaml:"paper_page_size"`
 }{}
 
 func Init() {

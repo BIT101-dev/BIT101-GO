@@ -1,14 +1,16 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-21 20:57:57
+ * @LastEditTime: 2023-03-21 22:56:57
  * @Description: _(:з」∠)_
  */
 package controller
 
 import (
 	"BIT101-GO/database"
+	"BIT101-GO/util/config"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -132,4 +134,61 @@ func pushHistory(paper *database.Paper) {
 		Anonymous: paper.Anonymous,
 	}
 	database.DB.Create(&history)
+}
+
+// 获取文章列表请求结构
+type PaperListQuery struct {
+	Search string `form:"search"`
+	Order  string `form:"order" default:"id"` //rand | new | like
+	Page   int    `form:"page" default:"0"`
+}
+
+// 获取文章列表返回结构
+type PaperListResponseItem struct {
+	ID         uint      `json:"id"`
+	Title      string    `json:"title"`
+	Intro      string    `json:"intro"`
+	LikeNum    uint      `json:"like_num"`
+	CommentNum uint      `json:"comment_num"`
+	UpdateTime time.Time `json:"update_time"`
+}
+
+// 获取文章列表
+func PaperList(c *gin.Context) {
+	var query PaperListQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	var papers []database.Paper
+	q := database.DB.Model(&database.Paper{}).Select("id,title,intro,updated_at,like_num,comment_num")
+	// 搜索
+	if query.Search != "" {
+		q = q.Where("title LIKE ?", "%"+query.Search+"%").Or("intro LIKE ?", "%"+query.Search+"%").Or("content LIKE ?", "%"+query.Search+"%")
+	}
+	// 排序
+	if query.Order == "rand" {
+		q = q.Order("random()")
+	} else if query.Order == "like" {
+		q = q.Order("like_num DESC")
+	} else { //默认new
+		q = q.Order("updated_at DESC")
+	}
+	// 分页
+	page_size := config.Config.PaperPageSize
+	q = q.Offset(query.Page * page_size).Limit(page_size)
+	q.Find(&papers)
+	var res []PaperListResponseItem
+	for _, paper := range papers {
+		res = append(res, PaperListResponseItem{
+			ID:         paper.ID,
+			Title:      paper.Title,
+			Intro:      paper.Intro,
+			LikeNum:    paper.LikeNum,
+			CommentNum: paper.CommentNum,
+			UpdateTime: paper.UpdatedAt,
+		})
+	}
+
+	c.JSON(200, res)
 }
