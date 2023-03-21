@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-21 19:28:40
+ * @LastEditTime: 2023-03-21 21:38:25
  * @Description: 路由配置
  */
 package router
@@ -46,6 +46,7 @@ func SetRouter(router *gin.Engine) {
 	paper := router.Group("/papers")
 	{
 		paper.GET("/:id", middleware.CheckLogin(false), controller.PaperGet)
+		paper.GET("", controller.PaperList)
 		paper.POST("", middleware.CheckLogin(true), controller.PaperPost)
 		paper.PUT("/:id", middleware.CheckLogin(true), controller.PaperPut)
 	}
