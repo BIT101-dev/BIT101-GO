@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-21 08:56:30
+ * @LastEditTime: 2023-03-21 19:28:40
  * @Description: 路由配置
  */
 package router
@@ -28,7 +28,7 @@ func SetRouter(router *gin.Engine) {
 		user.POST("/mail_verify", controller.UserMailVerify)
 		user.POST("/register", controller.UserRegister)
 		user.GET("/info", middleware.CheckLogin(false), controller.UserGetInfo)
-		user.POST("/info", middleware.CheckLogin(true), controller.UserSetInfo)
+		user.PUT("/info", middleware.CheckLogin(true), controller.UserSetInfo)
 	}
 	// 成绩模块
 	score := router.Group("/score")
@@ -41,5 +41,12 @@ func SetRouter(router *gin.Engine) {
 	{
 		upload.POST("/image", middleware.CheckLogin(true), controller.ImageUpload)
 		upload.POST("/image/url", middleware.CheckLogin(true), controller.ImageUploadByUrl)
+	}
+	// 文章模块
+	paper := router.Group("/papers")
+	{
+		paper.GET("/:id", middleware.CheckLogin(false), controller.PaperGet)
+		paper.POST("", middleware.CheckLogin(true), controller.PaperPost)
+		paper.PUT("/:id", middleware.CheckLogin(true), controller.PaperPut)
 	}
 }

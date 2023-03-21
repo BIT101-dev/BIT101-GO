@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 16:41:23
- * @LastEditTime: 2023-03-21 09:22:34
+ * @LastEditTime: 2023-03-21 19:40:10
  * @Description: _(:з」∠)_
  */
 package controller
@@ -16,7 +16,6 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -74,11 +73,10 @@ func save(c *gin.Context, content []byte) {
 		return
 	}
 
-	u, _ := strconv.ParseUint(c.GetString("uid"), 10, 32)
 	image = database.Image{
 		Mid:  mid,
 		Size: uint(len(content)),
-		User: uint(u),
+		Uid:  c.GetUint("uid_uint"),
 	}
 	database.DB.Create(&image)
 

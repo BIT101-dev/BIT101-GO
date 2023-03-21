@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-21 01:25:37
+ * @LastEditTime: 2023-03-21 20:43:23
  * @Description: 用户模块业务响应
  */
 package controller
@@ -20,6 +20,37 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// 清除敏感信息
+func CleanUser(user *database.User) {
+	user.Password = ""
+	user.Sid = ""
+	// 转换头像链接
+	user.Avatar = GetImageUrl(user.Avatar)
+}
+
+func GetUser(uid string) gin.H {
+	if uid == "-1" {
+		return gin.H{
+			"id":          -1,
+			"create_time": time.Now(),
+			"nickname":    "匿名者",
+			"avatar":      GetImageUrl(""),
+			"motto":       "面对愚昧，匿名者自己也缄口不言。",
+			"level":       1,
+		}
+	}
+	var user database.User
+	database.DB.Limit(1).Find(&user, "id = ?", uid)
+	return gin.H{
+		"id":          user.ID,
+		"create_time": user.CreatedAt,
+		"nickname":    user.Nickname,
+		"avatar":      GetImageUrl(user.Avatar),
+		"motto":       user.Motto,
+		"level":       user.Level,
+	}
+}
 
 // 登录请求结构
 type UserLoginQuery struct {
@@ -202,14 +233,7 @@ func UserGetInfo(c *gin.Context) {
 
 	// 匿名用户
 	if query.Id == "-1" {
-		c.JSON(200, gin.H{
-			"id":          -1,
-			"create_time": time.Now(),
-			"nickname":    "匿名者",
-			"avatar":      GetImageUrl(""),
-			"motto":       "面对愚昧，匿名者自己也缄口不言。",
-			"level":       1,
-		})
+		c.JSON(200, GetUser("-1"))
 		return
 	}
 
@@ -232,21 +256,16 @@ func UserGetInfo(c *gin.Context) {
 		return
 	}
 
-	// 清除敏感信息
-	user.Password = ""
-	if query.Id != "0" && query.Id != "" {
-		user.Sid = ""
-	}
-	// 转换头像链接
-	user.Avatar = GetImageUrl(user.Avatar)
+	CleanUser(&user)
+
 	c.JSON(200, user)
 }
 
 // 修改用户信息请求结构
 type UserSetInfoQuery struct {
-	Nickname string `form:"nickname" binding:"required"` // 昵称
-	Avatar   string `form:"avatar"`                      // 头像
-	Motto    string `form:"motto"`                       // 格言 简介
+	Nickname string `form:"nickname"` // 昵称
+	Avatar   string `form:"avatar"`   // 头像
+	Motto    string `form:"motto"`    // 格言 简介
 }
 
 // 修改用户信息
@@ -264,15 +283,28 @@ func UserSetInfo(c *gin.Context) {
 		return
 	}
 
-	user_ := database.User{}
-	database.DB.Limit(1).Find(&user_, "nickname = ?", query.Nickname)
-	if user_.ID != 0 && user_.ID != user.ID {
-		c.JSON(500, gin.H{"msg": "昵称冲突Orz"})
-		return
+	if query.Nickname != "" {
+		user_ := database.User{}
+		database.DB.Limit(1).Find(&user_, "nickname = ?", query.Nickname)
+		if user_.ID != 0 && user_.ID != user.ID {
+			c.JSON(500, gin.H{"msg": "昵称冲突Orz"})
+			return
+		}
+		user.Nickname = query.Nickname
 	}
-	user.Nickname = query.Nickname
-	user.Avatar = query.Avatar
-	user.Motto = query.Motto
+	if query.Avatar != "" {
+		// 验证图片是否存在
+		avatar := database.Image{}
+		database.DB.Limit(1).Find(&avatar, "mid = ?", query.Avatar)
+		if avatar.ID == 0 {
+			c.JSON(500, gin.H{"msg": "头像图片无效Orz"})
+			return
+		}
+		user.Avatar = query.Avatar
+	}
+	if query.Motto != "" {
+		user.Motto = query.Motto
+	}
 	database.DB.Save(&user)
 	c.JSON(200, gin.H{"msg": "修改成功OvO"})
 }
