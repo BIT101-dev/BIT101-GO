@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-21 08:15:43
+ * @LastEditTime: 2023-03-21 17:03:26
  * @Description: _(:з」∠)_
  */
 package main
@@ -26,6 +26,7 @@ func main() {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:3000"},
 		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
+		AllowMethods: []string{"GET", "POST", "PUT"},
 		// ExposeHeaders:    []string{"Content-Length"},
 		// AllowCredentials: true,
 		// AllowOriginFunc: func(origin string) bool {
