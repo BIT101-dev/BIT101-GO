@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-21 00:48:38
+ * @LastEditTime: 2023-03-21 08:56:30
  * @Description: 路由配置
  */
 package router
@@ -40,5 +40,6 @@ func SetRouter(router *gin.Engine) {
 	upload := router.Group("/upload")
 	{
 		upload.POST("/image", middleware.CheckLogin(true), controller.ImageUpload)
+		upload.POST("/image/url", middleware.CheckLogin(true), controller.ImageUploadByUrl)
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 16:41:23
- * @LastEditTime: 2023-03-21 01:24:35
+ * @LastEditTime: 2023-03-21 09:22:34
  * @Description: _(:з」∠)_
  */
 package controller
@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,65 +27,6 @@ func GetImageUrl(mid string) string {
 		return saver.GetUrl(filepath.Join("img", config.Config.DefaultAvatar))
 	}
 	return saver.GetUrl(filepath.Join("img", mid))
-}
-
-// 通过文件上传图片
-func ImageUpload(c *gin.Context) {
-	file, err := c.FormFile("file")
-	if err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-
-	// 获取图片二进制串
-	src, err := file.Open()
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "读取上传文件出错Orz"})
-		return
-	}
-	defer src.Close()
-
-	buff := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buff, src); err != nil {
-		c.JSON(500, gin.H{"msg": "读取上传文件出错Orz"})
-		return
-	}
-
-	// 获取图片扩展名
-	ext := getImageExt(buff.Bytes())
-	if ext == "" {
-		c.JSON(500, gin.H{"msg": "不支持该图片类型Orz"})
-		return
-	}
-
-	// 计算文件md5 生成文件名
-	h := md5.New()
-	h.Write(buff.Bytes())
-	mid := hex.EncodeToString(h.Sum(nil)) + ext
-	path := filepath.Join("img", mid)
-
-	image := database.Image{}
-	database.DB.Limit(1).Find(&image, "mid = ?", mid)
-	if image.Mid != "" {
-		c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
-		return
-	}
-
-	// 保存文件
-	err = saver.Save(path, buff.Bytes())
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "保存文件出错Orz"})
-		return
-	}
-
-	image = database.Image{
-		Mid:  mid,
-		Size: uint(file.Size),
-		User: c.GetUint("uid"),
-	}
-	database.DB.Create(&image)
-
-	c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
 }
 
 // 获取图片后缀名 无效返回空字符串
@@ -101,4 +43,99 @@ func getImageExt(content []byte) string {
 	default:
 		return ""
 	}
+}
+
+// 保存文件
+func save(c *gin.Context, content []byte) {
+	// 获取图片扩展名
+	ext := getImageExt(content)
+	if ext == "" {
+		c.JSON(500, gin.H{"msg": "不支持的图片类型Orz"})
+		return
+	}
+
+	// 计算文件md5 生成文件名
+	h := md5.New()
+	h.Write(content)
+	mid := hex.EncodeToString(h.Sum(nil)) + ext
+	path := filepath.Join("img", mid)
+
+	image := database.Image{}
+	database.DB.Limit(1).Find(&image, "mid = ?", mid)
+	if image.Mid != "" {
+		c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
+		return
+	}
+
+	// 保存文件
+	err := saver.Save(path, content)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "保存图片出错Orz"})
+		return
+	}
+
+	u, _ := strconv.ParseUint(c.GetString("uid"), 10, 32)
+	image = database.Image{
+		Mid:  mid,
+		Size: uint(len(content)),
+		User: uint(u),
+	}
+	database.DB.Create(&image)
+
+	c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
+}
+
+// 通过文件上传图片
+func ImageUpload(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
+	// 获取图片二进制串
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "读取上传图片出错Orz"})
+		return
+	}
+	defer src.Close()
+
+	buff := bytes.NewBuffer(nil)
+	if _, err := io.Copy(buff, src); err != nil {
+		c.JSON(500, gin.H{"msg": "读取上传图片出错Orz"})
+		return
+	}
+
+	save(c, buff.Bytes())
+}
+
+// 通过url上传图片请求结构
+type ImageUploadByUrlRequest struct {
+	Url string `json:"url" binding:"required"`
+}
+
+// 通过url上传图片
+func ImageUploadByUrl(c *gin.Context) {
+	var query ImageUploadByUrlRequest
+	if err := c.ShouldBindJSON(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
+	req, _ := http.NewRequest("GET", query.Url, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "获取图片出错Orz"})
+		return
+	}
+	defer resp.Body.Close()
+	reader := http.MaxBytesReader(nil, resp.Body, config.Config.Saver.MaxSize<<20) //限制请求大小
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "图片过大Orz"})
+		return
+	}
+
+	save(c, body)
 }

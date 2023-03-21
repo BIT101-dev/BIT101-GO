@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-20 17:53:43
+ * @LastEditTime: 2023-03-21 08:15:43
  * @Description: _(:з」∠)_
  */
 package main
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	limits "github.com/gin-contrib/size"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +22,7 @@ func main() {
 	config.Init()
 	database.Init()
 	app := gin.Default()
-	app.MaxMultipartMemory = 24 << 20
+	app.Use(limits.RequestSizeLimiter(config.Config.Saver.MaxSize << 20))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"http://127.0.0.1:3000"},
 		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},

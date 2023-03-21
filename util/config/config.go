@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-21 01:24:04
+ * @LastEditTime: 2023-03-21 08:04:18
  * @Description: _(:з」∠)_
  */
 package config
@@ -27,8 +27,9 @@ var Config = struct {
 	}
 	Dsn   string
 	Saver struct {
-		Url   string
-		Local struct {
+		MaxSize int64 `yaml:"max_size"`
+		Url     string
+		Local   struct {
 			Enable bool
 			Path   string
 		}
