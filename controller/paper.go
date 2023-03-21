@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-21 22:56:57
+ * @LastEditTime: 2023-03-22 00:44:09
  * @Description: _(:з」∠)_
  */
 package controller
@@ -9,6 +9,7 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"errors"
 	"fmt"
 	"time"
 
@@ -30,16 +31,18 @@ func PaperGet(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	var uid string
+	var update_uid string
 	if paper.Anonymous {
-		uid = "-1"
+		update_uid = "-1"
 	} else {
-		uid = fmt.Sprint(paper.UpdateUid)
+		update_uid = fmt.Sprint(paper.UpdateUid)
 	}
 
+	paper.UpdatedAt = paper.EditAt
 	var res = PaperGetResponse{
 		Paper:      paper,
-		UpdateUser: GetUser(uid),
+		UpdateUser: GetUser(update_uid),
+		Like:       CheckLike(fmt.Sprintf("paper%v", paper.ID), c.GetString("uid")),
 		Own:        paper.CreateUid == c.GetUint("uid"),
 	}
 	c.JSON(200, res)
@@ -106,7 +109,7 @@ func PaperPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "没有编辑权限Orz"})
 		return
 	}
-	if paper.UpdatedAt.Unix() > int64(query.LastTime) {
+	if paper.EditAt.Unix() > int64(query.LastTime) {
 		c.JSON(500, gin.H{"msg": "请基于最新版本编辑Orz"})
 		return
 	}
@@ -115,6 +118,7 @@ func PaperPut(c *gin.Context) {
 	paper.Content = query.Content
 	paper.Anonymous = query.Anonymous
 	paper.UpdateUid = c.GetUint("uid_uint")
+	paper.EditAt = time.Now()
 	if paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin") {
 		paper.PublicEdit = query.PublicEdit
 	}
@@ -161,7 +165,7 @@ func PaperList(c *gin.Context) {
 		return
 	}
 	var papers []database.Paper
-	q := database.DB.Model(&database.Paper{}).Select("id,title,intro,updated_at,like_num,comment_num")
+	q := database.DB.Model(&database.Paper{}).Select("id,title,intro,edit_at,like_num,comment_num")
 	// 搜索
 	if query.Search != "" {
 		q = q.Where("title LIKE ?", "%"+query.Search+"%").Or("intro LIKE ?", "%"+query.Search+"%").Or("content LIKE ?", "%"+query.Search+"%")
@@ -178,7 +182,7 @@ func PaperList(c *gin.Context) {
 	page_size := config.Config.PaperPageSize
 	q = q.Offset(query.Page * page_size).Limit(page_size)
 	q.Find(&papers)
-	var res []PaperListResponseItem
+	res := make([]PaperListResponseItem, 0)
 	for _, paper := range papers {
 		res = append(res, PaperListResponseItem{
 			ID:         paper.ID,
@@ -186,9 +190,21 @@ func PaperList(c *gin.Context) {
 			Intro:      paper.Intro,
 			LikeNum:    paper.LikeNum,
 			CommentNum: paper.CommentNum,
-			UpdateTime: paper.UpdatedAt,
+			UpdateTime: paper.EditAt,
 		})
 	}
 
 	c.JSON(200, res)
+}
+
+// 点赞
+func PaperOnLike(id string, delta int) (uint, error) {
+	var paper database.Paper
+	database.DB.Limit(1).Find(&paper, "id = ?", id)
+	if paper.ID == 0 {
+		return 0, errors.New("文章不存在Orz")
+	}
+	paper.LikeNum = uint(int(paper.LikeNum) + delta)
+	database.DB.Save(&paper)
+	return paper.LikeNum, nil
 }

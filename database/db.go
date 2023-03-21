@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-21 20:58:52
+ * @LastEditTime: 2023-03-22 00:43:23
  * @Description: _(:з」∠)_
  */
 package database
@@ -42,15 +42,16 @@ type Image struct {
 
 type Paper struct {
 	Base
-	Title      string `gorm:"not null" json:"title"`           //标题
-	Intro      string `json:"intro"`                           //简介
-	Content    string `json:"content"`                         //内容
-	CreateUid  uint   `gorm:"not null" json:"create_uid"`      //最初发布用户id
-	UpdateUid  uint   `gorm:"not null" json:"update_uid"`      //最后编辑用户id
-	Anonymous  bool   `gorm:"default:false" json:"anonymous"`  //是否匿名
-	LikeNum    uint   `gorm:"default:0" json:"like_num"`       //点赞数
-	CommentNum uint   `gorm:"default:0" json:"comment_num"`    //评论数
-	PublicEdit bool   `gorm:"default:true" json:"public_edit"` //是否共享编辑
+	Title      string    `gorm:"not null" json:"title"`           //标题
+	Intro      string    `json:"intro"`                           //简介
+	Content    string    `json:"content"`                         //内容
+	CreateUid  uint      `gorm:"not null" json:"create_uid"`      //最初发布用户id
+	UpdateUid  uint      `gorm:"not null" json:"update_uid"`      //最后编辑用户id
+	Anonymous  bool      `gorm:"default:false" json:"anonymous"`  //是否匿名
+	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
+	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
+	PublicEdit bool      `gorm:"default:true" json:"public_edit"` //是否共享编辑
+	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"`
 }
 
 type PaperHistory struct {
@@ -63,6 +64,12 @@ type PaperHistory struct {
 	Anonymous bool   `gorm:"default:false" json:"anonymous"` //是否匿名
 }
 
+type Like struct {
+	Base
+	Obj string `gorm:"not null" json:"obj"` //点赞对象
+	Uid uint   `gorm:"not null" json:"uid"` //用户id
+}
+
 func Init() {
 	dsn := config.Config.Dsn
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -71,5 +78,5 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{})
+	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{})
 }
