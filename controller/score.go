@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-16 09:10:10
- * @LastEditTime: 2023-03-18 11:53:12
+ * @LastEditTime: 2023-03-22 00:48:38
  * @Description: 成绩模块业务响应
  */
 package controller
@@ -62,5 +62,5 @@ func Report(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(200, gin.H{"msg": "查询成功OvO", "data": imgs})
+	c.JSON(200, gin.H{"msg": "获取成功OvO", "data": imgs})
 }
