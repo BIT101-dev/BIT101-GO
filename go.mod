@@ -21,6 +21,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mozillazg/go-httpheader v0.3.1 // indirect
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41 // indirect
+	github.com/yanyiwu/gojieba v1.3.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gorm.io/driver/postgres v1.5.0 // indirect
 	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11 // indirect

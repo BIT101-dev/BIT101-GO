@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-22 00:43:23
+ * @LastEditTime: 2023-03-23 01:11:36
  * @Description: _(:з」∠)_
  */
 package database
@@ -51,7 +51,8 @@ type Paper struct {
 	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
 	PublicEdit bool      `gorm:"default:true" json:"public_edit"` //是否共享编辑
-	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"`
+	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
+	Tsv        Tsvector  `gorm:"index:,type:gin" json:"tsv"`      //全文搜索
 }
 
 type PaperHistory struct {
