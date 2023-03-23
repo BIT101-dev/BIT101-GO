@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 14:59:32
- * @LastEditTime: 2023-03-23 16:04:34
+ * @LastEditTime: 2023-03-23 22:11:56
  * @Description: _(:з」∠)_
  */
 package other
@@ -74,10 +74,10 @@ func addFromCsv(csv_path string) {
 			tsv := database.Tsvector{}
 			for _, teacher := range teaches {
 				tsv.D = append(tsv.D, nlp.CutAll(teacher.Name)...)
-				tsv.D = append(tsv.D, teacher.Number)
+				tsv.A = append(tsv.A, teacher.Number)
 			}
 			tsv.D = append(tsv.D, nlp.CutAll(course["课程名"])...)
-			tsv.D = append(tsv.D, course["课程号"])
+			tsv.A = append(tsv.A, course["课程号"])
 			db_course := database.Course{
 				Name:           course["课程名"],
 				Number:         course["课程号"],

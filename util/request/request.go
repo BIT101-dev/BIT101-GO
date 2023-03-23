@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 14:32:05
- * @LastEditTime: 2023-03-15 18:13:47
+ * @LastEditTime: 2023-03-23 19:16:41
  * @Description: 封装的网络请求工具包
  */
 package request
@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	net_url "net/url"
+	"strings"
 )
 
 type Response struct {
@@ -57,4 +58,13 @@ func PostForm(url string, form map[string]string, headers map[string]string) (Re
 	formBytesReader := bytes.NewReader(formDataBytes)
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
 	return request("POST", url, headers, formBytesReader)
+}
+
+func PostJSON(url string, data string, headers map[string]string) (Response, error) {
+	headers["Content-Type"] = "application/json; charset=UTF-8"
+	return request("POST", url, headers, strings.NewReader(data))
+}
+
+func Put(url string, data []byte, headers map[string]string) (Response, error) {
+	return request("PUT", url, headers, bytes.NewBuffer(data))
 }

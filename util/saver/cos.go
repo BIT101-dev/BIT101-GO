@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 16:34:11
- * @LastEditTime: 2023-03-21 00:36:08
+ * @LastEditTime: 2023-03-23 23:09:03
  * @Description: _(:з」∠)_
  */
 package saver
@@ -43,7 +43,6 @@ func SaveCOS(path string, data []byte) error {
 	InitCOS()
 	_, err := client.Object.Put(context.Background(), path, bytes.NewReader(data), nil)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	return nil
