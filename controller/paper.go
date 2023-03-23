@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-23 12:55:14
+ * @LastEditTime: 2023-03-23 14:45:31
  * @Description: _(:з」∠)_
  */
 package controller
@@ -27,7 +27,10 @@ type PaperGetResponse struct {
 // 获取文章
 func PaperGet(c *gin.Context) {
 	var paper database.Paper
-	database.DB.Limit(1).Find(&paper, "id = ?", c.Param("id"))
+	if err := database.DB.Limit(1).Find(&paper, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if paper.ID == 0 {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
@@ -44,7 +47,7 @@ func PaperGet(c *gin.Context) {
 		Paper:      paper,
 		UpdateUser: GetUserAPI(update_uid),
 		Like:       CheckLike(fmt.Sprintf("paper%v", paper.ID), c.GetUint("uid_uint")),
-		Own:        paper.CreateUid == c.GetUint("uid"),
+		Own:        paper.CreateUid == c.GetUint("uid") || c.GetBool("admin"),
 	}
 	c.JSON(200, res)
 }
@@ -90,7 +93,10 @@ func PaperPost(c *gin.Context) {
 		CommentNum: 0,
 		Tsv:        tsv,
 	}
-	database.DB.Create(&paper)
+	if err := database.DB.Create(&paper).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	pushHistory(&paper)
 	c.JSON(200, gin.H{"msg": "发表成功OvO", "id": paper.ID})
 }
@@ -114,7 +120,10 @@ func PaperPut(c *gin.Context) {
 	}
 
 	var paper database.Paper
-	database.DB.Limit(1).Find(&paper, "id = ?", c.Param("id"))
+	if err := database.DB.Limit(1).Find(&paper, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if paper.ID == 0 {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
@@ -150,7 +159,10 @@ func PaperPut(c *gin.Context) {
 	if paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin") {
 		paper.PublicEdit = query.PublicEdit
 	}
-	database.DB.Save(&paper)
+	if err := database.DB.Save(&paper).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	pushHistory(&paper)
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
@@ -211,7 +223,10 @@ func PaperList(c *gin.Context) {
 	// 分页
 	page_size := int(config.Config.PaperPageSize)
 	q = q.Offset(query.Page * page_size).Limit(page_size)
-	q.Find(&papers)
+	if err := q.Find(&papers).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	res := make([]PaperListResponseItem, 0)
 	for _, paper := range papers {
 		res = append(res, PaperListResponseItem{
@@ -227,10 +242,34 @@ func PaperList(c *gin.Context) {
 	c.JSON(200, res)
 }
 
+// 删除文章
+func PaperDelete(c *gin.Context) {
+	var paper database.Paper
+	if err := database.DB.Limit(1).Find(&paper, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
+	if paper.ID == 0 {
+		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
+		return
+	}
+	if paper.CreateUid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+		c.JSON(500, gin.H{"msg": "没有删除权限Orz"})
+		return
+	}
+	if err := database.DB.Delete(&paper).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "删除成功OvO"})
+}
+
 // 点赞
 func PaperOnLike(id string, delta int) (uint, error) {
 	var paper database.Paper
-	database.DB.Limit(1).Find(&paper, "id = ?", id)
+	if err := database.DB.Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
+		return 0, errors.New("数据库错误Orz")
+	}
 	if paper.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}
@@ -242,7 +281,9 @@ func PaperOnLike(id string, delta int) (uint, error) {
 // 评论
 func PaperOnComment(id string, delta int) (uint, error) {
 	var paper database.Paper
-	database.DB.Limit(1).Find(&paper, "id = ?", id)
+	if err := database.DB.Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
+		return 0, errors.New("数据库错误Orz")
+	}
 	if paper.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}

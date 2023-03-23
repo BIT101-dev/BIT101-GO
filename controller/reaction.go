@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-23 13:33:23
+ * @LastEditTime: 2023-03-23 16:18:38
  * @Description: _(:з」∠)_
  */
 package controller
@@ -78,6 +78,7 @@ func ReactionLike(c *gin.Context) {
 	case "comment":
 		like_num, err = CommentOnLike(obj_id, delta)
 	case "course":
+		like_num, err = CourseOnLike(obj_id, delta)
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -203,6 +204,7 @@ func ReactionComment(c *gin.Context) {
 	case "comment":
 		_, err = CommentOnComment(obj_id, 1)
 	case "course":
+		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -293,6 +295,7 @@ func ReactionCommentDelete(c *gin.Context) {
 	case "comment":
 		_, err = CommentOnComment(obj_id, -1)
 	case "course":
+		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})

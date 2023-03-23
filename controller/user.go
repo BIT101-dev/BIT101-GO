@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-23 12:41:37
+ * @LastEditTime: 2023-03-23 14:41:32
  * @Description: 用户模块业务响应
  */
 package controller
@@ -77,7 +77,10 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 	var user database.User
-	database.DB.Limit(1).Find(&user, "sid = ?", query.Sid)
+	if err := database.DB.Limit(1).Find(&user, "sid = ?", query.Sid).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if user.ID == 0 || user.Password != query.Password {
 		c.JSON(500, gin.H{"msg": "登录失败Orz"})
 		return
@@ -202,7 +205,10 @@ func UserRegister(c *gin.Context) {
 
 	// 查询用户是否已经注册过
 	var user database.User
-	database.DB.Limit(1).Find(&user, "sid = ?", sid)
+	if err := database.DB.Limit(1).Find(&user, "sid = ?", sid).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if user.ID == 0 {
 		// 未注册过
 		user.Sid = sid
@@ -213,17 +219,26 @@ func UserRegister(c *gin.Context) {
 		user_ := database.User{}
 		for {
 			nickname := "BIT101-" + uuid.New().String()[:8]
-			database.DB.Limit(1).Find(&user_, "nickname = ?", nickname)
+			if err := database.DB.Limit(1).Find(&user_, "nickname = ?", nickname).Error; err != nil {
+				c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+				return
+			}
 			if user_.ID == 0 {
 				user.Nickname = nickname
 				break
 			}
 		}
 
-		database.DB.Create(&user)
+		if err := database.DB.Create(&user).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+			return
+		}
 	} else {
 		// 已经注册过 修改密码
-		database.DB.Model(&user).Update("password", query.Password)
+		if err := database.DB.Model(&user).Update("password", query.Password).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+			return
+		}
 	}
 	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key)
 	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
@@ -261,7 +276,10 @@ func UserGetInfo(c *gin.Context) {
 	}
 
 	var user database.User
-	database.DB.Limit(1).Find(&user, "id = ?", uid)
+	if err := database.DB.Limit(1).Find(&user, "id = ?", uid).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if user.ID == 0 {
 		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
 		return
@@ -288,7 +306,10 @@ func UserSetInfo(c *gin.Context) {
 	}
 	uid := c.GetString("uid")
 	var user database.User
-	database.DB.Limit(1).Find(&user, "id = ?", uid)
+	if err := database.DB.Limit(1).Find(&user, "id = ?", uid).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	if user.ID == 0 {
 		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
 		return
@@ -296,7 +317,10 @@ func UserSetInfo(c *gin.Context) {
 
 	if query.Nickname != "" {
 		user_ := database.User{}
-		database.DB.Limit(1).Find(&user_, "nickname = ?", query.Nickname)
+		if err := database.DB.Limit(1).Find(&user_, "nickname = ?", query.Nickname).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+			return
+		}
 		if user_.ID != 0 && user_.ID != user.ID {
 			c.JSON(500, gin.H{"msg": "昵称冲突Orz"})
 			return
@@ -306,7 +330,10 @@ func UserSetInfo(c *gin.Context) {
 	if query.Avatar != "" {
 		// 验证图片是否存在
 		avatar := database.Image{}
-		database.DB.Limit(1).Find(&avatar, "mid = ?", query.Avatar)
+		if err := database.DB.Limit(1).Find(&avatar, "mid = ?", query.Avatar).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+			return
+		}
 		if avatar.ID == 0 {
 			c.JSON(500, gin.H{"msg": "头像图片无效Orz"})
 			return
@@ -316,6 +343,9 @@ func UserSetInfo(c *gin.Context) {
 	if query.Motto != "" {
 		user.Motto = query.Motto
 	}
-	database.DB.Save(&user)
+	if err := database.DB.Save(&user).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "修改成功OvO"})
 }
