@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-21 23:16:11
+ * @LastEditTime: 2023-03-23 12:24:27
  * @Description: 路由配置
  */
 package router
@@ -54,5 +54,8 @@ func SetRouter(router *gin.Engine) {
 	reaction := router.Group("/reaction")
 	{
 		reaction.POST("/like", middleware.CheckLogin(true), controller.ReactionLike)
+		reaction.POST("/comments", middleware.CheckLogin(true), controller.ReactionComment)
+		reaction.GET("/comments", middleware.CheckLogin(false), controller.ReactionCommentList)
+		reaction.DELETE("/comments/:id", middleware.CheckLogin(true), controller.ReactionCommentDelete)
 	}
 }

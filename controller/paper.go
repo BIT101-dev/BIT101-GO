@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-23 01:03:22
+ * @LastEditTime: 2023-03-23 12:55:14
  * @Description: _(:з」∠)_
  */
 package controller
@@ -19,9 +19,9 @@ import (
 
 type PaperGetResponse struct {
 	database.Paper
-	UpdateUser gin.H `json:"update_user"`
-	Like       bool  `json:"like"`
-	Own        bool  `json:"own"`
+	UpdateUser UserAPI `json:"update_user"`
+	Like       bool    `json:"like"`
+	Own        bool    `json:"own"`
 }
 
 // 获取文章
@@ -32,25 +32,25 @@ func PaperGet(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	var update_uid string
+	var update_uid int
 	if paper.Anonymous {
-		update_uid = "-1"
+		update_uid = -1
 	} else {
-		update_uid = fmt.Sprint(paper.UpdateUid)
+		update_uid = int(paper.UpdateUid)
 	}
 
 	paper.UpdatedAt = paper.EditAt
 	var res = PaperGetResponse{
 		Paper:      paper,
-		UpdateUser: GetUser(update_uid),
-		Like:       CheckLike(fmt.Sprintf("paper%v", paper.ID), c.GetString("uid")),
+		UpdateUser: GetUserAPI(update_uid),
+		Like:       CheckLike(fmt.Sprintf("paper%v", paper.ID), c.GetUint("uid_uint")),
 		Own:        paper.CreateUid == c.GetUint("uid"),
 	}
 	c.JSON(200, res)
 }
 
 // 新建文章请求接口
-type PaperPostRequest struct {
+type PaperPostQuery struct {
 	Title      string `json:"title" binding:"required"`
 	Intro      string `json:"intro" binding:"required"`
 	Content    string `json:"content" binding:"required"`
@@ -60,7 +60,7 @@ type PaperPostRequest struct {
 
 // 新建文章
 func PaperPost(c *gin.Context) {
-	var query PaperPostRequest
+	var query PaperPostQuery
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -96,7 +96,7 @@ func PaperPost(c *gin.Context) {
 }
 
 // 修改文章请求接口
-type PaperPutRequest struct {
+type PaperPutQeury struct {
 	Title      string  `json:"title" binding:"required"`
 	Intro      string  `json:"intro" binding:"required"`
 	Content    string  `json:"content" binding:"required"`
@@ -107,7 +107,7 @@ type PaperPutRequest struct {
 
 // 修改文章
 func PaperPut(c *gin.Context) {
-	var query PaperPutRequest
+	var query PaperPutQeury
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -171,7 +171,7 @@ func pushHistory(paper *database.Paper) {
 // 获取文章列表请求结构
 type PaperListQuery struct {
 	Search string `form:"search"`
-	Order  string `form:"order" default:"id"` //rand | new | like
+	Order  string `form:"order" default:"new"` //rand | new | like
 	Page   int    `form:"page" default:"0"`
 }
 
@@ -209,7 +209,7 @@ func PaperList(c *gin.Context) {
 		q = q.Order("updated_at DESC")
 	}
 	// 分页
-	page_size := config.Config.PaperPageSize
+	page_size := int(config.Config.PaperPageSize)
 	q = q.Offset(query.Page * page_size).Limit(page_size)
 	q.Find(&papers)
 	res := make([]PaperListResponseItem, 0)
@@ -237,4 +237,16 @@ func PaperOnLike(id string, delta int) (uint, error) {
 	paper.LikeNum = uint(int(paper.LikeNum) + delta)
 	database.DB.Save(&paper)
 	return paper.LikeNum, nil
+}
+
+// 评论
+func PaperOnComment(id string, delta int) (uint, error) {
+	var paper database.Paper
+	database.DB.Limit(1).Find(&paper, "id = ?", id)
+	if paper.ID == 0 {
+		return 0, errors.New("文章不存在Orz")
+	}
+	paper.CommentNum = uint(int(paper.CommentNum) + delta)
+	database.DB.Save(&paper)
+	return paper.CommentNum, nil
 }
