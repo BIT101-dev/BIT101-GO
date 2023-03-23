@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-23 13:33:01
+ * @LastEditTime: 2023-03-23 16:22:55
  * @Description: _(:з」∠)_
  */
 package config
@@ -46,6 +46,7 @@ var Config = struct {
 	PaperPageSize      uint   `yaml:"paper_page_size"`
 	CommentPageSize    uint   `yaml:"comment_page_size"`
 	CommentPreviewSize uint   `yaml:"comment_preview_size"`
+	CoursePageSize     uint   `yaml:"course_page_size"`
 }{}
 
 func Init() {

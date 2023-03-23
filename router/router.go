@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-23 12:24:27
+ * @LastEditTime: 2023-03-23 16:27:59
  * @Description: 路由配置
  */
 package router
@@ -49,6 +49,7 @@ func SetRouter(router *gin.Engine) {
 		paper.GET("", controller.PaperList)
 		paper.POST("", middleware.CheckLogin(true), controller.PaperPost)
 		paper.PUT("/:id", middleware.CheckLogin(true), controller.PaperPut)
+		paper.DELETE("/:id", middleware.CheckLogin(true), controller.PaperDelete)
 	}
 	// 操作反馈模块
 	reaction := router.Group("/reaction")
@@ -58,4 +59,11 @@ func SetRouter(router *gin.Engine) {
 		reaction.GET("/comments", middleware.CheckLogin(false), controller.ReactionCommentList)
 		reaction.DELETE("/comments/:id", middleware.CheckLogin(true), controller.ReactionCommentDelete)
 	}
+	// 课程模块
+	course := router.Group("/courses")
+	{
+		course.GET("", controller.CourseList)
+		course.GET("/:id", middleware.CheckLogin(false), controller.CourseInfo)
+	}
+
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-23 12:18:05
+ * @LastEditTime: 2023-03-23 16:05:02
  * @Description: _(:з」∠)_
  */
 package database
@@ -16,6 +16,7 @@ import (
 
 var DB *gorm.DB
 
+// 基本模型
 type Base struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"create_time"`
@@ -23,6 +24,7 @@ type Base struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"delete_time"`
 }
 
+// 用户
 type User struct {
 	Base
 	Sid      string `gorm:"not null;uniqueIndex" json:"sid"`
@@ -33,6 +35,7 @@ type User struct {
 	Level    int    `gorm:"default:1" json:"level"`
 }
 
+// 图片
 type Image struct {
 	Base
 	Mid  string `gorm:"not null;uniqueIndex" json:"mid"`
@@ -40,6 +43,7 @@ type Image struct {
 	Uid  uint   `gorm:"not null" json:"uid"`
 }
 
+// 文章
 type Paper struct {
 	Base
 	Title      string    `gorm:"not null" json:"title"`           //标题
@@ -55,6 +59,7 @@ type Paper struct {
 	Tsv        Tsvector  `gorm:"index:,type:gin" json:"tsv"`      //全文搜索
 }
 
+// 文章记录
 type PaperHistory struct {
 	Base
 	Pid       uint   `gorm:"not null" json:"pid"`            //文章id
@@ -65,12 +70,14 @@ type PaperHistory struct {
 	Anonymous bool   `gorm:"default:false" json:"anonymous"` //是否匿名
 }
 
+// 点赞
 type Like struct {
 	Base
 	Obj string `gorm:"not null;index" json:"obj"` //点赞对象
 	Uid uint   `gorm:"not null;index" json:"uid"` //用户id
 }
 
+// 评论
 type Comment struct {
 	Base
 	Obj        string `gorm:"not null;index" json:"obj"`      //点赞对象
@@ -83,6 +90,47 @@ type Comment struct {
 	Rate       uint   `gorm:"default:0" json:"rate"`          //评分
 }
 
+// 课程
+type Course struct {
+	Base
+	Name           string    `gorm:"not null" json:"name"`                      //课程名
+	Number         string    `gorm:"not null;index" json:"number"`              //课程号
+	LikeNum        uint      `gorm:"default:0" json:"like_num"`                 //点赞数
+	CommentNum     uint      `gorm:"default:0" json:"comment_num"`              //评论数
+	Rate           float64   `gorm:"default:0" json:"rate"`                     //评分
+	RateSum        uint      `gorm:"default:0" json:"rate_sum"`                 //评分总和
+	TeachersName   string    `gorm:"not null" json:"teachers_name"`             //教师名
+	TeachersNumber string    `gorm:"not null" json:"teachers_number"`           //教师号
+	Teachers       []Teacher `gorm:"many2many:course_teachers" json:"teachers"` //教师
+	Tsv            Tsvector  `gorm:"index:,type:gin" json:"tsv"`                //搜索
+}
+
+// 教师
+type Teacher struct {
+	Base
+	Name   string `gorm:"not null" json:"name"`   //教师名
+	Number string `gorm:"not null" json:"number"` //教师号
+}
+
+// 课程资料上传记录
+type CourseUploadLog struct {
+	Base
+	Uid          uint   `gorm:"not null;index" json:"uid"`           //用户id
+	CourseNumber string `gorm:"not null;index" json:"course_number"` //课程号
+	CourseName   string `gorm:"not null" json:"course_name"`         //课程名
+	Type         string `gorm:"not null" json:"type"`                //资料类型
+	Name         string `gorm:"not null" json:"name"`                //资料名
+	Msg          string `gorm:"not null" json:"msg"`                 //备注
+	Finish       bool   `gorm:"default:false" json:"finish"`         //是否完成
+}
+
+// 课程资料文档
+type CourseUploadReadme struct {
+	Base
+	CourseNumber string `gorm:"not null;index" json:"course_number"` //课程号
+	Text         string `json:"text"`                                //内容
+}
+
 func Init() {
 	dsn := config.Config.Dsn
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -91,5 +139,5 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{})
+	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{})
 }

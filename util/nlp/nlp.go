@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-22 23:35:32
- * @LastEditTime: 2023-03-23 00:38:05
+ * @LastEditTime: 2023-03-23 14:49:45
  * @Description: _(:з」∠)_
  */
 package nlp
@@ -27,12 +27,18 @@ func RemoveBlank(s []string) []string {
 
 // 精确分词
 func Cut(s string) []string {
-	words := jieba.Cut(strings.ReplaceAll(s, "|", " "), true)
+	words := jieba.Cut(s, true)
 	return RemoveBlank(words)
 }
 
 // 搜索分词
 func CutForSearch(s string) []string {
 	words := jieba.CutForSearch(s, true)
+	return RemoveBlank(words)
+}
+
+// 全模式分词
+func CutAll(s string) []string {
+	words := jieba.CutAll(s)
 	return RemoveBlank(words)
 }

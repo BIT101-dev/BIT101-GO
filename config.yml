@@ -26,3 +26,4 @@ default_avatar: "4e513b23f0f8357ebe9c808e16991a71.jpeg" #默认头像
 paper_page_size: 24
 comment_page_size: 24
 comment_preview_size: 3
+course_page_size: 24

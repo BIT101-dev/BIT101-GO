@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-23 12:26:13
+ * @LastEditTime: 2023-03-23 16:09:28
  * @Description: _(:з」∠)_
  */
 package main
@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	// database.Test()
+	// other.AddCourse()
 	config.Init()
 	database.Init()
 	app := gin.Default()
