@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-23 16:05:02
+ * @LastEditTime: 2023-03-23 20:14:04
  * @Description: _(:з」∠)_
  */
 package database
@@ -120,7 +120,7 @@ type CourseUploadLog struct {
 	CourseName   string `gorm:"not null" json:"course_name"`         //课程名
 	Type         string `gorm:"not null" json:"type"`                //资料类型
 	Name         string `gorm:"not null" json:"name"`                //资料名
-	Msg          string `gorm:"not null" json:"msg"`                 //备注
+	Msg          string `json:"msg"`                                 //备注
 	Finish       bool   `gorm:"default:false" json:"finish"`         //是否完成
 }
 

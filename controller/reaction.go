@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-23 16:18:38
+ * @LastEditTime: 2023-03-23 22:55:12
  * @Description: _(:з」∠)_
  */
 package controller
@@ -104,7 +104,7 @@ type ReactionCommentAPI struct {
 	User      UserAPI              `json:"user"`       // 评论用户
 }
 
-func GetCommentList(obj string, order string, page uint, uid uint) []ReactionCommentAPI {
+func GetCommentList(obj string, order string, page uint, uid uint, admin bool) []ReactionCommentAPI {
 	var list = make([]ReactionCommentAPI, 0)
 	var db_list []database.Comment
 	q := database.DB.Model(&database.Comment{}).Where("obj = ?", obj)
@@ -123,13 +123,13 @@ func GetCommentList(obj string, order string, page uint, uid uint) []ReactionCom
 	q = q.Offset(int(page * page_size)).Limit(int(page_size))
 	q.Find(&db_list)
 	for _, db_comment := range db_list {
-		list = append(list, CleanComment(db_comment, uid))
+		list = append(list, CleanComment(db_comment, uid, admin))
 	}
 	return list
 }
 
 // 将数据库格式评论转化为返回格式
-func CleanComment(old_comment database.Comment, uid uint) ReactionCommentAPI {
+func CleanComment(old_comment database.Comment, uid uint, admin bool) ReactionCommentAPI {
 	comment_obj := "comment" + fmt.Sprint(old_comment.ID)
 	var user UserAPI
 	if old_comment.Anonymous {
@@ -140,13 +140,13 @@ func CleanComment(old_comment database.Comment, uid uint) ReactionCommentAPI {
 	comment := ReactionCommentAPI{
 		Comment:   old_comment,
 		Like:      CheckLike(comment_obj, uid),
-		Own:       old_comment.Uid == uid,
+		Own:       old_comment.Uid == uid || admin,
 		ReplyUser: GetUserAPI(old_comment.ReplyUid),
 		User:      user,
 	}
 
 	if comment.CommentNum > 0 {
-		comment.Sub = GetCommentList(comment_obj, "like", 0, uid)
+		comment.Sub = GetCommentList(comment_obj, "like", 0, uid, admin)
 		sz := int(config.Config.CommentPreviewSize)
 		if len(comment.Sub) > sz {
 			comment.Sub = comment.Sub[:sz]
@@ -223,7 +223,7 @@ func ReactionComment(c *gin.Context) {
 	database.DB.Create(&comment)
 
 	c.JSON(200, ReactionCommentResponse{
-		ReactionCommentAPI: CleanComment(comment, comment.Uid),
+		ReactionCommentAPI: CleanComment(comment, comment.Uid, c.GetBool("admin")),
 		Msg:                "评论成功OvO",
 	})
 }
@@ -243,7 +243,7 @@ func ReactionCommentList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint")))
+	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin")))
 }
 
 // 点赞评论
@@ -254,7 +254,9 @@ func CommentOnLike(id string, delta int) (uint, error) {
 		return 0, errors.New("文章不存在Orz")
 	}
 	comment.LikeNum = uint(int(comment.LikeNum) + delta)
-	database.DB.Save(&comment)
+	if err := database.DB.Save(&comment).Error; err != nil {
+		return 0, err
+	}
 	return comment.LikeNum, nil
 }
 
@@ -266,7 +268,9 @@ func CommentOnComment(id string, delta int) (uint, error) {
 		return 0, errors.New("文章不存在Orz")
 	}
 	comment.CommentNum = uint(int(comment.CommentNum) + delta)
-	database.DB.Save(&comment)
+	if err := database.DB.Save(&comment).Error; err != nil {
+		return 0, err
+	}
 	return comment.CommentNum, nil
 }
 
@@ -302,6 +306,9 @@ func ReactionCommentDelete(c *gin.Context) {
 		return
 	}
 
-	database.DB.Delete(&comment)
+	if err := database.DB.Delete(&comment).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "删除失败Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }

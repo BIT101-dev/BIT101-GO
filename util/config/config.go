@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-23 16:22:55
+ * @LastEditTime: 2023-03-23 20:30:58
  * @Description: _(:з」∠)_
  */
 package config
@@ -41,12 +41,21 @@ var Config = struct {
 			Region    string
 			Path      string
 		}
+		OneDrive struct {
+			Enable       bool
+			Api          string `yaml:"api"`
+			AuthApi      string `yaml:"auth_api"`
+			ClientId     string `yaml:"client_id"`
+			ClientSecret string `yaml:"client_secret"`
+			RefreshToken string `yaml:"refresh_token"`
+		}
 	}
 	DefaultAvatar      string `yaml:"default_avatar"`
 	PaperPageSize      uint   `yaml:"paper_page_size"`
 	CommentPageSize    uint   `yaml:"comment_page_size"`
 	CommentPreviewSize uint   `yaml:"comment_preview_size"`
 	CoursePageSize     uint   `yaml:"course_page_size"`
+	MainUrl            string `yaml:"main_url"`
 }{}
 
 func Init() {

@@ -22,8 +22,16 @@ saver: #文件保存相关
     region: "ap-beijing"
     bucket: "bit101-test-1255944436"
     path: "/"
+  onedrive:
+    enable: true
+    api: https://graph.microsoft.com/v1.0/me/drive
+    auth_api: https://login.microsoftonline.com/common/oauth2/v2.0/token
+    client_id: 
+    client_secret: 
+    refresh_token: 
 default_avatar: "4e513b23f0f8357ebe9c808e16991a71.jpeg" #默认头像
 paper_page_size: 24
 comment_page_size: 24
 comment_preview_size: 3
 course_page_size: 24
+main_url: http://127.0.0.1:3000

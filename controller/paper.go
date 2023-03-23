@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-23 14:45:31
+ * @LastEditTime: 2023-03-23 22:49:25
  * @Description: _(:з」∠)_
  */
 package controller
@@ -42,12 +42,14 @@ func PaperGet(c *gin.Context) {
 		update_uid = int(paper.UpdateUid)
 	}
 
+	own := paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin")
+	paper.CreateUid = 0
 	paper.UpdatedAt = paper.EditAt
 	var res = PaperGetResponse{
 		Paper:      paper,
 		UpdateUser: GetUserAPI(update_uid),
 		Like:       CheckLike(fmt.Sprintf("paper%v", paper.ID), c.GetUint("uid_uint")),
-		Own:        paper.CreateUid == c.GetUint("uid") || c.GetBool("admin"),
+		Own:        own,
 	}
 	c.JSON(200, res)
 }
@@ -274,7 +276,9 @@ func PaperOnLike(id string, delta int) (uint, error) {
 		return 0, errors.New("文章不存在Orz")
 	}
 	paper.LikeNum = uint(int(paper.LikeNum) + delta)
-	database.DB.Save(&paper)
+	if err := database.DB.Save(&paper).Error; err != nil {
+		return 0, errors.New("数据库错误Orz")
+	}
 	return paper.LikeNum, nil
 }
 
@@ -288,6 +292,8 @@ func PaperOnComment(id string, delta int) (uint, error) {
 		return 0, errors.New("文章不存在Orz")
 	}
 	paper.CommentNum = uint(int(paper.CommentNum) + delta)
-	database.DB.Save(&paper)
+	if err := database.DB.Save(&paper).Error; err != nil {
+		return 0, errors.New("数据库错误Orz")
+	}
 	return paper.CommentNum, nil
 }

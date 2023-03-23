@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-23 14:41:32
+ * @LastEditTime: 2023-03-23 22:25:44
  * @Description: 用户模块业务响应
  */
 package controller
@@ -85,7 +85,7 @@ func UserLogin(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "登录失败Orz"})
 		return
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key)
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, user.Level == 0)
 	c.JSON(200, gin.H{"msg": "登录成功OvO", "fake_cookie": token})
 }
 
@@ -152,7 +152,7 @@ func UserWebvpnVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code)
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, false)
 	c.JSON(200, gin.H{"msg": "统一身份认证成功OvO", "token": token, "code": code})
 }
 
@@ -171,7 +171,7 @@ func UserMailVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code)
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, false)
 	//发送邮件
 	err := mail.Send(query.Sid+"@bit.edu.cn", "[BIT101]验证码", fmt.Sprintf("【%v】 是你的验证码ヾ(^▽^*)))", code))
 	if err != nil {
@@ -197,7 +197,7 @@ func UserRegister(c *gin.Context) {
 	}
 
 	// 验证token
-	sid, ok := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
+	sid, ok, _ := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
 	if !ok {
 		c.JSON(500, gin.H{"msg": "验证码无效Orz"})
 		return
@@ -240,7 +240,7 @@ func UserRegister(c *gin.Context) {
 			return
 		}
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key)
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, user.Level == 0)
 	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
 }
 
