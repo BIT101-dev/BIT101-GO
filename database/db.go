@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-23 01:11:36
+ * @LastEditTime: 2023-03-23 12:18:05
  * @Description: _(:з」∠)_
  */
 package database
@@ -67,8 +67,20 @@ type PaperHistory struct {
 
 type Like struct {
 	Base
-	Obj string `gorm:"not null" json:"obj"` //点赞对象
-	Uid uint   `gorm:"not null" json:"uid"` //用户id
+	Obj string `gorm:"not null;index" json:"obj"` //点赞对象
+	Uid uint   `gorm:"not null;index" json:"uid"` //用户id
+}
+
+type Comment struct {
+	Base
+	Obj        string `gorm:"not null;index" json:"obj"`      //点赞对象
+	Uid        uint   `gorm:"not null;index" json:"uid"`      //用户id
+	Text       string `gorm:"not null" json:"text"`           //评论内容
+	Anonymous  bool   `gorm:"default:false" json:"anonymous"` //是否匿名
+	LikeNum    uint   `gorm:"default:0" json:"like_num"`      //点赞数
+	CommentNum uint   `gorm:"default:0" json:"comment_num"`   //评论数
+	ReplyUid   int    `gorm:"default:0" json:"reply_uid"`     //回复用户id
+	Rate       uint   `gorm:"default:0" json:"rate"`          //评分
 }
 
 func Init() {
@@ -79,5 +91,5 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{})
+	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{})
 }

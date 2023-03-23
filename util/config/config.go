@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-21 22:56:33
+ * @LastEditTime: 2023-03-23 13:33:01
  * @Description: _(:з」∠)_
  */
 package config
@@ -42,8 +42,10 @@ var Config = struct {
 			Path      string
 		}
 	}
-	DefaultAvatar string `yaml:"default_avatar"`
-	PaperPageSize int    `yaml:"paper_page_size"`
+	DefaultAvatar      string `yaml:"default_avatar"`
+	PaperPageSize      uint   `yaml:"paper_page_size"`
+	CommentPageSize    uint   `yaml:"comment_page_size"`
+	CommentPreviewSize uint   `yaml:"comment_preview_size"`
 }{}
 
 func Init() {

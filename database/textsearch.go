@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-22 16:35:17
- * @LastEditTime: 2023-03-23 01:10:08
+ * @LastEditTime: 2023-03-23 01:20:50
  * @Description: _(:з」∠)_
  */
 package database
@@ -44,6 +44,7 @@ func SearchText(query []string) func(db *gorm.DB) *gorm.DB {
 		for _, word := range query {
 			word = strings.ReplaceAll(word, "'", "")
 			word = strings.ReplaceAll(word, "|", "")
+			word = strings.ReplaceAll(word, "\\", "")
 			if word == "" {
 				continue
 			}

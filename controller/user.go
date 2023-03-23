@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-21 20:43:23
+ * @LastEditTime: 2023-03-23 12:41:37
  * @Description: 用户模块业务响应
  */
 package controller
@@ -22,40 +22,51 @@ import (
 )
 
 // 清除敏感信息
-func CleanUser(user *database.User) {
+func CleanUser(old_user database.User) database.User {
+	user := old_user
 	user.Password = ""
 	user.Sid = ""
 	// 转换头像链接
 	user.Avatar = GetImageUrl(user.Avatar)
+	return user
 }
 
-func GetUser(uid string) gin.H {
-	if uid == "-1" {
-		return gin.H{
-			"id":          -1,
-			"create_time": time.Now(),
-			"nickname":    "匿名者",
-			"avatar":      GetImageUrl(""),
-			"motto":       "面对愚昧，匿名者自己也缄口不言。",
-			"level":       1,
+type UserAPI struct {
+	ID         int       `json:"id"`
+	CreateTime time.Time `json:"create_time"`
+	Nickname   string    `json:"nickname"`
+	Avatar     string    `json:"avatar"`
+	Motto      string    `json:"motto"`
+	Level      int       `json:"level"`
+}
+
+func GetUserAPI(uid int) UserAPI {
+	if uid == -1 {
+		return UserAPI{
+			ID:         -1,
+			CreateTime: time.Now(),
+			Nickname:   "匿名者",
+			Avatar:     GetImageUrl(""),
+			Motto:      "面对愚昧，匿名者自己也缄口不言。",
+			Level:      1,
 		}
 	}
 	var user database.User
 	database.DB.Limit(1).Find(&user, "id = ?", uid)
-	return gin.H{
-		"id":          user.ID,
-		"create_time": user.CreatedAt,
-		"nickname":    user.Nickname,
-		"avatar":      GetImageUrl(user.Avatar),
-		"motto":       user.Motto,
-		"level":       user.Level,
+	return UserAPI{
+		ID:         int(user.ID),
+		CreateTime: user.CreatedAt,
+		Nickname:   user.Nickname,
+		Avatar:     GetImageUrl(user.Avatar),
+		Motto:      user.Motto,
+		Level:      user.Level,
 	}
 }
 
 // 登录请求结构
 type UserLoginQuery struct {
-	Sid      string `form:"sid" binding:"required"`      // 学号
-	Password string `form:"password" binding:"required"` // MD5密码
+	Sid      string `json:"sid" binding:"required"`      // 学号
+	Password string `json:"password" binding:"required"` // MD5密码
 }
 
 // 登录
@@ -77,7 +88,7 @@ func UserLogin(c *gin.Context) {
 
 // webvpn验证初始化请求结构
 type UserWebvpnVerifyInitQuery struct {
-	Sid string `form:"sid"` // 学号
+	Sid string `json:"sid"` // 学号
 }
 
 // webvpn验证初始化
@@ -116,11 +127,11 @@ func UserWebvpnVerifyInit(c *gin.Context) {
 
 // webvpn验证请求结构
 type UserWebvpnVerifyQuery struct {
-	Sid       string `form:"sid" binding:"required"`      // 学号
-	Password  string `form:"password" binding:"required"` // EncryptedPassword.js加密后的密码
-	Execution string `form:"execution" binding:"required"`
-	Cookie    string `form:"cookie" binding:"required"`
-	Captcha   string `form:"captcha"`
+	Sid       string `json:"sid" binding:"required"`      // 学号
+	Password  string `json:"password" binding:"required"` // EncryptedPassword.js加密后的密码
+	Execution string `json:"execution" binding:"required"`
+	Cookie    string `json:"cookie" binding:"required"`
+	Captcha   string `json:"captcha"`
 }
 
 // webvpn验证
@@ -169,9 +180,9 @@ func UserMailVerify(c *gin.Context) {
 
 // 注册请求结构
 type UserRegisterQuery struct {
-	Password string `form:"password" binding:"required"` // MD5密码
-	Token    string `form:"token" binding:"required"`    // token
-	Code     string `form:"code" binding:"required"`     // 验证码
+	Password string `json:"password" binding:"required"` // MD5密码
+	Token    string `json:"token" binding:"required"`    // token
+	Code     string `json:"code" binding:"required"`     // 验证码
 }
 
 // 注册
@@ -233,7 +244,7 @@ func UserGetInfo(c *gin.Context) {
 
 	// 匿名用户
 	if query.Id == "-1" {
-		c.JSON(200, GetUser("-1"))
+		c.JSON(200, GetUserAPI(-1))
 		return
 	}
 
@@ -250,22 +261,22 @@ func UserGetInfo(c *gin.Context) {
 	}
 
 	var user database.User
-	database.DB.Limit(1).Find(&user, uid)
+	database.DB.Limit(1).Find(&user, "id = ?", uid)
 	if user.ID == 0 {
 		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
 		return
 	}
 
-	CleanUser(&user)
+	user = CleanUser(user)
 
 	c.JSON(200, user)
 }
 
 // 修改用户信息请求结构
 type UserSetInfoQuery struct {
-	Nickname string `form:"nickname"` // 昵称
-	Avatar   string `form:"avatar"`   // 头像
-	Motto    string `form:"motto"`    // 格言 简介
+	Nickname string `json:"nickname"` // 昵称
+	Avatar   string `json:"avatar"`   // 头像
+	Motto    string `json:"motto"`    // 格言 简介
 }
 
 // 修改用户信息
@@ -277,7 +288,7 @@ func UserSetInfo(c *gin.Context) {
 	}
 	uid := c.GetString("uid")
 	var user database.User
-	database.DB.Limit(1).Find(&user, uid)
+	database.DB.Limit(1).Find(&user, "id = ?", uid)
 	if user.ID == 0 {
 		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
 		return
