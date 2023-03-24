@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-22 16:35:17
- * @LastEditTime: 2023-03-23 21:46:44
+ * @LastEditTime: 2023-03-25 01:30:31
  * @Description: _(:з」∠)_
  */
 package database
@@ -57,6 +57,7 @@ func SearchText(query []string) func(db *gorm.DB) *gorm.DB {
 			word = strings.ReplaceAll(word, "'", "")
 			word = strings.ReplaceAll(word, "|", "")
 			word = strings.ReplaceAll(word, "\\", "")
+			word = strings.ToLower(word)
 			if word == "" {
 				continue
 			}
@@ -68,5 +69,26 @@ func SearchText(query []string) func(db *gorm.DB) *gorm.DB {
 		return db.Where("tsv @@ ?::tsquery", query_s).Clauses(clause.OrderBy{
 			Expression: clause.Expr{SQL: "ts_rank(tsv,?::tsquery) DESC", Vars: []interface{}{query_s}},
 		})
+	}
+}
+
+// 筛选
+func FilterText(query []string) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		query_s := ""
+		for _, word := range query {
+			word = strings.ReplaceAll(word, "'", "")
+			word = strings.ReplaceAll(word, "|", "")
+			word = strings.ReplaceAll(word, "\\", "")
+			word = strings.ToLower(word)
+			if word == "" {
+				continue
+			}
+			if query_s != "" {
+				query_s += "|"
+			}
+			query_s += word
+		}
+		return db.Where("tsv @@ ?::tsquery", query_s)
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-03-23 23:08:57
+ * @LastEditTime: 2023-03-25 01:51:00
  * @Description: _(:з」∠)_
  */
 package controller
@@ -39,17 +39,23 @@ func CourseList(c *gin.Context) {
 	if query.Search != "" {
 		query_l := nlp.CutAll(query.Search)
 		query_l = append(query_l, nlp.CutForSearch(query.Search)...)
-		q = q.Scopes(database.SearchText(query_l))
+		if query.Order == "search" {
+			q = q.Scopes(database.SearchText(query_l))
+		} else {
+			q = q.Scopes(database.FilterText(query_l))
+		}
 	}
 	// 排序
-	if query.Order == "comment" {
-		q = q.Order("comment_num DESC")
-	} else if query.Order == "like" {
-		q = q.Order("like_num DESC")
-	} else if query.Order == "rate" {
-		q = q.Order("rate DESC")
-	} else { //默认new
-		q = q.Order("updated_at DESC")
+	if query.Order != "search" {
+		if query.Order == "comment" {
+			q = q.Order("comment_num DESC")
+		} else if query.Order == "like" {
+			q = q.Order("like_num DESC")
+		} else if query.Order == "rate" {
+			q = q.Order("rate DESC")
+		} else { //默认new
+			q = q.Order("updated_at DESC")
+		}
 	}
 	// 分页
 	page_size := int(config.Config.CoursePageSize)

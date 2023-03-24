@@ -1,14 +1,13 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 14:59:32
- * @LastEditTime: 2023-03-23 22:11:56
+ * @LastEditTime: 2023-03-25 01:39:18
  * @Description: _(:з」∠)_
  */
 package other
 
 import (
 	"BIT101-GO/database"
-	"BIT101-GO/util/config"
 	"BIT101-GO/util/nlp"
 	"encoding/csv"
 	"fmt"
@@ -18,8 +17,8 @@ import (
 )
 
 func AddCourse() {
-	config.Init()
-	database.Init()
+	// config.Init()
+	// database.Init()
 
 	csv_paths := []string{
 		"./data/course/2020-2021-1.csv",
@@ -74,9 +73,11 @@ func addFromCsv(csv_path string) {
 			tsv := database.Tsvector{}
 			for _, teacher := range teaches {
 				tsv.D = append(tsv.D, nlp.CutAll(teacher.Name)...)
+				tsv.B = append(tsv.B, nlp.CutForSearch(teacher.Name)...)
 				tsv.A = append(tsv.A, teacher.Number)
 			}
 			tsv.D = append(tsv.D, nlp.CutAll(course["课程名"])...)
+			tsv.B = append(tsv.B, nlp.CutForSearch(course["课程名"])...)
 			tsv.A = append(tsv.A, course["课程号"])
 			db_course := database.Course{
 				Name:           course["课程名"],
@@ -102,7 +103,7 @@ func addFromCsv(csv_path string) {
 
 func getTeachers(name_list []string, number_list []string) []database.Teacher {
 	var db_teachers []database.Teacher
-	for ind, _ := range number_list {
+	for ind := range number_list {
 		var db_teacher database.Teacher
 		database.DB.Where("number = ?", number_list[ind]).Limit(1).Find(&db_teacher)
 		if db_teacher.ID == 0 {

@@ -7,8 +7,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/jinzhu/configor"
 )
 
@@ -60,5 +58,5 @@ var Config = struct {
 
 func Init() {
 	configor.Load(&Config, "config.yml")
-	fmt.Printf("config: %#v", Config)
+	// fmt.Printf("config: %#v", Config)
 }
