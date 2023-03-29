@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-24 00:32:23
- * @LastEditTime: 2023-03-25 01:44:20
+ * @LastEditTime: 2023-03-25 15:19:42
  * @Description: _(:з」∠)_
  */
 package other
@@ -14,6 +14,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -280,6 +281,31 @@ func MigrateCourse() {
 	}
 }
 
+type VariableJson struct {
+	ID   int    `json:"id"`
+	Obj  string `json:"obj"`
+	Data string `json:"data"`
+}
+
+func MigrateVariable() {
+	text, err := os.ReadFile(base_path + "variable.json")
+	if err != nil {
+		panic(err)
+	}
+	var variable_json []VariableJson
+	err = json.Unmarshal(text, &variable_json)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, variable := range variable_json {
+		database.DB.Exec(`INSERT INTO variables ("id", "created_at", "updated_at", "deleted_at", "obj", "data")`+
+			`VALUES (?,?,?,?,?,?)`, variable.ID, time.Now(), time.Now(), nil, variable.Obj, variable.Data)
+	}
+
+	database.DB.Exec(`select setval('variables_id_seq',(select max(id) from "variables"))`)
+}
+
 func Migrate() {
 	config.Init()
 	database.Init()
@@ -290,4 +316,5 @@ func Migrate() {
 	MigrateComment()
 	MigrateImage()
 	MigrateCourse()
+	MigrateVariable()
 }

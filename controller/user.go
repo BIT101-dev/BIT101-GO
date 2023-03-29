@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-23 22:25:44
+ * @LastEditTime: 2023-03-28 18:20:36
  * @Description: 用户模块业务响应
  */
 package controller
@@ -40,27 +40,43 @@ type UserAPI struct {
 	Level      int       `json:"level"`
 }
 
+// 获取用户信息
 func GetUserAPI(uid int) UserAPI {
-	if uid == -1 {
-		return UserAPI{
-			ID:         -1,
-			CreateTime: time.Now(),
-			Nickname:   "匿名者",
-			Avatar:     GetImageUrl(""),
-			Motto:      "面对愚昧，匿名者自己也缄口不言。",
-			Level:      1,
+	return GetUserAPIMap(map[int]bool{uid: true})[uid]
+}
+
+// 批量获取用户信息
+func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
+	out := make(map[int]UserAPI)
+	uid_list := make([]int, 0)
+	for uid := range uid_map {
+		if uid == -1 {
+			out[-1] = UserAPI{
+				ID:         -1,
+				CreateTime: time.Now(),
+				Nickname:   "匿名者",
+				Avatar:     GetImageUrl(""),
+				Motto:      "面对愚昧，匿名者自己也缄口不言。",
+				Level:      1,
+			}
+		} else {
+			uid_list = append(uid_list, uid)
 		}
 	}
-	var user database.User
-	database.DB.Limit(1).Find(&user, "id = ?", uid)
-	return UserAPI{
-		ID:         int(user.ID),
-		CreateTime: user.CreatedAt,
-		Nickname:   user.Nickname,
-		Avatar:     GetImageUrl(user.Avatar),
-		Motto:      user.Motto,
-		Level:      user.Level,
+
+	var users []database.User
+	database.DB.Where("id IN ?", uid_list).Find(&users)
+	for _, user := range users {
+		out[int(user.ID)] = UserAPI{
+			ID:         int(user.ID),
+			CreateTime: user.CreatedAt,
+			Nickname:   user.Nickname,
+			Avatar:     GetImageUrl(user.Avatar),
+			Motto:      user.Motto,
+			Level:      user.Level,
+		}
 	}
+	return out
 }
 
 // 登录请求结构
