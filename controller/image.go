@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 16:41:23
- * @LastEditTime: 2023-03-21 19:40:10
+ * @LastEditTime: 2023-03-29 20:23:30
  * @Description: _(:з」∠)_
  */
 package controller
@@ -67,7 +67,7 @@ func save(c *gin.Context, content []byte) {
 	}
 
 	// 保存文件
-	err := saver.Save(path, content)
+	url, err := saver.Save(path, content)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "保存图片出错Orz"})
 		return
@@ -80,7 +80,7 @@ func save(c *gin.Context, content []byte) {
 	}
 	database.DB.Create(&image)
 
-	c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
+	c.JSON(200, gin.H{"url": url, "mid": image.Mid})
 }
 
 // 通过文件上传图片

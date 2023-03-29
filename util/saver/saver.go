@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 00:36:32
- * @LastEditTime: 2023-03-21 00:51:54
+ * @LastEditTime: 2023-03-29 20:22:57
  * @Description: _(:з」∠)_
  */
 package saver
@@ -13,13 +13,13 @@ import (
 )
 
 // 保存文件 返回url
-func Save(path string, content []byte) error {
+func Save(path string, content []byte) (string, error) {
 	err1 := SaveLocal(path, content)
 	err2 := SaveCOS(path, content)
 	if err1 != nil || err2 != nil {
-		return errors.New("save failed")
+		return "", errors.New("save failed")
 	}
-	return nil
+	return GetUrl(path), nil
 }
 
 // 通过文件路径获取url
