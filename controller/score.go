@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-16 09:10:10
- * @LastEditTime: 2023-03-23 12:52:41
+ * @LastEditTime: 2023-03-29 15:41:51
  * @Description: 成绩模块业务响应
  */
 package controller
@@ -43,11 +43,6 @@ func Score(c *gin.Context) {
 
 // 获取可信成绩单
 func Report(c *gin.Context) {
-	var query ScoreQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
 	cookie := c.Request.Header.Get("webvpn-cookie")
 	if cookie == "" {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})

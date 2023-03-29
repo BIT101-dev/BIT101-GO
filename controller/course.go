@@ -1,12 +1,13 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-03-25 01:51:00
+ * @LastEditTime: 2023-03-29 20:40:41
  * @Description: _(:з」∠)_
  */
 package controller
 
 import (
+	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/nlp"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm/clause"
 )
 
@@ -258,3 +260,91 @@ var readme_template = `
 
 // /{type}/{name}@{time} {msg}
 var log_template = "\n* `/%v/%v`@`%v` %v"
+
+// 上课时间表 节次 上课/下课时间 时,分
+var time_table = [][][]int{
+	{{8, 0}, {8, 45}},
+	{{8, 50}, {9, 35}},
+	{{9, 55}, {10, 40}},
+	{{10, 45}, {11, 30}},
+	{{11, 35}, {12, 20}},
+	{{13, 20}, {14, 5}},
+	{{14, 10}, {14, 55}},
+	{{15, 15}, {16, 0}},
+	{{16, 5}, {16, 50}},
+	{{16, 55}, {17, 40}},
+	{{18, 30}, {19, 15}},
+	{{19, 20}, {20, 5}},
+	{{20, 10}, {20, 55}},
+}
+
+// 获取课程表请求结构
+type CourseScheduleQuery struct {
+	Term string `form:"term"` // 学期
+}
+
+// 获取课程表
+func CourseSchedule(c *gin.Context) {
+	var query CourseScheduleQuery
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	cookie := c.Request.Header.Get("webvpn-cookie")
+	if cookie == "" {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
+	schedule, err := webvpn.GetSchedule(cookie, query.Term)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "获取课程表失败Orz"})
+		return
+	}
+	first_day, err := time.Parse("2006-01-02", schedule.FirstDay)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "解析时间失败Orz"})
+		return
+	}
+
+	class_ct := 0
+	time_ct := 0
+
+	calendar := ""
+	calendar += "BEGIN:VCALENDAR\n"
+	calendar += "VERSION:2.0\n"
+	calendar += fmt.Sprintf("PRODID:BIT101 %v\n", time.Now())
+	calendar += "TZID:Asia/Shanghai\n"
+	calendar += "X-WR-CALNAME:BIT101课程表\n"
+
+	for _, course := range schedule.Data {
+		for week, ok := range course.SKZC {
+			if ok == '1' {
+				calendar += "BEGIN:VEVENT\n"
+				calendar += fmt.Sprintf("SUMMARY:%v\n", course.KCM)
+				calendar += fmt.Sprintf("LOCATION:%v\n", course.JASMC)
+				calendar += fmt.Sprintf("DESCRIPTION:%v | %v\n", course.SKJS, course.YPSJDD)
+				start_time_table := time_table[course.KSJC-1][0]
+				start_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*start_time_table[0]+start_time_table[1])).Format("20060102T150405")
+				calendar += fmt.Sprintf("DTSTART:%v\n", start_time)
+				end_time_table := time_table[course.JSJC-1][1]
+				end_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*end_time_table[0]+end_time_table[1])).Format("20060102T150405")
+				calendar += fmt.Sprintf("DTEND:%v\n", end_time)
+				calendar += fmt.Sprintf("UID:%v\n", uuid.New())
+				calendar += "END:VEVENT\n"
+
+				class_ct++
+				time_ct += (course.JSJC - course.KSJC + 1) * 45
+			}
+		}
+	}
+
+	calendar += "END:VCALENDAR\n"
+
+	url, err := saver.Save(fmt.Sprintf("/tmp/%v.ics", uuid.New()), []byte(calendar))
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "保存课程表失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"url": url, "note": fmt.Sprintf("一共添加了%v学期的%v节课，合计坐牢时间%v小时（雾", schedule.Term, class_ct, float64(time_ct)/60), "msg": "获取成功OvO"})
+}

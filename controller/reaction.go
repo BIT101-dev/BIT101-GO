@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-29 13:30:54
+ * @LastEditTime: 2023-03-29 15:47:38
  * @Description: _(:з」∠)_
  */
 package controller
@@ -171,7 +171,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 
 	// 查询子评论
 	var sub_comment_list []database.Comment
-	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE obj IN ?) t WHERE rn<=?`, comment_obj_list, config.Config.CommentPreviewSize).Scan(&sub_comment_list)
+	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE "deleted_at" IS NULL AND obj IN ?) t WHERE rn<=?`, comment_obj_list, config.Config.CommentPreviewSize).Scan(&sub_comment_list)
 	for _, sub_comment := range sub_comment_list {
 		if sub_comment.Anonymous {
 			uid_map[-1] = true
@@ -200,6 +200,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 			Own:       sub_comment.Uid == uid || admin,
 			ReplyUser: users[int(sub_comment.ReplyUid)],
 			User:      user,
+			Sub:       make([]ReactionCommentAPI, 0),
 		})
 	}
 
