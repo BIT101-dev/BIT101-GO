@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-23 22:55:12
+ * @LastEditTime: 2023-03-29 13:30:54
  * @Description: _(:з」∠)_
  */
 package controller
@@ -88,10 +88,26 @@ func ReactionLike(c *gin.Context) {
 	c.JSON(200, gin.H{"like": !like.DeletedAt.Valid, "like_num": like_num})
 }
 
+// 检查是否点赞
 func CheckLike(obj string, uid uint) bool {
 	var like database.Like
 	database.DB.Where("uid = ?", uid).Where("obj = ?", obj).Limit(1).Find(&like)
 	return like.ID != 0
+}
+
+// 批量检查是否点赞
+func CheckLikeMap(obj_map map[string]bool, uid uint) map[string]bool {
+	obj_list := make([]string, 0, len(obj_map))
+	for obj := range obj_map {
+		obj_list = append(obj_list, obj)
+		obj_map[obj] = false
+	}
+	var like_list []database.Like
+	database.DB.Where("uid = ?", uid).Where("obj IN ?", obj_list).Find(&like_list)
+	for _, like := range like_list {
+		obj_map[like.Obj] = true
+	}
+	return obj_map
 }
 
 // 评论返回结构
@@ -104,8 +120,8 @@ type ReactionCommentAPI struct {
 	User      UserAPI              `json:"user"`       // 评论用户
 }
 
+// 获取评论列表
 func GetCommentList(obj string, order string, page uint, uid uint, admin bool) []ReactionCommentAPI {
-	var list = make([]ReactionCommentAPI, 0)
 	var db_list []database.Comment
 	q := database.DB.Model(&database.Comment{}).Where("obj = ?", obj)
 	// 排序
@@ -122,40 +138,93 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool) [
 	page_size := config.Config.CommentPageSize
 	q = q.Offset(int(page * page_size)).Limit(int(page_size))
 	q.Find(&db_list)
-	for _, db_comment := range db_list {
-		list = append(list, CleanComment(db_comment, uid, admin))
-	}
-	return list
+	return CleanCommentList(db_list, uid, admin)
 }
 
 // 将数据库格式评论转化为返回格式
 func CleanComment(old_comment database.Comment, uid uint, admin bool) ReactionCommentAPI {
-	comment_obj := "comment" + fmt.Sprint(old_comment.ID)
-	var user UserAPI
-	if old_comment.Anonymous {
-		user = GetUserAPI(-1)
-	} else {
-		user = GetUserAPI(int(old_comment.Uid))
-	}
-	comment := ReactionCommentAPI{
-		Comment:   old_comment,
-		Like:      CheckLike(comment_obj, uid),
-		Own:       old_comment.Uid == uid || admin,
-		ReplyUser: GetUserAPI(old_comment.ReplyUid),
-		User:      user,
-	}
+	return CleanCommentList([]database.Comment{old_comment}, uid, admin)[0]
+}
 
-	if comment.CommentNum > 0 {
-		comment.Sub = GetCommentList(comment_obj, "like", 0, uid, admin)
-		sz := int(config.Config.CommentPreviewSize)
-		if len(comment.Sub) > sz {
-			comment.Sub = comment.Sub[:sz]
+// 批量将数据库格式评论转化为返回格式
+func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []ReactionCommentAPI {
+	comments := make([]ReactionCommentAPI, 0)
+
+	// 查询用户和点赞情况
+	uid_map := make(map[int]bool)
+	like_map := make(map[string]bool)
+	comment_obj_list := make([]string, 0)
+	sub_comment_map := make(map[string][]ReactionCommentAPI)
+	for _, old_comment := range old_comments {
+		if old_comment.Anonymous {
+			uid_map[-1] = true
+		} else {
+			uid_map[int(old_comment.Uid)] = true
 		}
-	} else {
-		comment.Sub = make([]ReactionCommentAPI, 0)
+		uid_map[int(old_comment.ReplyUid)] = true
+		like_map["comment"+fmt.Sprint(old_comment.ID)] = true
+		if old_comment.CommentNum > 0 {
+			comment_obj_list = append(comment_obj_list, "comment"+fmt.Sprint(old_comment.ID))
+		}
+		sub_comment_map["comment"+fmt.Sprint(old_comment.ID)] = make([]ReactionCommentAPI, 0)
 	}
 
-	return comment
+	// 查询子评论
+	var sub_comment_list []database.Comment
+	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE obj IN ?) t WHERE rn<=?`, comment_obj_list, config.Config.CommentPreviewSize).Scan(&sub_comment_list)
+	for _, sub_comment := range sub_comment_list {
+		if sub_comment.Anonymous {
+			uid_map[-1] = true
+		} else {
+			uid_map[int(sub_comment.Uid)] = true
+		}
+		uid_map[int(sub_comment.ReplyUid)] = true
+		like_map["comment"+fmt.Sprint(sub_comment.ID)] = true
+	}
+
+	// 批量获取用户和点赞
+	users := GetUserAPIMap(uid_map)
+	likes := CheckLikeMap(like_map, uid)
+
+	// 组装子评论
+	for _, sub_comment := range sub_comment_list {
+		var user UserAPI
+		if sub_comment.Anonymous {
+			user = users[-1]
+		} else {
+			user = users[int(sub_comment.Uid)]
+		}
+		sub_comment_map[sub_comment.Obj] = append(sub_comment_map[sub_comment.Obj], ReactionCommentAPI{
+			Comment:   sub_comment,
+			Like:      likes["comment"+fmt.Sprint(sub_comment.ID)],
+			Own:       sub_comment.Uid == uid || admin,
+			ReplyUser: users[int(sub_comment.ReplyUid)],
+			User:      user,
+		})
+	}
+
+	// 组装评论
+	for _, old_comment := range old_comments {
+		comment_obj := "comment" + fmt.Sprint(old_comment.ID)
+		var user UserAPI
+		if old_comment.Anonymous {
+			user = users[-1]
+		} else {
+			user = users[int(old_comment.Uid)]
+		}
+		comment := ReactionCommentAPI{
+			Comment:   old_comment,
+			Like:      likes[comment_obj],
+			Own:       old_comment.Uid == uid || admin,
+			ReplyUser: users[int(old_comment.ReplyUid)],
+			User:      user,
+		}
+
+		comment.Sub = sub_comment_map[comment_obj]
+		comments = append(comments, comment)
+	}
+
+	return comments
 }
 
 // 评论请求结构

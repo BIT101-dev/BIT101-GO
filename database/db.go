@@ -1,13 +1,15 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-25 00:07:55
+ * @LastEditTime: 2023-03-29 13:39:23
  * @Description: _(:з」∠)_
  */
 package database
 
 import (
 	"BIT101-GO/util/config"
+	"math/rand"
+	"strconv"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -131,6 +133,23 @@ type CourseUploadReadme struct {
 	Text         string `json:"text"`                                //内容
 }
 
+// 变量
+type Variable struct {
+	Base
+	Obj  string `gorm:"not null;index" json:"obj"` //对象
+	Data string `json:"data"`
+}
+
+// 消息
+type Message struct {
+	Base
+	FromUid uint   `gorm:"not null;index" json:"from_uid"` //发起用户id
+	ToUid   uint   `gorm:"not null;index" json:"to_uid"`   //接收用户id
+	Type    string `gorm:"not null;index" json:"type"`     //类型
+	Obj     string `gorm:"not null;index" json:"obj"`      //对象
+	Content string `gorm:"not null" json:"content"`        //内容
+}
+
 func Init() {
 	dsn := config.Config.Dsn
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -139,5 +158,21 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{})
+	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{})
+}
+
+func Test() {
+	config.Init()
+	Init()
+
+	for i := 0; i < 100000; i++ {
+		msg := Message{
+			FromUid: uint(rand.Intn(1000)),
+			ToUid:   1,
+			Type:    "like",
+			Obj:     "wall" + strconv.Itoa(rand.Intn(1000)),
+			Content: "test",
+		}
+		DB.Create(&msg)
+	}
 }

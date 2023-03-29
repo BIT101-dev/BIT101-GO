@@ -11,7 +11,7 @@ mail: #邮箱
 dsn: host=localhost user=bit101 password=BIT101 dbname=bit101 port=5432 sslmode=disable TimeZone=Asia/Shanghai #数据库源
 saver: #文件保存相关
   max_size: 24 #最大上传大小 单位MB
-  url: "https://bit101-test-1255944436.cos.ap-beijing.myqcloud.com"
+  url: "https://bit101-1255944436.cos.ap-beijing.myqcloud.com"
   local:
     enable: true
     path: "./data/"
