@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-29 20:28:01
+ * @LastEditTime: 2023-03-30 16:18:06
  * @Description: 路由配置
  */
 package router
@@ -74,5 +74,12 @@ func SetRouter(router *gin.Engine) {
 		variable.GET("", controller.VariableGet)
 		variable.POST("", middleware.CheckLogin(true), controller.VariablePost)
 	}
-
+	// 消息模块
+	message := router.Group("/messages")
+	{
+		message.GET("", middleware.CheckLogin(true), controller.MessageGetList)
+		message.GET("/unread_num", middleware.CheckLogin(true), controller.MessageGetUnreadNum)
+		message.GET("/unread_likes_num", middleware.CheckLogin(true), controller.MessageGetUnreadLikeNum)
+		message.GET("/unread_comments_num", middleware.CheckLogin(true), controller.MessageGetUnreadCommentNum)
+	}
 }

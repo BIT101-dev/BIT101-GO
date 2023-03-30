@@ -1,15 +1,13 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-03-29 13:39:23
+ * @LastEditTime: 2023-03-30 18:00:06
  * @Description: _(:з」∠)_
  */
 package database
 
 import (
 	"BIT101-GO/util/config"
-	"math/rand"
-	"strconv"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -88,6 +86,7 @@ type Comment struct {
 	Anonymous  bool   `gorm:"default:false" json:"anonymous"` //是否匿名
 	LikeNum    uint   `gorm:"default:0" json:"like_num"`      //点赞数
 	CommentNum uint   `gorm:"default:0" json:"comment_num"`   //评论数
+	ReplyObj   string `json:"reply_obj"`                      //回复对象
 	ReplyUid   int    `gorm:"default:0" json:"reply_uid"`     //回复用户id
 	Rate       uint   `gorm:"default:0" json:"rate"`          //评分
 }
@@ -140,14 +139,25 @@ type Variable struct {
 	Data string `json:"data"`
 }
 
+// 消息摘要
+type MessageSummary struct {
+	Base
+	Uid       uint      `gorm:"not null;index" json:"uid"`       //用户id
+	Obj       string    `gorm:"not null;index" json:"obj"`       //对象
+	UnreadNum uint      `gorm:"default:0" json:"unread_num"`     //未读数
+	LastTime  time.Time `gorm:"autoCreateTime" json:"last_time"` //最后时间
+	Content   string    `gorm:"not null" json:"content"`         //内容
+}
+
 // 消息
 type Message struct {
 	Base
-	FromUid uint   `gorm:"not null;index" json:"from_uid"` //发起用户id
-	ToUid   uint   `gorm:"not null;index" json:"to_uid"`   //接收用户id
-	Type    string `gorm:"not null;index" json:"type"`     //类型
 	Obj     string `gorm:"not null;index" json:"obj"`      //对象
-	Content string `gorm:"not null" json:"content"`        //内容
+	FromUid int    `gorm:"not null;index" json:"from_uid"` //发起用户id
+	ToUid   uint   `gorm:"not null;index" json:"to_uid"`   //接收用户id
+	Type    string `json:"type"`                           //类型
+	LinkObj string `json:"link_obj"`                       //跳转对象
+	Content string `json:"content"`                        //内容
 }
 
 func Init() {
@@ -158,21 +168,5 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{})
-}
-
-func Test() {
-	config.Init()
-	Init()
-
-	for i := 0; i < 100000; i++ {
-		msg := Message{
-			FromUid: uint(rand.Intn(1000)),
-			ToUid:   1,
-			Type:    "like",
-			Obj:     "wall" + strconv.Itoa(rand.Intn(1000)),
-			Content: "test",
-		}
-		DB.Create(&msg)
-	}
+	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{})
 }

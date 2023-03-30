@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-29 15:47:38
+ * @LastEditTime: 2023-03-30 15:33:02
  * @Description: _(:з」∠)_
  */
 package controller
@@ -11,6 +11,7 @@ import (
 	"BIT101-GO/util/config"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -76,7 +77,7 @@ func ReactionLike(c *gin.Context) {
 	case "paper":
 		like_num, err = PaperOnLike(obj_id, delta)
 	case "comment":
-		like_num, err = CommentOnLike(obj_id, delta)
+		like_num, err = CommentOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	case "course":
 		like_num, err = CourseOnLike(obj_id, delta)
 	}
@@ -234,6 +235,7 @@ type ReactionCommentQuery struct {
 	Text      string `json:"text" binding:"required"`   // 评论内容
 	Anonymous bool   `json:"anonymous" default:"false"` // 是否匿名
 	ReplyUid  int    `json:"reply_uid" default:"0"`     //回复用户id
+	ReplyObj  string `json:"reply_obj" default:""`      //回复对象
 	Rate      uint   `json:"rate" default:"0"`          //评分
 }
 
@@ -272,7 +274,7 @@ func ReactionComment(c *gin.Context) {
 	case "paper":
 		_, err = PaperOnComment(obj_id, 1)
 	case "comment":
-		_, err = CommentOnComment(obj_id, 1)
+		_, err = CommentOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
 	case "course":
 		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
 	}
@@ -287,6 +289,7 @@ func ReactionComment(c *gin.Context) {
 		Text:      query.Text,
 		Anonymous: query.Anonymous,
 		ReplyUid:  query.ReplyUid,
+		ReplyObj:  query.ReplyObj,
 		Rate:      query.Rate,
 		Uid:       c.GetUint("uid_uint"),
 	}
@@ -317,7 +320,7 @@ func ReactionCommentList(c *gin.Context) {
 }
 
 // 点赞评论
-func CommentOnLike(id string, delta int) (uint, error) {
+func CommentOnLike(id string, delta int, from_uid uint) (uint, error) {
 	var comment database.Comment
 	database.DB.Limit(1).Find(&comment, "id = ?", id)
 	if comment.ID == 0 {
@@ -327,11 +330,29 @@ func CommentOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&comment).Error; err != nil {
 		return 0, err
 	}
+
+	// 通知
+	if delta == 1 && from_uid != comment.Uid {
+		go func() {
+			// 获取顶级对象 处理子评论问题
+			link_obj := comment.Obj
+			for strings.HasPrefix(link_obj, "comment") {
+				var parent_comment database.Comment
+				if err := database.DB.Limit(1).Find(&parent_comment, "id = ?", strings.TrimPrefix(comment.Obj, "comment")).Error; err != nil || parent_comment.ID == 0 {
+					return
+				}
+				link_obj = parent_comment.Obj
+			}
+
+			MessageSend(int(from_uid), comment.Uid, "like", fmt.Sprintf("comment%v", comment.ID), link_obj, comment.Text)
+		}()
+	}
+
 	return comment.LikeNum, nil
 }
 
 // 评论评论
-func CommentOnComment(id string, delta int) (uint, error) {
+func CommentOnComment(id string, delta int, from_uid uint, from_anonymous bool, reply_obj string, content string) (uint, error) {
 	var comment database.Comment
 	database.DB.Limit(1).Find(&comment, "id = ?", id)
 	if comment.ID == 0 {
@@ -341,6 +362,41 @@ func CommentOnComment(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&comment).Error; err != nil {
 		return 0, err
 	}
+
+	// 通知
+	if delta == 1 {
+		go func() {
+			// 确定通知对象
+			to_uid := comment.Uid
+			if strings.HasPrefix(reply_obj, "comment") {
+				var reply_comment database.Comment
+				if err := database.DB.Limit(1).Find(&reply_comment, "id = ?", strings.TrimPrefix(reply_obj, "comment")).Error; err != nil || reply_comment.ID == 0 {
+					return
+				}
+				to_uid = reply_comment.Uid
+			}
+			if to_uid == from_uid {
+				return
+			}
+
+			// 获取顶级对象 处理子评论问题
+			link_obj := comment.Obj
+			for strings.HasPrefix(link_obj, "comment") {
+				var parent_comment database.Comment
+				if err := database.DB.Limit(1).Find(&parent_comment, "id = ?", strings.TrimPrefix(comment.Obj, "comment")).Error; err != nil || parent_comment.ID == 0 {
+					return
+				}
+				link_obj = parent_comment.Obj
+			}
+
+			from_uid_ := int(from_uid)
+			if from_anonymous {
+				from_uid_ = -1
+			}
+			MessageSend(from_uid_, to_uid, "comment", fmt.Sprintf("comment%v", comment.ID), link_obj, content)
+		}()
+	}
+
 	return comment.CommentNum, nil
 }
 
@@ -367,7 +423,7 @@ func ReactionCommentDelete(c *gin.Context) {
 	case "paper":
 		_, err = PaperOnComment(obj_id, -1)
 	case "comment":
-		_, err = CommentOnComment(obj_id, -1)
+		_, err = CommentOnComment(obj_id, -1, 0, true, "", "")
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
 	}

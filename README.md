@@ -1,7 +1,7 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-03-23 13:51:21
+ * @LastEditTime: 2023-03-30 18:01:08
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
@@ -10,7 +10,16 @@ BIT101的新后端，基于GO。
 
 项目仍在开发中，敬请期待。
 
-## 数据库配置
+## 部署指南
+
+以`Ubuntu`为例。
+
+* 安装`PostgreSQL`并配置
+* 安装`GO`
+* 执行`go build -o main main.go`以编译
+* 配置`config.yaml`
+
+### 数据库配置
 
 使用`postgresql`作为数据库。
 
@@ -20,7 +29,7 @@ CREATE DATABASE bit101 OWNER bit101;
 GRANT ALL PRIVILEGES ON DATABASE bit101 TO bit101;
 ```
 
-## 部署到Serverless以及代理请求
+### 部署到Serverless以及代理请求
 
 BIT101-GO可以非常简单地部署到函数计算服务上，也可以按照路由将请求转发到另一个服务器上，实现反向代理。
 
@@ -28,7 +37,7 @@ BIT101-GO可以非常简单地部署到函数计算服务上，也可以按照�
 
 如果只是快捷开关并配置代理链接，更改配置文件中的`proxy`字段即可，但如果要定义哪些接口需要走代理，需要在`router`中添加获移除特定路由的`Proxy`中间件（默认已经在部分接口添加了代理中间件）。
 
-### 腾讯云部署
+#### 腾讯云部署
 
 在Serverless中新建函数服务，选择运行环境为`GO`的`Web函数`。
 

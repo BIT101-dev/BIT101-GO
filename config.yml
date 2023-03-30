@@ -7,7 +7,7 @@ login_expire: 2073600 #登录有效期 单位秒
 mail: #邮箱
   host: smtp.qq.com
   user: bit101@qq.com
-  password:
+  password: 
 dsn: host=localhost user=bit101 password=BIT101 dbname=bit101 port=5432 sslmode=disable TimeZone=Asia/Shanghai #数据库源
 saver: #文件保存相关
   max_size: 24 #最大上传大小 单位MB
@@ -29,9 +29,11 @@ saver: #文件保存相关
     client_id: 
     client_secret: 
     refresh_token: 
-default_avatar: "4e513b23f0f8357ebe9c808e16991a71.jpeg" #默认头像
-paper_page_size: 24
-comment_page_size: 24
-comment_preview_size: 3
-course_page_size: 24
+default_avatar: "e2e4437695e019484769bc807948dad8.jpeg" #默认头像
+paper_page_size: 24 #每次加载文章数量
+comment_page_size: 24 #每次加载评论数量
+comment_preview_size: 3 #预览子评论数量
+course_page_size: 24 #每次加载课程数量
+message_page_size: 24
 main_url: http://127.0.0.1:3000
+release_mode: true
