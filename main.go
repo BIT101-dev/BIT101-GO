@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-03-29 20:30:40
+ * @LastEditTime: 2023-03-30 17:24:12
  * @Description: _(:з」∠)_
  */
 package main
@@ -18,8 +18,12 @@ import (
 )
 
 func main() {
+	// database.Test()
 	config.Init()
 	database.Init()
+	if config.Config.ReleaseMode {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	app := gin.Default()
 	app.Use(limits.RequestSizeLimiter(config.Config.Saver.MaxSize << 20))
 	app.Use(cors.New(cors.Config{

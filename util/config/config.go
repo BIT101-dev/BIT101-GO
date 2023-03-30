@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-23 20:30:58
+ * @LastEditTime: 2023-03-30 17:23:54
  * @Description: _(:з」∠)_
  */
 package config
@@ -53,7 +53,9 @@ var Config = struct {
 	CommentPageSize    uint   `yaml:"comment_page_size"`
 	CommentPreviewSize uint   `yaml:"comment_preview_size"`
 	CoursePageSize     uint   `yaml:"course_page_size"`
+	MessagePageSize    uint   `yaml:"message_page_size"`
 	MainUrl            string `yaml:"main_url"`
+	ReleaseMode        bool   `yaml:"release_mode"`
 }{}
 
 func Init() {
