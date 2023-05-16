@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-30 08:55:28
- * @LastEditTime: 2023-03-30 16:29:26
+ * @LastEditTime: 2023-03-30 19:00:50
  * @Description: _(:з」∠)_
  */
 package controller
@@ -9,6 +9,7 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"database/sql"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -147,10 +148,14 @@ func MessageGetUnreadCommentNum(c *gin.Context) {
 
 // 获取总未读消息数
 func MessageGetUnreadNum(c *gin.Context) {
-	var count int64
+	var count sql.NullInt64
 	if err := database.DB.Model(&database.MessageSummary{}).Select("SUM(unread_num)").Where("uid = ?", c.GetString("uid")).Pluck("sum", &count).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "获取未读消息数失败Orz"})
 		return
 	}
-	c.JSON(200, gin.H{"unread_num": count})
+	if !count.Valid {
+		c.JSON(200, gin.H{"unread_num": 0})
+		return
+	}
+	c.JSON(200, gin.H{"unread_num": count.Int64})
 }

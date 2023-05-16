@@ -2,29 +2,31 @@ module BIT101-GO
 
 go 1.20
 
-require github.com/gin-gonic/gin v1.9.0
+require (
+	github.com/gin-contrib/cors v1.4.0
+	github.com/gin-gonic/gin v1.9.0
+	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1
+	github.com/google/uuid v1.3.0
+	github.com/jinzhu/configor v1.2.1
+	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
+	github.com/yanyiwu/gojieba v1.3.0
+	gorm.io/driver/postgres v1.5.0
+	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11
+)
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
-	github.com/gin-contrib/cors v1.4.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.0.0-rc.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.3.1 // indirect
-	github.com/jinzhu/configor v1.2.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mozillazg/go-httpheader v0.3.1 // indirect
-	github.com/tencentyun/cos-go-sdk-v5 v0.7.41 // indirect
-	github.com/yanyiwu/gojieba v1.3.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gorm.io/driver/postgres v1.5.0 // indirect
-	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11 // indirect
 )
 
 require (

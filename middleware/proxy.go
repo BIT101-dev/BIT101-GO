@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-16 10:40:12
- * @LastEditTime: 2023-03-18 09:56:21
+ * @LastEditTime: 2023-05-16 11:29:35
  * @Description: 代理中间件
  */
 package middleware
@@ -21,11 +21,18 @@ func Proxy() gin.HandlerFunc {
 		if config.Config.Proxy.Enable {
 			proxyUrl, _ := url.Parse(config.Config.Proxy.Url)
 
-			proxy := httputil.ReverseProxy{Director: func(req *http.Request) {
-				req.Host = proxyUrl.Host
-				req.URL.Scheme = proxyUrl.Scheme
-				req.URL.Host = proxyUrl.Host
-			}}
+			proxy := httputil.ReverseProxy{
+				Director: func(req *http.Request) {
+					req.Host = proxyUrl.Host
+					req.URL.Scheme = proxyUrl.Scheme
+					req.URL.Host = proxyUrl.Host
+				},
+				ModifyResponse: func(resp *http.Response) error {
+					// 防止返回重复的CORS头
+					resp.Header.Del("Access-Control-Allow-Origin")
+					return nil
+				},
+			}
 
 			proxy.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
