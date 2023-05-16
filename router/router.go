@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-03-30 16:18:06
+ * @LastEditTime: 2023-05-16 02:10:19
  * @Description: 路由配置
  */
 package router
@@ -33,8 +33,8 @@ func SetRouter(router *gin.Engine) {
 	// 成绩模块
 	score := router.Group("/score")
 	{
-		score.GET("", controller.Score)
-		score.GET("/report", controller.Report)
+		score.GET("", middleware.Proxy(), controller.Score)
+		score.GET("/report", middleware.Proxy(), controller.Report)
 	}
 	// 上传模块
 	upload := router.Group("/upload")

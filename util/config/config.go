@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-03-30 17:23:54
+ * @LastEditTime: 2023-05-16 11:31:35
  * @Description: _(:з」∠)_
  */
 package config
@@ -11,6 +11,7 @@ import (
 )
 
 var Config = struct {
+	Port  string
 	Proxy struct {
 		Enable bool
 		Url    string

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 00:36:32
- * @LastEditTime: 2023-03-29 20:22:57
+ * @LastEditTime: 2023-03-30 19:08:13
  * @Description: _(:з」∠)_
  */
 package saver
@@ -24,5 +24,5 @@ func Save(path string, content []byte) (string, error) {
 
 // 通过文件路径获取url
 func GetUrl(path string) string {
-	return filepath.Join(config.Config.Saver.Url, path)
+	return config.Config.Saver.Url + filepath.Join("/", path)
 }
