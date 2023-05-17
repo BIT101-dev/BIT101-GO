@@ -1,13 +1,12 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-05-16 12:16:14
+ * @LastEditTime: 2023-05-17 17:21:20
  * @Description: _(:з」∠)_
  */
 package main
 
 import (
-	"BIT101-GO/database"
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
 	"fmt"
@@ -20,7 +19,6 @@ import (
 
 func main() {
 	config.Init()
-	database.Init()
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
