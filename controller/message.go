@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-30 08:55:28
- * @LastEditTime: 2023-03-30 19:00:50
+ * @LastEditTime: 2023-05-17 16:51:49
  * @Description: _(:з」∠)_
  */
 package controller
@@ -74,7 +74,7 @@ func MessageGetUnreadLikeNum(c *gin.Context) {
 // 获取消息列表请求结构
 type MessageGetListQuery struct {
 	Obj    string `form:"obj" binding:"required"` // 消息对象
-	LastID uint   `form:"last_id" default:"0"`    // 上次查询最后一条消息的ID 为0则不限制
+	LastID uint   `form:"last_id"`                // 上次查询最后一条消息的ID 为0则不限制
 }
 
 type MessageGetListResponseItem struct {

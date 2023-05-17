@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-03-25 01:50:05
+ * @LastEditTime: 2023-05-17 16:54:54
  * @Description: _(:з」∠)_
  */
 package controller
@@ -59,13 +59,14 @@ type PaperPostQuery struct {
 	Title      string `json:"title" binding:"required"`
 	Intro      string `json:"intro" binding:"required"`
 	Content    string `json:"content" binding:"required"`
-	Anonymous  bool   `json:"anonymous" default:"false"`
-	PublicEdit bool   `json:"public_edit" default:"true"`
+	Anonymous  bool   `json:"anonymous"`
+	PublicEdit bool   `json:"public_edit"`
 }
 
 // 新建文章
 func PaperPost(c *gin.Context) {
 	var query PaperPostQuery
+	query.PublicEdit = true
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -108,14 +109,15 @@ type PaperPutQeury struct {
 	Title      string  `json:"title" binding:"required"`
 	Intro      string  `json:"intro" binding:"required"`
 	Content    string  `json:"content" binding:"required"`
-	Anonymous  bool    `json:"anonymous" default:"false"`
-	PublicEdit bool    `json:"public_edit" default:"true"`
+	Anonymous  bool    `json:"anonymous"`
+	PublicEdit bool    `json:"public_edit"`
 	LastTime   float64 `json:"last_time" binding:"required"`
 }
 
 // 修改文章
 func PaperPut(c *gin.Context) {
 	var query PaperPutQeury
+	query.PublicEdit = true
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -185,8 +187,8 @@ func pushHistory(paper *database.Paper) {
 // 获取文章列表请求结构
 type PaperListQuery struct {
 	Search string `form:"search"`
-	Order  string `form:"order" default:"new"` //rand | new | like
-	Page   int    `form:"page" default:"0"`
+	Order  string `form:"order"` //rand | new | like
+	Page   int    `form:"page"`
 }
 
 // 获取文章列表返回结构

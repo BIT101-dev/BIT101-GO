@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2023-03-28 18:20:36
+ * @LastEditTime: 2023-05-17 16:50:12
  * @Description: 用户模块业务响应
  */
 package controller
@@ -199,9 +199,10 @@ func UserMailVerify(c *gin.Context) {
 
 // 注册请求结构
 type UserRegisterQuery struct {
-	Password string `json:"password" binding:"required"` // MD5密码
-	Token    string `json:"token" binding:"required"`    // token
-	Code     string `json:"code" binding:"required"`     // 验证码
+	Password  string `json:"password" binding:"required"` // MD5密码
+	Token     string `json:"token" binding:"required"`    // token
+	Code      string `json:"code" binding:"required"`     // 验证码
+	LoginMode bool   `json:"login_mode"`                  // 是否使用不强制修改密码的登录模式
 }
 
 // 注册
@@ -250,10 +251,12 @@ func UserRegister(c *gin.Context) {
 			return
 		}
 	} else {
-		// 已经注册过 修改密码
-		if err := database.DB.Model(&user).Update("password", query.Password).Error; err != nil {
-			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-			return
+		// 已经注册过且不处于登录模式则修改密码
+		if !query.LoginMode {
+			if err := database.DB.Model(&user).Update("password", query.Password).Error; err != nil {
+				c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+				return
+			}
 		}
 	}
 	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, user.Level == 0)
