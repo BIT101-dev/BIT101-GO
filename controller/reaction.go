@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-03-30 15:33:02
+ * @LastEditTime: 2023-05-17 16:59:19
  * @Description: _(:з」∠)_
  */
 package controller
@@ -231,12 +231,12 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 
 // 评论请求结构
 type ReactionCommentQuery struct {
-	Obj       string `json:"obj" binding:"required"`    // 操作对象
-	Text      string `json:"text" binding:"required"`   // 评论内容
-	Anonymous bool   `json:"anonymous" default:"false"` // 是否匿名
-	ReplyUid  int    `json:"reply_uid" default:"0"`     //回复用户id
-	ReplyObj  string `json:"reply_obj" default:""`      //回复对象
-	Rate      uint   `json:"rate" default:"0"`          //评分
+	Obj       string `json:"obj" binding:"required"`  // 操作对象
+	Text      string `json:"text" binding:"required"` // 评论内容
+	Anonymous bool   `json:"anonymous"`               // 是否匿名
+	ReplyUid  int    `json:"reply_uid"`               //回复用户id
+	ReplyObj  string `json:"reply_obj"`               //回复对象
+	Rate      uint   `json:"rate"`                    //评分
 }
 
 // 评论返回结构
@@ -304,8 +304,8 @@ func ReactionComment(c *gin.Context) {
 // 获取评论列表请求结构
 type ReactionCommentListQuery struct {
 	Obj   string `form:"obj" binding:"required"` // 操作对象
-	Order string `form:"order" default:"old"`    // 排序方式
-	Page  uint   `form:"page" default:"0"`       // 页码
+	Order string `form:"order"`                  // 排序方式
+	Page  uint   `form:"page"`                   // 页码
 }
 
 // 获取评论列表
