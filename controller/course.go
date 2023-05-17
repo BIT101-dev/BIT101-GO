@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-03-29 20:40:41
+ * @LastEditTime: 2023-05-17 16:54:23
  * @Description: _(:з」∠)_
  */
 package controller
@@ -24,8 +24,8 @@ import (
 // 获取课程列表请求结构
 type CourseListQuery struct {
 	Search string `form:"search"`
-	Order  string `form:"order" default:"new"` //like | comment | rate | new
-	Page   int    `form:"page" default:"0"`
+	Order  string `form:"order"` //like | comment | rate | new
+	Page   int    `form:"page"`
 }
 
 // 获取课程列表
@@ -134,12 +134,13 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 type CourseUploadUrlQuery struct {
 	Number string `form:"number" binding:"required"` //课程编号
 	Name   string `form:"name" binding:"required"`   //文件名
-	Type   string `form:"type" default:"other"`      //资料类型
+	Type   string `form:"type"`                      //资料类型 默认other
 }
 
 // 获取课程资料上传链接
 func CourseUploadUrl(c *gin.Context) {
 	var query CourseUploadUrlQuery
+	query.Type = "other"
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
