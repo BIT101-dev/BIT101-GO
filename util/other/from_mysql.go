@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-24 00:32:23
- * @LastEditTime: 2023-03-25 15:19:42
+ * @LastEditTime: 2023-05-25 18:01:58
  * @Description: _(:з」∠)_
  */
 package other
@@ -306,6 +306,60 @@ func MigrateVariable() {
 	database.DB.Exec(`select setval('variables_id_seq',(select max(id) from "variables"))`)
 }
 
+type CourseUploadReadmeJson struct {
+	ID     int    `json:"id"`
+	Number string `json:"number"`
+	Text   string `json:"text"`
+}
+
+type CourseUploadLogJson struct {
+	ID         int    `json:"id"`
+	User       int    `json:"user"`
+	Number     string `json:"number"`
+	CourseName string `json:"course_name"`
+	Type       string `json:"type"`
+	Name       string `json:"name"`
+	Msg        string `json:"msg"`
+	Finish     int    `json:"finish"`
+	UpdateTime string `json:"update_time"`
+}
+
+func MigrateCourseUpload() {
+	text, err := os.ReadFile(base_path + "course_upload_readme.json")
+	if err != nil {
+		panic(err)
+	}
+	var readme_json []CourseUploadReadmeJson
+	err = json.Unmarshal(text, &readme_json)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, readme := range readme_json {
+		database.DB.Exec(`INSERT INTO course_upload_readmes ("id", "created_at", "updated_at", "deleted_at", "course_number", "text")`+
+			`VALUES (?,?,?,?,?,?)`, readme.ID, time.Now(), time.Now(), nil, readme.Number, readme.Text)
+	}
+
+	database.DB.Exec(`select setval('course_upload_readmes_id_seq',(select max(id) from "course_upload_readmes"))`)
+
+	text, err = os.ReadFile(base_path + "course_upload_log.json")
+	if err != nil {
+		panic(err)
+	}
+	var log_json []CourseUploadLogJson
+	err = json.Unmarshal(text, &log_json)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, log := range log_json {
+		database.DB.Exec(`INSERT INTO course_upload_logs ("id", "created_at", "updated_at", "deleted_at", "uid", "course_number", "course_name", "type", "name", "msg", "finish")`+
+			`VALUES (?,?,?,?,?,?,?,?,?,?,?)`, log.ID, log.UpdateTime, log.UpdateTime, nil, log.User, log.Number, log.CourseName, log.Type, log.Name, log.Msg, log.Finish != 0)
+	}
+
+	database.DB.Exec(`select setval('course_upload_logs_id_seq',(select max(id) from "course_upload_logs"))`)
+}
+
 func Migrate() {
 	config.Init()
 	database.Init()
@@ -317,4 +371,5 @@ func Migrate() {
 	MigrateImage()
 	MigrateCourse()
 	MigrateVariable()
+	MigrateCourseUpload()
 }

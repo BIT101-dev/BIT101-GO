@@ -1,14 +1,14 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-05-16 11:30:23
+ * @LastEditTime: 2023-05-18 11:07:48
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
 
 `BIT101`的新后端，基于`GO`。
 
-[API文档](https://www.apifox.cn/apidoc/shared-cb9f2548-ee02-49ad-97ed-099ef5f9337e)
+[API文档](https://j1dds2ogfu.apifox.cn)
 
 如果其他同学有需要用到该项目，可以直接使用，但需要注明使用了该项目，另外还请注意开源协议。文档中的说明已经比较详尽了，如有问题欢迎提`issue`。
 
