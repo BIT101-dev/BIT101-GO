@@ -1,6 +1,6 @@
 port: 9000 #启动端口
 proxy: #代理请求
-  enable: true #是否开启代理
+  enable: false #是否开启代理
   url: https://service-h5igxl6r-1255944436.bj.apigw.tencentcs.com/release #代理服务链接
 key: "BIT101" #加密密钥
 verify_code_expire: 300 #验证码有效期 单位秒
