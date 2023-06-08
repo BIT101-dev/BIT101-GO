@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-15 18:24:54
- * @LastEditTime: 2023-03-18 12:00:24
+ * @LastEditTime: 2023-06-08 23:55:15
  * @Description: webvpn成绩模块
  */
 package webvpn
@@ -135,12 +135,12 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 
 func GetReport(cookie string) ([]string, error) {
 	// 预登录
-	_, err := preCheck("https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421fae042d225397c1e7b0c9ce29b5b/cjd/Account/ExternalLogin", cookie)
+	_, err := preCheck("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/Account/ExternalLogin", cookie)
 	if err != nil {
 		return nil, err
 	}
 	// 获取成绩单
-	res, err := request.Get("https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421fae042d225397c1e7b0c9ce29b5b/cjd/ScoreReport2/Index?GPA=1", map[string]string{"Cookie": cookie})
+	res, err := request.Get("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/ScoreReport2/Index?GPA=1", map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
 		return nil, errors.New("webvpn get report error")
 	}
