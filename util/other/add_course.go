@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 14:59:32
- * @LastEditTime: 2023-03-25 01:39:18
+ * @LastEditTime: 2023-06-09 16:56:30
  * @Description: _(:з」∠)_
  */
 package other
@@ -26,6 +26,7 @@ func AddCourse() {
 		"./data/course/2021-2022-1.csv",
 		"./data/course/2021-2022-2.csv",
 		"./data/course/2022-2023-1.csv",
+		"./data/course/2022-2023-2.csv",
 	}
 	for _, csv_path := range csv_paths {
 		addFromCsv(csv_path)
@@ -49,6 +50,7 @@ func addFromCsv(csv_path string) {
 			course[courses[0][ind]] = s
 		}
 
+		course["课程名"] = strings.ReplaceAll(course["课程名"], "/", "_")
 		name_list := strings.Split(course["上课教师"], ",")
 		number_list := strings.Split(course["教师号"], ",")
 		var db_courses []database.Course

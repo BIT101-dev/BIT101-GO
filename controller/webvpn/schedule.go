@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-29 16:24:34
- * @LastEditTime: 2023-03-29 20:20:32
+ * @LastEditTime: 2023-08-19 11:59:47
  * @Description: _(:з」∠)_
  */
 package webvpn
@@ -39,7 +39,7 @@ type GetScheduleResponse struct {
 }
 
 func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
-	base_url := "https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421faef5b842238695c720999bcd6572a216b231105adc27d"
+	base_url := "https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421faef5b842238695c720999bcd6572a216b231105adc27d"
 	res, err := request.Get(base_url+"/jwapp/sys/funauthapp/api/getAppConfig/wdkbby-5959167891382285.do", map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
 		return GetScheduleResponse{}, errors.New("get schedule init error")
