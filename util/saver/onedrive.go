@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 17:28:04
- * @LastEditTime: 2023-03-23 20:54:19
+ * @LastEditTime: 2023-06-20 16:21:05
  * @Description: _(:з」∠)_
  */
 package saver
@@ -70,7 +70,7 @@ func OneDriveGetPath(path string, op string) string {
 	if op[0] == '/' {
 		op = op[1:]
 	}
-	return fmt.Sprintf("%v/root:/BIT102/%v:/%v", config.Config.Saver.OneDrive.Api, path, op)
+	return fmt.Sprintf("%v/root:/BIT101/%v:/%v", config.Config.Saver.OneDrive.Api, path, op)
 }
 
 // 获取OneDrive上传链接
