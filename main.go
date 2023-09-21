@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-05-16 12:16:14
+ * @LastEditTime: 2023-09-21 16:32:27
  * @Description: _(:з」∠)_
  */
 package main
@@ -10,7 +10,10 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/other"
+	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -18,7 +21,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
+var LOGO = `
+                                                              
+ ________   ___   _________    _____   ________     _____     
+|\   __  \ |\  \ |\___   ___\ / __  \ |\   __  \   / __  \    
+\ \  \|\ /_\ \  \\|___ \  \_||\/_|\  \\ \  \|\  \ |\/_|\  \   
+ \ \   __  \\ \  \    \ \  \ \|/ \ \  \\ \  \\\  \\|/ \ \  \  
+  \ \  \|\  \\ \  \    \ \  \     \ \  \\ \  \\\  \    \ \  \ 
+   \ \_______\\ \__\    \ \__\     \ \__\\ \_______\    \ \__\
+    \|_______| \|__|     \|__|      \|__| \|_______|     \|__|
+ ________   ________                                          
+|\   ____\ |\   __  \                                         
+\ \  \___| \ \  \|\  \                                        
+ \ \  \  ___\ \  \\\  \                                       
+  \ \  \|\  \\ \  \\\  \                                      
+   \ \_______\\ \_______\                                     
+    \|_______| \|_______|                                     
+                                                              
+`
+
+// 服务，启动！
+func runServer() {
 	config.Init()
 	database.Init()
 	if config.Config.ReleaseMode {
@@ -40,4 +63,33 @@ func main() {
 	router.SetRouter(app)
 	fmt.Println("BIT101-GO will run on port " + config.Config.Port)
 	app.Run(":" + config.Config.Port)
+}
+
+func main() {
+	flag.Usage = func() {
+		fmt.Println(LOGO)
+		fmt.Printf("Usage: %s [mode]\n", os.Args[0])
+		fmt.Println("mode:")
+		fmt.Println("\tserver\t\tRun server")
+		fmt.Println("\timport_course [path]\t\tImport course data from path/*.csv (default path: ./data/course/)")
+
+	}
+
+	flag.Parse()
+	args := flag.Args()
+	if len(args) == 0 {
+		args = append(args, "server")
+	}
+
+	switch args[0] {
+	case "server": // 启动服务
+		runServer()
+	case "import_course": // 导入课程
+		if len(args) <= 1 {
+			args = append(args, "./data/course/")
+		}
+		other.ImportCourse(args[1])
+	default:
+		flag.Usage()
+	}
 }

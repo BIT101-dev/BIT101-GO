@@ -1,12 +1,15 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-05-16 11:31:35
+ * @LastEditTime: 2023-09-21 16:46:08
  * @Description: _(:з」∠)_
  */
 package config
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/jinzhu/configor"
 )
 
@@ -60,6 +63,12 @@ var Config = struct {
 }{}
 
 func Init() {
-	configor.Load(&Config, "config.yml")
+	path := "config.yml"
+	_, err := os.Stat(path)
+	if err != nil {
+		fmt.Println("config.yml not found, please copy config_example.yml to config.yml and edit it")
+		os.Exit(1)
+	}
+	configor.Load(&Config, path)
 	// fmt.Printf("config: %#v", Config)
 }
