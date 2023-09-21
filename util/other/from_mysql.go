@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-24 00:32:23
- * @LastEditTime: 2023-05-25 18:01:58
+ * @LastEditTime: 2023-09-21 16:12:37
  * @Description: _(:з」∠)_
  */
 package other
@@ -263,7 +263,7 @@ type CourseJson struct {
 }
 
 func MigrateCourse() {
-	AddCourse()
+	ImportCourse("./data/course/")
 
 	text, err := os.ReadFile(base_path + "course.json")
 	if err != nil {

@@ -1,14 +1,14 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-05-18 11:07:48
+ * @LastEditTime: 2023-09-21 16:48:35
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
 
 `BIT101`的新后端，基于`GO`。
 
-[API文档](https://j1dds2ogfu.apifox.cn)
+[API文档](https://bit101-api.apifox.cn)
 
 如果其他同学有需要用到该项目，可以直接使用，但需要注明使用了该项目，另外还请注意开源协议。文档中的说明已经比较详尽了，如有问题欢迎提`issue`。
 
@@ -24,7 +24,7 @@
 * 安装`PostgreSQL`并配置
 * 安装`GO`并配置
 * 执行`go build -o main main.go`以编译
-* 配置`config.yaml`
+* 复制`config_example.yaml`为`config.yaml`并配置
 
 ### 数据库配置
 
