@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-09-23 23:37:08
+ * @LastEditTime: 2023-09-24 00:16:19
  * @Description: _(:з」∠)_
  */
 package database
@@ -116,11 +116,11 @@ type Teacher struct {
 // 课程历史
 type CourseHistory struct {
 	Base
-	Number    string  `gorm:"not null;index" json:"number"` //课程号
-	Term      string  `gorm:"not null;index" json:"term"`   //学期
-	AvgScore  float64 `gorm:"default:0" json:"avg_score"`   //均分
-	MaxScore  float64 `gorm:"default:0" json:"max_score"`   //最高分
-	PeopleNum uint    `gorm:"default:0" json:"people_num"`  //学习人数
+	Number     string  `gorm:"not null;index" json:"number"` //课程号
+	Term       string  `gorm:"not null;index" json:"term"`   //学期
+	AvgScore   float64 `gorm:"default:0" json:"avg_score"`   //均分
+	MaxScore   float64 `gorm:"default:0" json:"max_score"`   //最高分
+	StudentNum uint    `gorm:"default:0" json:"student_num"` //学习人数
 }
 
 // 课程资料上传记录
