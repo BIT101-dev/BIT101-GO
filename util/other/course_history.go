@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-09-23 20:14:40
- * @LastEditTime: 2023-09-23 23:41:58
+ * @LastEditTime: 2023-09-24 02:21:04
  * @Description: 获取历史均分_(:з」∠)_
  */
 package other
@@ -43,7 +43,7 @@ func GetCourseHistory(start_year_s string, end_year_s string, webvpn_cookie stri
 			fmt.Println("正在获取", term, "学期的课程历史")
 			// 初始化当前已有的课程历史
 			var db_histories []database.CourseHistory
-			database.DB.Find(&db_histories)
+			database.DB.Where("term = ?", term).Find(&db_histories)
 			hisotry_exist := make(map[string]bool)
 			for _, db_history := range db_histories {
 				hisotry_exist[db_history.Number+" "+db_history.Term] = true
@@ -85,15 +85,15 @@ func getCourseHistoryItem(course_number string, term string, webvpn_cookie strin
 	max_score, err2 := strconv.ParseFloat(mp["最高分"], 64)
 	re := regexp.MustCompile(`(\d+)`)
 	match := re.FindStringSubmatch(mp["学习人数"])
-	people_num, err3 := strconv.ParseUint(match[1], 10, 64)
-	if err1 != nil || err2 != nil || err3 != nil || people_num == 0 {
+	student_num, err3 := strconv.ParseUint(match[1], 10, 64)
+	if err1 != nil || err2 != nil || err3 != nil || student_num == 0 {
 		return nil, errors.New("invalid score")
 	}
 	return &database.CourseHistory{
-		Number:    course_number,
-		Term:      term,
-		AvgScore:  avg_score,
-		MaxScore:  max_score,
-		PeopleNum: uint(people_num),
+		Number:     course_number,
+		Term:       term,
+		AvgScore:   avg_score,
+		MaxScore:   max_score,
+		StudentNum: uint(student_num),
 	}, nil
 }

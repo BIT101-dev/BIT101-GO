@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-05-17 16:54:23
+ * @LastEditTime: 2023-09-24 02:35:36
  * @Description: _(:з」∠)_
  */
 package controller
@@ -348,4 +348,31 @@ func CourseSchedule(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"url": url, "note": fmt.Sprintf("一共添加了%v学期的%v节课，合计坐牢时间%v小时（雾", schedule.Term, class_ct, float64(time_ct)/60), "msg": "获取成功OvO"})
+}
+
+// 获取课程历史返回结构
+type CourseHistoryResponseItem struct {
+	Term       string  `json:"term"`        //学期
+	AvgScore   float64 `json:"avg_score"`   //均分
+	MaxScore   float64 `json:"max_score"`   //最高分
+	StudentNum uint    `json:"student_num"` //学习人数
+}
+
+// 获取课程历史
+func CourseHistory(c *gin.Context) {
+	var histories []database.CourseHistory
+	if err := database.DB.Where("number = ?", c.Param("number")).Find(&histories).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
+	history_response := make([]CourseHistoryResponseItem, 0)
+	for _, history := range histories {
+		history_response = append(history_response, CourseHistoryResponseItem{
+			Term:       history.Term,
+			AvgScore:   history.AvgScore,
+			MaxScore:   history.MaxScore,
+			StudentNum: history.StudentNum,
+		})
+	}
+	c.JSON(200, history_response)
 }
