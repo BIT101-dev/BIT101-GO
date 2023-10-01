@@ -48,7 +48,7 @@ func runServer() {
 
 	//search
 	search.Init()
-	search.Test()
+	//search.Test()
 
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
