@@ -60,6 +60,7 @@ var Config = struct {
 	MessagePageSize    uint   `yaml:"message_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
+	SearchApiKey       string `yaml:"search_api_key"`
 }{}
 
 func Init() {
