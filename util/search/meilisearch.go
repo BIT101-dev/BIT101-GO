@@ -177,6 +177,7 @@ func Init() {
 		Host:   "http://localhost:7700",
 		APIKey: config.Config.SearchApiKey,
 	})
+	// TODO 待确定
 	if _, err := client.GetIndex("course"); err == nil {
 		client.DeleteIndex("course")
 	}
