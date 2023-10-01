@@ -11,6 +11,7 @@ import (
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/other"
+	"BIT101-GO/util/search"
 	"flag"
 	"fmt"
 	"os"
@@ -44,6 +45,11 @@ var LOGO = `
 func runServer() {
 	config.Init()
 	database.Init()
+
+	//search
+	search.Init()
+	search.Test()
+
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
 	}

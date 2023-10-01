@@ -8,10 +8,11 @@ package controller
 
 import (
 	"BIT101-GO/database"
-	"BIT101-GO/util/config"
 	"BIT101-GO/util/nlp"
+	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -101,6 +102,10 @@ func PaperPost(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
+	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "发表成功OvO", "id": paper.ID})
 }
 
@@ -168,6 +173,10 @@ func PaperPut(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
+	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
 
@@ -208,27 +217,22 @@ func PaperList(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	var papers []database.Paper
-	q := database.DB.Model(&database.Paper{}).Select("id,title,intro,edit_at,like_num,comment_num")
-	// 搜索
-	if query.Search != "" {
-		// q = q.Where("title LIKE ?", "%"+query.Search+"%").Or("intro LIKE ?", "%"+query.Search+"%").Or("content LIKE ?", "%"+query.Search+"%")
-		query := nlp.CutForSearch(query.Search)
-		q = q.Scopes(database.SearchText(query))
-	}
+
 	// 排序
-	if query.Order == "rand" {
-		q = q.Order("random()")
-	} else if query.Order == "like" {
-		q = q.Order("like_num DESC")
-	} else { //默认new
-		q = q.Order("updated_at DESC")
+	var order []string
+	if query.Order != "rand" {
+		if query.Order == "like" {
+			order = append(order, "like_num:desc")
+		} else { //默认new
+			order = append(order, "update_time:desc")
+		}
 	}
-	// 分页
-	page_size := int(config.Config.PaperPageSize)
-	q = q.Offset(query.Page * page_size).Limit(page_size)
-	if err := q.Find(&papers).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+
+	fmt.Println("PaperList search:", query.Search, "order:", order, "page:", query.Page)
+	var papers []database.Paper
+	err := search.Search(&papers, "paper", query.Search, order, int64(query.Page))
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
 	}
 	res := make([]PaperListResponseItem, 0)
@@ -242,7 +246,6 @@ func PaperList(c *gin.Context) {
 			UpdateTime: paper.EditAt,
 		})
 	}
-
 	c.JSON(200, res)
 }
 
@@ -265,6 +268,10 @@ func PaperDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
+	if err := search.Delete("paper", []string{strconv.Itoa(int(paper.ID))}); err != nil {
+		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
@@ -281,6 +288,9 @@ func PaperOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
+	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+		return 0, errors.New("search同步失败Orz")
+	}
 	return paper.LikeNum, nil
 }
 
@@ -296,6 +306,9 @@ func PaperOnComment(id string, delta int) (uint, error) {
 	paper.CommentNum = uint(int(paper.CommentNum) + delta)
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
+	}
+	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+		return 0, errors.New("search同步失败Orz")
 	}
 	return paper.CommentNum, nil
 }
