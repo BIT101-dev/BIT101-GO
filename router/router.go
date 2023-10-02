@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2023-05-16 02:10:19
+ * @LastEditTime: 2023-09-24 00:20:52
  * @Description: 路由配置
  */
 package router
@@ -67,6 +67,7 @@ func SetRouter(router *gin.Engine) {
 		course.GET("/upload/url", middleware.CheckLogin(true), controller.CourseUploadUrl)
 		course.POST("/upload/log", middleware.CheckLogin(true), controller.CourseUploadLog)
 		course.GET("/schedule", controller.CourseSchedule)
+		course.GET("/histories/:number", controller.CourseHistory)
 	}
 	// 变量模块
 	variable := router.Group("/variables")

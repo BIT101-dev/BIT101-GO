@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-15 18:24:54
- * @LastEditTime: 2023-06-08 23:55:15
+ * @LastEditTime: 2023-09-23 23:37:15
  * @Description: webvpn成绩模块
  */
 package webvpn
@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -191,4 +192,25 @@ func GetReport(cookie string) ([]string, error) {
 	}
 	cancel()
 	return imgs, nil
+}
+
+// 获取课程历史 接口同查询成绩详情
+func GetCourseHistory(course_number string, term string, cookie string) (map[string]string, error) {
+	course_history_url := fmt.Sprintf("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421fae04c8f69326144300d8db9d6562d/jsxsd/kscj/cjfx?kch=%s&xnxq01id=%s", course_number, term)
+	mp := make(map[string]string)
+	res, err := request.Get(course_history_url, map[string]string{"Cookie": cookie})
+	if err != nil || res.Code != 200 {
+		return nil, err
+	}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(res.Text))
+	if err != nil {
+		return nil, err
+	}
+	doc.Find("td").Each(func(i int, s *goquery.Selection) {
+		if strings.Contains(s.Text(), "：") {
+			arr := strings.Split(s.Text(), "：")
+			mp[arr[0]] = arr[1]
+		}
+	})
+	return mp, nil
 }

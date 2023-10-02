@@ -1,7 +1,7 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-09-21 16:48:35
+ * @LastEditTime: 2023-09-23 22:16:52
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
@@ -64,6 +64,12 @@ GRANT ALL PRIVILEGES ON DATABASE bit101 TO bit101;
 
 另外需要注意函数配置中几个参数的设置：超时时间、请求多并发等。
 
+## 使用方法
+
+假设编译后程序为`main`
+* 开启服务：`./main`或`./main server`
+* 导入课程表：`./main import_course [path]`，其中`path`为课程表`.csv`文件所在的目录，默认为`./data/course/`
+* 获取课程历史：`./main course_history [start_year] [end_year] [webvpn_cookie]`，现阶段测试最早的课程历史为`2005-2006`学年
 
 ## 性能测试
 

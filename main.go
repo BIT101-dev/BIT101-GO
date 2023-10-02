@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-09-21 16:32:27
+ * @LastEditTime: 2023-09-23 23:36:27
  * @Description: _(:з」∠)_
  */
 package main
@@ -78,7 +78,7 @@ func main() {
 		fmt.Println("mode:")
 		fmt.Println("\tserver\t\tRun server")
 		fmt.Println("\timport_course [path]\t\tImport course data from path/*.csv (default path: ./data/course/)")
-
+		fmt.Println("\thistory_score [start_year] [end_year] [webvpn_cookie]\t\tGet history score from term start_year-start_year+1 to end_year-1-end_year")
 	}
 
 	flag.Parse()
@@ -95,6 +95,12 @@ func main() {
 			args = append(args, "./data/course/")
 		}
 		other.ImportCourse(args[1])
+	case "history_score": // 获取历史均分
+		if len(args) <= 3 {
+			flag.Usage()
+			return
+		}
+		other.GetCourseHistory(args[1], args[2], args[3])
 	default:
 		flag.Usage()
 	}
