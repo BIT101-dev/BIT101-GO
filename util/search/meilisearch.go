@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/meilisearch/meilisearch-go"
-	"time"
 )
 
 var client *meilisearch.Client
@@ -90,54 +89,6 @@ func deleteDocumentFromMeiliSearch(client *meilisearch.Client, indexName string,
 	return nil
 }
 
-// SearchCourse 搜索course
-func SearchCourse(indexName string, query string, sort []string, page int64) ([]database.Course, error) {
-	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
-		Limit:  int64(config.Config.CoursePageSize),
-		Offset: page * int64(config.Config.CoursePageSize),
-		Sort:   sort,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var courses []database.Course
-	for _, hit := range response.Hits {
-		course := database.Course{}
-		courseJson, _ := json.Marshal(hit)
-		if err := json.Unmarshal(courseJson, &course); err != nil {
-			fmt.Println("解码JSON失败:", err)
-			return nil, err
-		}
-		courses = append(courses, course)
-	}
-	return courses, nil
-}
-
-// SearchPaper 搜索paper
-func SearchPaper(indexName string, query string, sort []string, page int64) ([]database.Paper, error) {
-	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
-		Limit:  int64(config.Config.PaperPageSize),
-		Offset: page * int64(config.Config.PaperPageSize),
-		Sort:   sort,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var papers []database.Paper
-	for _, hit := range response.Hits {
-		paper := database.Paper{}
-		paperJson, _ := json.Marshal(hit)
-		if err := json.Unmarshal(paperJson, &paper); err != nil {
-			fmt.Println("解码JSON失败:", err)
-			return nil, err
-		}
-		papers = append(papers, paper)
-	}
-	return papers, nil
-}
-
 // Search 搜索
 func Search(result interface{}, indexName string, query string, sort []string, page int64) error {
 	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
@@ -177,30 +128,23 @@ func Init() {
 		Host:   "http://localhost:7700",
 		APIKey: config.Config.SearchApiKey,
 	})
-	// TODO 待确定
-	if _, err := client.GetIndex("course"); err == nil {
-		client.DeleteIndex("course")
-	}
-	if _, err := client.GetIndex("paper"); err == nil {
-		client.DeleteIndex("paper")
-	}
-	client.CreateIndex(&meilisearch.IndexConfig{
+	// 创建index
+	info1, _ := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "course",
 		PrimaryKey: "id",
 	})
-	client.CreateIndex(&meilisearch.IndexConfig{
+	info2, _ := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "paper",
 		PrimaryKey: "id",
 	})
-	// TODO
-	time.Sleep(1 * time.Second)
+	client.WaitForTask(info1.TaskUID)
+	client.WaitForTask(info2.TaskUID)
 
+	// 设置sort
 	courseIndex, _ := client.GetIndex("course")
 	paperIndex, _ := client.GetIndex("paper")
-	// 设置sort
 	sortableAttributes := []string{"comment_num", "like_num", "rate", "update_time"}
 	courseIndex.UpdateSortableAttributes(&sortableAttributes)
-
 	sortableAttributes = []string{"like_num", "update_time"}
 	paperIndex.UpdateSortableAttributes(&sortableAttributes)
 
@@ -211,36 +155,5 @@ func Init() {
 
 // Test 测试
 func Test() {
-	var ids []string
-	ids = append(ids, "1300")
-	err := Delete("course", ids)
-	if err != nil {
-		panic(err)
-	}
 
-	var courses []database.Course
-	if err := Search(&courses, "course", "金旭亮", []string{}, 0); err != nil {
-		panic(err)
-	}
-	for _, course := range courses {
-		fmt.Println(course)
-	}
-
-	fmt.Println("new test--------------------------------")
-	add_course := courses[0]
-	add_course.ID = 1145140
-
-	update_course := courses[0]
-	update_course.Name = "面向百度技术与方法"
-
-	Update("course", []map[string]interface{}{
-		database.StructToMap(add_course),
-		database.StructToMap(update_course),
-	})
-	if err := Search(&courses, "course", "金旭亮", []string{}, 0); err != nil {
-		panic(err)
-	}
-	for _, course := range courses {
-		fmt.Println(course)
-	}
 }
