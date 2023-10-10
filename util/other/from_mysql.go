@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-24 00:32:23
- * @LastEditTime: 2023-09-21 16:12:37
+ * @LastEditTime: 2023-10-10 19:54:39
  * @Description: _(:з」∠)_
  */
 package other
@@ -9,14 +9,10 @@ package other
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
-	"BIT101-GO/util/nlp"
 	"encoding/json"
 	"os"
 	"sort"
-	"strings"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 var base_path = "./data/json/"
@@ -79,26 +75,12 @@ func MigratePaper() {
 	}
 
 	for _, paper := range paper_list {
-		text, err := nlp.ParseEditorJS(paper.Data)
-		if err != nil {
-			panic(err)
-		}
-
-		t := database.Tsvector{
-			B: nlp.CutForSearch(paper.Title),
-			C: nlp.CutForSearch(paper.Intro),
-			D: nlp.CutForSearch(text),
-		}
-		tsv := gorm.Expr(
-			`setweight(to_tsvector('simple',?),'A') || setweight(to_tsvector('simple',?),'B')  || setweight(to_tsvector('simple',?),'C') || setweight(to_tsvector('simple',?),'D')`,
-			strings.Join(t.A, " "), strings.Join(t.B, " "), strings.Join(t.C, " "), strings.Join(t.D, " "),
-		)
 		if paper.Show == 1 {
-			database.DB.Exec(`INSERT INTO papers ("id", "created_at", "updated_at", "deleted_at", "title", "intro", "content", "create_uid", "update_uid", "anonymous", "like_num", "comment_num", "public_edit", "edit_at", "tsv")`+
-				`VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, paper.ID, paper.CreateTime, paper.UpdateTime, nil, paper.Title, paper.Intro, paper.Data, paper.Owner, paper.User, paper.Anonymous == 1, paper.LikeNum, paper.CommentNum, paper.Share == 1, paper.UpdateTime, tsv)
+			database.DB.Exec(`INSERT INTO papers ("id", "created_at", "updated_at", "deleted_at", "title", "intro", "content", "create_uid", "update_uid", "anonymous", "like_num", "comment_num", "public_edit", "edit_at")`+
+				`VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, paper.ID, paper.CreateTime, paper.UpdateTime, nil, paper.Title, paper.Intro, paper.Data, paper.Owner, paper.User, paper.Anonymous == 1, paper.LikeNum, paper.CommentNum, paper.Share == 1, paper.UpdateTime)
 		} else {
-			database.DB.Exec(`INSERT INTO papers ("id", "created_at", "updated_at", "deleted_at", "title", "intro", "content", "create_uid", "update_uid", "anonymous", "like_num", "comment_num", "public_edit", "edit_at", "tsv")`+
-				`VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, paper.ID, paper.CreateTime, paper.UpdateTime, paper.UpdateTime, paper.Title, paper.Intro, paper.Data, paper.Owner, paper.User, paper.Anonymous == 1, paper.LikeNum, paper.CommentNum, paper.Share == 1, paper.UpdateTime, tsv)
+			database.DB.Exec(`INSERT INTO papers ("id", "created_at", "updated_at", "deleted_at", "title", "intro", "content", "create_uid", "update_uid", "anonymous", "like_num", "comment_num", "public_edit", "edit_at")`+
+				`VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, paper.ID, paper.CreateTime, paper.UpdateTime, paper.UpdateTime, paper.Title, paper.Intro, paper.Data, paper.Owner, paper.User, paper.Anonymous == 1, paper.LikeNum, paper.CommentNum, paper.Share == 1, paper.UpdateTime)
 		}
 	}
 

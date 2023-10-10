@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-09-23 23:36:27
+ * @LastEditTime: 2023-10-10 14:28:07
  * @Description: _(:з」∠)_
  */
 package main
@@ -11,6 +11,7 @@ import (
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/other"
+	"BIT101-GO/util/search"
 	"flag"
 	"fmt"
 	"os"
@@ -44,6 +45,8 @@ var LOGO = `
 func runServer() {
 	config.Init()
 	database.Init()
+	search.Init()
+
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
 	}

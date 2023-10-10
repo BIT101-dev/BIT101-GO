@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 14:59:32
- * @LastEditTime: 2023-09-21 16:27:31
+ * @LastEditTime: 2023-10-10 19:55:03
  * @Description: _(:з」∠)_
  */
 package other
@@ -9,7 +9,6 @@ package other
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
-	"BIT101-GO/util/nlp"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -88,22 +87,12 @@ func importFromCsv(csv_path string) {
 		// 加入新课程
 		if new_flag {
 			teaches := getTeachers(name_list, number_list)
-			tsv := database.Tsvector{}
-			for _, teacher := range teaches {
-				tsv.D = append(tsv.D, nlp.CutAll(teacher.Name)...)
-				tsv.B = append(tsv.B, nlp.CutForSearch(teacher.Name)...)
-				tsv.A = append(tsv.A, teacher.Number)
-			}
-			tsv.D = append(tsv.D, nlp.CutAll(course["课程名"])...)
-			tsv.B = append(tsv.B, nlp.CutForSearch(course["课程名"])...)
-			tsv.A = append(tsv.A, course["课程号"])
 			db_course := database.Course{
 				Name:           course["课程名"],
 				Number:         course["课程号"],
 				TeachersName:   course["上课教师"],
 				TeachersNumber: course["教师号"],
 				Teachers:       teaches,
-				Tsv:            tsv,
 			}
 			database.DB.Create(&db_course)
 

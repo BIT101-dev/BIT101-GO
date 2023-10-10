@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-09-24 00:16:19
+ * @LastEditTime: 2023-10-10 19:53:47
  * @Description: _(:з」∠)_
  */
 package database
@@ -56,7 +56,6 @@ type Paper struct {
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
 	PublicEdit bool      `gorm:"default:true" json:"public_edit"` //是否共享编辑
 	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
-	Tsv        Tsvector  `gorm:"index:,type:gin" json:"tsv"`      //全文搜索
 }
 
 // 文章记录
@@ -103,7 +102,6 @@ type Course struct {
 	TeachersName   string    `gorm:"not null" json:"teachers_name"`             //教师名
 	TeachersNumber string    `gorm:"not null" json:"teachers_number"`           //教师号
 	Teachers       []Teacher `gorm:"many2many:course_teachers" json:"teachers"` //教师
-	Tsv            Tsvector  `gorm:"index:,type:gin" json:"tsv"`                //搜索
 }
 
 // 教师
