@@ -10,7 +10,6 @@ require (
 	github.com/jinzhu/configor v1.2.1
 	github.com/meilisearch/meilisearch-go v0.25.1
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
-	github.com/yanyiwu/gojieba v1.3.0
 	gorm.io/driver/postgres v1.5.0
 	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11
 )
