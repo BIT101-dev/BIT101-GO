@@ -38,4 +38,6 @@ course_page_size: 24 #每次加载课程数量
 message_page_size: 24
 main_url: https://bit101.cn
 release_mode: true #是否为部署模式 开启后不显示DEBUG信息
-search_api_key: BIT101
+meilisearch:
+  url: http://localhost:7700
+  master_key: BIT101

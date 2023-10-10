@@ -111,18 +111,26 @@ func Delete(indexName string, ids []string) error {
 // Init 初始化
 func Init() {
 	client = meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   "http://localhost:7700",
-		APIKey: config.Config.SearchApiKey,
+		Host:   config.Config.Meilisearch.Url,
+		APIKey: config.Config.Meilisearch.MasterKey,
 	})
 	// 创建index
-	courseInfo, _ := client.CreateIndex(&meilisearch.IndexConfig{
+	courseInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "course",
 		PrimaryKey: "id",
 	})
-	paperInfo, _ := client.CreateIndex(&meilisearch.IndexConfig{
+	if err != nil {
+		fmt.Println("[Search] CreateIndex failed:", err)
+		panic(err)
+	}
+	paperInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "paper",
 		PrimaryKey: "id",
 	})
+	if err != nil {
+		fmt.Println("[Search] CreateIndex failed:", err)
+		panic(err)
+	}
 	client.WaitForTask(courseInfo.TaskUID)
 	client.WaitForTask(paperInfo.TaskUID)
 

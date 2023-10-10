@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-09-21 16:46:08
+ * @LastEditTime: 2023-10-10 20:21:35
  * @Description: _(:з」∠)_
  */
 package config
@@ -60,7 +60,10 @@ var Config = struct {
 	MessagePageSize    uint   `yaml:"message_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
-	SearchApiKey       string `yaml:"search_api_key"`
+	Meilisearch        struct {
+		Url       string
+		MasterKey string `yaml:"master_key"`
+	}
 }{}
 
 func Init() {
