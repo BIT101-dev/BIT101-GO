@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-09-23 23:36:27
+ * @LastEditTime: 2023-10-10 14:28:07
  * @Description: _(:з」∠)_
  */
 package main
@@ -45,10 +45,7 @@ var LOGO = `
 func runServer() {
 	config.Init()
 	database.Init()
-
-	//search
 	search.Init()
-	//search.Test()
 
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)

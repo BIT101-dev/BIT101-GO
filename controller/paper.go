@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-05-17 16:54:54
+ * @LastEditTime: 2023-10-10 14:37:40
  * @Description: _(:з」∠)_
  */
 package controller
@@ -102,7 +102,7 @@ func PaperPost(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+	if err := search.Update("paper", paper); err != nil {
 		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
 		return
 	}
@@ -173,7 +173,7 @@ func PaperPut(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+	if err := search.Update("paper", paper); err != nil {
 		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
 		return
 	}
@@ -228,7 +228,6 @@ func PaperList(c *gin.Context) {
 		}
 	}
 
-	fmt.Println("PaperList search:", query.Search, "order:", order, "page:", query.Page)
 	var papers []database.Paper
 	err := search.Search(&papers, "paper", query.Search, order, int64(query.Page))
 	if err != nil {
@@ -288,7 +287,7 @@ func PaperOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+	if err := search.Update("paper", paper); err != nil {
 		return 0, errors.New("search同步失败Orz")
 	}
 	return paper.LikeNum, nil
@@ -307,7 +306,7 @@ func PaperOnComment(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", []map[string]interface{}{database.StructToMap(paper)}); err != nil {
+	if err := search.Update("paper", paper); err != nil {
 		return 0, errors.New("search同步失败Orz")
 	}
 	return paper.CommentNum, nil

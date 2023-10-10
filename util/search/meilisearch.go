@@ -5,6 +5,7 @@ import (
 	"BIT101-GO/util/config"
 	"encoding/json"
 	"fmt"
+
 	"github.com/meilisearch/meilisearch-go"
 )
 
@@ -18,18 +19,12 @@ func ImportCourse() {
 		panic(err)
 	}
 
-	var coursesData []map[string]interface{}
-	for _, course := range courses {
-		courseMap := database.StructToMap(course)
-		coursesData = append(coursesData, courseMap)
-	}
-
-	err := addDocumentToMeiliSearch(client, "course", coursesData)
+	err := addDocumentToMeiliSearch("course", courses)
 	if err != nil {
-		fmt.Println("Course导入失败")
+		fmt.Println("[Search] Course导入失败")
 		return
 	}
-	fmt.Println("Course导入完成")
+	fmt.Println("[Search] Course导入完成")
 }
 
 // ImportPaper 将Paper表中的数据导入到MeiliSearch中
@@ -40,51 +35,42 @@ func ImportPaper() {
 		panic(err)
 	}
 
-	var papersData []map[string]interface{}
-	for _, paper := range papers {
-		courseMap := database.StructToMap(paper)
-		papersData = append(papersData, courseMap)
-	}
-
-	err := addDocumentToMeiliSearch(client, "paper", papersData)
+	err := addDocumentToMeiliSearch("paper", papers)
 	if err != nil {
-		fmt.Println("Paper导入失败")
+		fmt.Println("[Search] Paper导入失败")
 		return
 	}
-	fmt.Println("Paper导入完成")
+	fmt.Println("[Search] Paper导入完成")
 }
 
 // addDocumentToMeiliSearch 将数据添加到MeiliSearch中
-func addDocumentToMeiliSearch(client *meilisearch.Client, indexName string, documents []map[string]interface{}) error {
-	if len(documents) == 0 {
-		return nil
-	}
+func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	index, err := client.GetIndex(indexName)
 	if err != nil {
-		fmt.Println("No such index:", err)
+		fmt.Println("[Search] No such index:", err)
 		return err
 	}
 	info, _ := index.AddDocuments(documents)
 	task, _ := client.WaitForTask(info.TaskUID)
-	fmt.Println("addDocument task_uid:", info.TaskUID, ",task_status:", task.Status)
-	if task.Status == "failed" {
-		return fmt.Errorf("task failed")
+	fmt.Println("[Search] Add documents to ", indexName, " task_uid:", info.TaskUID, ",task_status:", task.Status)
+	if task.Status != meilisearch.TaskStatusSucceeded {
+		return fmt.Errorf("[Search] task %d %s", info.TaskUID, task.Status)
 	}
 	return nil
 }
 
 // 将数据从MeiliSearch中删除
-func deleteDocumentFromMeiliSearch(client *meilisearch.Client, indexName string, ids []string) error {
+func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 	index, err := client.GetIndex(indexName)
 	if err != nil {
-		fmt.Println("No such index:", err)
+		fmt.Println("[Search] No such index:", err)
 		return err
 	}
 	info, _ := index.DeleteDocuments(ids)
 	task, _ := client.WaitForTask(info.TaskUID)
-	fmt.Println("deleteDocument task_uid:", info.TaskUID, ",task_status:", task.Status)
-	if task.Status == "failed" {
-		return fmt.Errorf("task failed")
+	fmt.Println("[Search] deleteDocument task_uid:", info.TaskUID, ",task_status:", task.Status)
+	if task.Status != meilisearch.TaskStatusSucceeded {
+		return fmt.Errorf("[Search] task %d %s", info.TaskUID, task.Status)
 	}
 	return nil
 }
@@ -106,20 +92,20 @@ func Search(result interface{}, indexName string, query string, sort []string, p
 
 	resultJSON, _ := json.Marshal(hits)
 	if err := json.Unmarshal(resultJSON, result); err != nil {
-		fmt.Println("解码JSON失败:", err)
+		fmt.Println("[Search] 解码JSON失败:", err)
 		return err
 	}
 	return nil
 }
 
 // Update 更新记录（add、update）
-func Update(indexName string, documents []map[string]interface{}) error {
-	return addDocumentToMeiliSearch(client, indexName, documents)
+func Update(indexName string, documents interface{}) error {
+	return addDocumentToMeiliSearch(indexName, documents)
 }
 
 // Delete 删除记录
 func Delete(indexName string, ids []string) error {
-	return deleteDocumentFromMeiliSearch(client, indexName, ids)
+	return deleteDocumentFromMeiliSearch(indexName, ids)
 }
 
 // Init 初始化
@@ -129,16 +115,16 @@ func Init() {
 		APIKey: config.Config.SearchApiKey,
 	})
 	// 创建index
-	info1, _ := client.CreateIndex(&meilisearch.IndexConfig{
+	courseInfo, _ := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "course",
 		PrimaryKey: "id",
 	})
-	info2, _ := client.CreateIndex(&meilisearch.IndexConfig{
+	paperInfo, _ := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        "paper",
 		PrimaryKey: "id",
 	})
-	client.WaitForTask(info1.TaskUID)
-	client.WaitForTask(info2.TaskUID)
+	client.WaitForTask(courseInfo.TaskUID)
+	client.WaitForTask(paperInfo.TaskUID)
 
 	// 设置sort
 	courseIndex, _ := client.GetIndex("course")
@@ -151,9 +137,4 @@ func Init() {
 	// 与pg数据库同步
 	ImportCourse()
 	ImportPaper()
-}
-
-// Test 测试
-func Test() {
-
 }
