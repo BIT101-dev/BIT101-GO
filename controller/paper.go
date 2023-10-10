@@ -1,14 +1,13 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-10-10 14:37:40
+ * @LastEditTime: 2023-10-10 19:53:39
  * @Description: _(:з」∠)_
  */
 package controller
 
 import (
 	"BIT101-GO/database"
-	"BIT101-GO/util/nlp"
 	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
@@ -73,18 +72,6 @@ func PaperPost(c *gin.Context) {
 		return
 	}
 
-	text, err := nlp.ParseEditorJS(query.Content)
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "解析文章出错Orz"})
-		return
-	}
-
-	tsv := database.Tsvector{
-		B: nlp.CutForSearch(query.Title),
-		C: nlp.CutForSearch(query.Intro),
-		D: nlp.CutForSearch(text),
-	}
-
 	var paper = database.Paper{
 		Title:      query.Title,
 		Intro:      query.Intro,
@@ -95,7 +82,6 @@ func PaperPost(c *gin.Context) {
 		PublicEdit: query.PublicEdit,
 		LikeNum:    0,
 		CommentNum: 0,
-		Tsv:        tsv,
 	}
 	if err := database.DB.Create(&paper).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
@@ -146,25 +132,12 @@ func PaperPut(c *gin.Context) {
 		return
 	}
 
-	text, err := nlp.ParseEditorJS(query.Content)
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "解析文章出错Orz"})
-		return
-	}
-
-	tsv := database.Tsvector{
-		B: nlp.CutForSearch(query.Title),
-		C: nlp.CutForSearch(query.Intro),
-		D: nlp.CutForSearch(text),
-	}
-
 	paper.Title = query.Title
 	paper.Intro = query.Intro
 	paper.Content = query.Content
 	paper.Anonymous = query.Anonymous
 	paper.UpdateUid = c.GetUint("uid_uint")
 	paper.EditAt = time.Now()
-	paper.Tsv = tsv
 	if paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin") {
 		paper.PublicEdit = query.PublicEdit
 	}
