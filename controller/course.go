@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-09-24 02:35:36
+ * @LastEditTime: 2023-10-10 14:38:13
  * @Description: _(:з」∠)_
  */
 package controller
@@ -50,7 +50,6 @@ func CourseList(c *gin.Context) {
 		}
 	}
 
-	fmt.Println("CourseList search:", query.Search, "order:", order, "page:", query.Page)
 	courses := make([]database.Course, 0)
 	err := search.Search(&courses, "course", query.Search, order, int64(query.Page))
 	if err != nil {
@@ -96,7 +95,7 @@ func CourseOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", []map[string]interface{}{database.StructToMap(course)}); err != nil {
+	if err := search.Update("course", course); err != nil {
 		return 0, errors.New("search同步失败Orz")
 	}
 	return course.LikeNum, nil
@@ -121,7 +120,7 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", []map[string]interface{}{database.StructToMap(course)}); err != nil {
+	if err := search.Update("course", course); err != nil {
 		return 0, errors.New("search同步失败Orz")
 	}
 	return course.CommentNum, nil
