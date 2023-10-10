@@ -1,7 +1,7 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-09-23 22:16:52
+ * @LastEditTime: 2023-10-10 20:40:43
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
@@ -21,7 +21,8 @@
 
 以`Ubuntu`为例。
 
-* 安装`PostgreSQL`并配置
+* 安装`PostgreSQL`并配置启动
+* 安装`Meilisearch`并配置启动
 * 安装`GO`并配置
 * 执行`go build -o main main.go`以编译
 * 复制`config_example.yaml`为`config.yaml`并配置
@@ -36,13 +37,23 @@ CREATE DATABASE bit101 OWNER bit101;
 GRANT ALL PRIVILEGES ON DATABASE bit101 TO bit101;
 ```
 
+### 搜索系统配置
+
+使用`Meilisearch`作为搜索系统。可前往[官网链接](https://www.meilisearch.com/)查看安装和实用教程。
+
+部署时运行：
+```shell
+meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
+```
+
+其中`master key`需要和`config.yml`中对应。
+
 ### 身份验证说明
 
 使用`JWT`作为身份验证的方式，这样服务器就不用缓存任何信息，只要验证数字签名就可以，数字签名的密钥在`config.yml`中配置，绝对不可以泄漏。登录成功时会下发一个`fake-cookie`，之后只需要每次请求携带`fake-cookie`头即可。
 
 ### 部署到 Serverless 以及代理请求
-
-⚠️由于用于分词的`gojieba`库调用了原生`C++`，编译部署会有各种各样的奇怪错误，故该功能暂不可用，之后会考虑单独开一个专供`Serverless`的分支。
+`serverless`的分支中为专供`Serverless`平台使用的精简版本，当前只用于成绩查询。
 
 `BIT101-GO`可以非常简单地部署到函数计算服务上，也可以按照路由将请求转发到另一个服务器上，实现反向代理。
 
@@ -116,12 +127,3 @@ Transfer rate:          6022.28 [Kbytes/sec] received
 一通测试猛如虎，结果非常 AMAZING 啊，老、新后端在该接口上的秒并发分别为`22.71`、`340.31`，提升了约**15倍**！！！（然而当前实际场景中服务器带宽反而成为瓶颈了）
 
 又测试了一个比较简单的接口（仅包含一个数据库查询），老、新后端秒并发分别为`708`、`955`，仍然一定的提升。
-
-
-## 全文搜索功能实现
-
-对于文章等内容有全文搜索的需求，但是如果直接使用数据库`LIKE %key%`查询的话效率实在太低，于是考虑使用全文索引。
-
-实现方式依赖`PostgreSQL`数据库，首先建立一个`tsvector`类型的字段，并且在这个字段上建立`gin`索引，然后将待搜索的文本进行分词，再将分词后的结果加入到这个字段中，之后搜索时使用`tsquery`即可。
-
-然而就结果来说，现在还不能很好的平衡相关性和一些其他参数（如点赞数）的排序，因为分词的原因，也可能会搜出很多不相关结果来。

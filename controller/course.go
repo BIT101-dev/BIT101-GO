@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-09-24 02:35:36
+ * @LastEditTime: 2023-10-10 14:38:13
  * @Description: _(:з」∠)_
  */
 package controller
@@ -10,8 +10,8 @@ import (
 	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
-	"BIT101-GO/util/nlp"
 	"BIT101-GO/util/saver"
+	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
 	"time"
@@ -21,61 +21,51 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// 获取课程列表请求结构
+// CourseListQuery 获取课程列表请求结构
 type CourseListQuery struct {
 	Search string `form:"search"`
 	Order  string `form:"order"` //like | comment | rate | new
 	Page   int    `form:"page"`
 }
 
-// 获取课程列表
+// CourseList 获取课程列表
 func CourseList(c *gin.Context) {
 	var query CourseListQuery
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	var courses []database.Course
-	q := database.DB.Model(&database.Course{})
-	// 搜索
-	if query.Search != "" {
-		query_l := nlp.CutAll(query.Search)
-		query_l = append(query_l, nlp.CutForSearch(query.Search)...)
-		if query.Order == "search" {
-			q = q.Scopes(database.SearchText(query_l))
-		} else {
-			q = q.Scopes(database.FilterText(query_l))
-		}
-	}
+
 	// 排序
+	var order []string
 	if query.Order != "search" {
 		if query.Order == "comment" {
-			q = q.Order("comment_num DESC")
+			order = append(order, "comment_num:desc")
 		} else if query.Order == "like" {
-			q = q.Order("like_num DESC")
+			order = append(order, "like_num:desc")
 		} else if query.Order == "rate" {
-			q = q.Order("rate DESC")
+			order = append(order, "rate:desc")
 		} else { //默认new
-			q = q.Order("updated_at DESC")
+			order = append(order, "update_time:desc")
 		}
 	}
-	// 分页
-	page_size := int(config.Config.CoursePageSize)
-	q = q.Offset(query.Page * page_size).Limit(page_size)
-	if err := q.Find(&courses).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+
+	courses := make([]database.Course, 0)
+	err := search.Search(&courses, "course", query.Search, order, int64(query.Page))
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
 	}
 	c.JSON(200, courses)
 }
 
-// 获取课程详情返回结构
+// CourseInfoResponse 获取课程详情返回结构
 type CourseInfoResponse struct {
 	database.Course
 	Like bool `json:"like"`
 }
 
-// 获取课程详情
+// CourseInfo 获取课程详情
 func CourseInfo(c *gin.Context) {
 	var course database.Course
 	if err := database.DB.Where("id = ?", c.Param("id")).Limit(1).Find(&course).Error; err != nil {
@@ -92,7 +82,7 @@ func CourseInfo(c *gin.Context) {
 	})
 }
 
-// 点赞
+// CourseOnLike 点赞
 func CourseOnLike(id string, delta int) (uint, error) {
 	var course database.Course
 	if err := database.DB.Limit(1).Find(&course, "id = ?", id).Error; err != nil {
@@ -105,10 +95,13 @@ func CourseOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
+	if err := search.Update("course", course); err != nil {
+		return 0, errors.New("search同步失败Orz")
+	}
 	return course.LikeNum, nil
 }
 
-// 评论
+// CourseOnComment 评论
 func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	var course database.Course
 	if err := database.DB.Limit(1).Find(&course, "id = ?", id).Error; err != nil {
@@ -127,17 +120,20 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
+	if err := search.Update("course", course); err != nil {
+		return 0, errors.New("search同步失败Orz")
+	}
 	return course.CommentNum, nil
 }
 
-// 获取课程资料上传链接请求结构
+// CourseUploadUrlQuery 获取课程资料上传链接请求结构
 type CourseUploadUrlQuery struct {
 	Number string `form:"number" binding:"required"` //课程编号
 	Name   string `form:"name" binding:"required"`   //文件名
 	Type   string `form:"type"`                      //资料类型 默认other
 }
 
-// 获取课程资料上传链接
+// CourseUploadUrl 获取课程资料上传链接
 func CourseUploadUrl(c *gin.Context) {
 	var query CourseUploadUrlQuery
 	query.Type = "other"
@@ -182,13 +178,13 @@ func CourseUploadUrl(c *gin.Context) {
 	c.JSON(200, gin.H{"url": url, "id": log.ID})
 }
 
-// 上报课程资料上传记录请求结构
+// CourseUploadLogQuery 上报课程资料上传记录请求结构
 type CourseUploadLogQuery struct {
 	ID  uint   `json:"id" binding:"required"` //上传记录ID
 	Msg string `json:"msg"`                   //上传备注
 }
 
-// 上报课程资料上传记录
+// CourseUploadLog 上报课程资料上传记录
 func CourseUploadLog(c *gin.Context) {
 	var query CourseUploadLogQuery
 	if err := c.ShouldBind(&query); err != nil {
@@ -279,12 +275,12 @@ var time_table = [][][]int{
 	{{20, 10}, {20, 55}},
 }
 
-// 获取课程表请求结构
+// CourseScheduleQuery 获取课程表请求结构
 type CourseScheduleQuery struct {
 	Term string `form:"term"` // 学期
 }
 
-// 获取课程表
+// CourseSchedule 获取课程表
 func CourseSchedule(c *gin.Context) {
 	var query CourseScheduleQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
