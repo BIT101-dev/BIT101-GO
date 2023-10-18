@@ -37,7 +37,12 @@ type UserAPI struct {
 	Nickname   string    `json:"nickname"`
 	Avatar     string    `json:"avatar"`
 	Motto      string    `json:"motto"`
-	Level      int       `json:"level"`
+	Type       Type      `json:"type"`
+}
+
+type Type struct {
+	Text  string `json:"text"`
+	Color string `json:"color"`
 }
 
 // 获取用户信息
@@ -57,7 +62,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 				Nickname:   "匿名者",
 				Avatar:     GetImageUrl(""),
 				Motto:      "面对愚昧，匿名者自己也缄口不言。",
-				Level:      1,
+				Type:       Type{database.IdentityMap[1].Text, database.IdentityMap[1].Color},
 			}
 		} else {
 			uid_list = append(uid_list, uid)
@@ -73,7 +78,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 			Nickname:   user.Nickname,
 			Avatar:     GetImageUrl(user.Avatar),
 			Motto:      user.Motto,
-			Level:      user.Level,
+			Type:       Type{database.IdentityMap[user.Level].Text, database.IdentityMap[user.Level].Color},
 		}
 	}
 	return out
