@@ -11,36 +11,34 @@ import (
 
 var client *meilisearch.Client
 
-// ImportCourse 将Course表中的数据导入到MeiliSearch中
-func ImportCourse() {
-	var courses []database.Course
-	q := database.DB.Model(&database.Course{})
-	if err := q.Find(&courses).Error; err != nil {
+// createAndConfigureIndex 创建并配置索引
+func createAndConfigureIndex(uid, primaryKey string, sortableAttributes []string) {
+	index, err := client.CreateIndex(&meilisearch.IndexConfig{
+		Uid:        uid,
+		PrimaryKey: primaryKey,
+	})
+	if err != nil {
+		fmt.Println("[Search] CreateIndex failed:", err)
 		panic(err)
 	}
-
-	err := addDocumentToMeiliSearch("course", courses)
-	if err != nil {
-		fmt.Println("[Search] Course导入失败")
-		return
-	}
-	fmt.Println("[Search] Course导入完成")
+	client.WaitForTask(index.TaskUID)
+	indexToUpdate, _ := client.GetIndex(uid)
+	indexToUpdate.UpdateSortableAttributes(&sortableAttributes)
 }
 
-// ImportPaper 将Paper表中的数据导入到MeiliSearch中
-func ImportPaper() {
-	var papers []database.Paper
-	q := database.DB.Model(&database.Paper{})
-	if err := q.Find(&papers).Error; err != nil {
+// importData 导入数据库表到MeiliSearch
+func importData(indexName string, dataSlice interface{}) {
+	q := database.DB.Model(dataSlice)
+	if err := q.Find(dataSlice).Error; err != nil {
 		panic(err)
 	}
 
-	err := addDocumentToMeiliSearch("paper", papers)
+	err := addDocumentToMeiliSearch(indexName, dataSlice)
 	if err != nil {
-		fmt.Println("[Search] Paper导入失败")
+		fmt.Printf("[Search] %s导入失败\n", indexName)
 		return
 	}
-	fmt.Println("[Search] Paper导入完成")
+	fmt.Printf("[Search] %s导入完成\n", indexName)
 }
 
 // addDocumentToMeiliSearch 将数据添加到MeiliSearch中
@@ -59,7 +57,7 @@ func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	return nil
 }
 
-// 将数据从MeiliSearch中删除
+// deleteDocumentFromMeiliSearch 将数据从MeiliSearch中删除
 func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 	index, err := client.GetIndex(indexName)
 	if err != nil {
@@ -114,35 +112,16 @@ func Init() {
 		Host:   config.Config.Meilisearch.Url,
 		APIKey: config.Config.Meilisearch.MasterKey,
 	})
-	// 创建index
-	courseInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
-		Uid:        "course",
-		PrimaryKey: "id",
-	})
-	if err != nil {
-		fmt.Println("[Search] CreateIndex failed:", err)
-		panic(err)
-	}
-	paperInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
-		Uid:        "paper",
-		PrimaryKey: "id",
-	})
-	if err != nil {
-		fmt.Println("[Search] CreateIndex failed:", err)
-		panic(err)
-	}
-	client.WaitForTask(courseInfo.TaskUID)
-	client.WaitForTask(paperInfo.TaskUID)
+	sortableAttributesCourse := []string{"comment_num", "like_num", "rate", "update_time"}
+	sortableAttributesPaper := []string{"like_num", "update_time"}
+	sortableAttributesPost := []string{"like_num", "comment_num", "update_time"}
 
-	// 设置sort
-	courseIndex, _ := client.GetIndex("course")
-	paperIndex, _ := client.GetIndex("paper")
-	sortableAttributes := []string{"comment_num", "like_num", "rate", "update_time"}
-	courseIndex.UpdateSortableAttributes(&sortableAttributes)
-	sortableAttributes = []string{"like_num", "update_time"}
-	paperIndex.UpdateSortableAttributes(&sortableAttributes)
+	createAndConfigureIndex("course", "id", sortableAttributesCourse)
+	createAndConfigureIndex("paper", "id", sortableAttributesPaper)
+	createAndConfigureIndex("post", "id", sortableAttributesPost)
 
 	// 与pg数据库同步
-	ImportCourse()
-	ImportPaper()
+	importData("course", &[]database.Course{})
+	importData("paper", &[]database.Paper{})
+	importData("post", &[]database.Post{})
 }

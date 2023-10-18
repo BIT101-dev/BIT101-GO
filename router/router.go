@@ -42,6 +42,16 @@ func SetRouter(router *gin.Engine) {
 		upload.POST("/image", middleware.CheckLogin(true), controller.ImageUpload)
 		upload.POST("/image/url", middleware.CheckLogin(true), controller.ImageUploadByUrl)
 	}
+	// 帖子模块
+	post := router.Group("/posters")
+	{
+		post.GET("/:id", middleware.CheckLogin(false), controller.PostGet)
+		post.GET("", controller.PostList)
+		post.POST("", middleware.CheckLogin(true), controller.PostSubmit)
+		post.PUT("/:id", middleware.CheckLogin(true), controller.PostPut)
+		post.DELETE("/:id", middleware.CheckLogin(true), controller.PostDelete)
+		post.GET("/claims", controller.ClaimList)
+	}
 	// 文章模块
 	paper := router.Group("/papers")
 	{
