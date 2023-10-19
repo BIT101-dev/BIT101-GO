@@ -14,7 +14,9 @@ import (
 	"BIT101-GO/util/mail"
 	"encoding/base64"
 	"fmt"
+	"gorm.io/gorm"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -273,6 +275,15 @@ type UserGetInfoQuery struct {
 	Id string `form:"id"` // uid
 }
 
+// 获取用户信息返回结构
+type UserGetInfoResponse struct {
+	UserAPI      UserAPI `json:"user"`
+	FollowingNum int64   `json:"following_num"` // 关注数
+	FollowerNum  int64   `json:"follower_num"`  // 粉丝数
+	Following    bool    `json:"following"`     // 是否被我关注
+	Follower     bool    `json:"follower"`      // 是否关注我
+}
+
 // 获取用户信息
 func UserGetInfo(c *gin.Context) {
 	var query UserGetInfoQuery
@@ -280,13 +291,17 @@ func UserGetInfo(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-
 	// 匿名用户
 	if query.Id == "-1" {
-		c.JSON(200, GetUserAPI(-1))
+		c.JSON(200, UserGetInfoResponse{
+			GetUserAPI(-1),
+			0,
+			0,
+			false,
+			false,
+		})
 		return
 	}
-
 	var uid string
 	if query.Id == "" || query.Id == "0" {
 		// 获取自己的信息
@@ -298,20 +313,36 @@ func UserGetInfo(c *gin.Context) {
 	} else {
 		uid = query.Id
 	}
-
-	var user database.User
-	if err := database.DB.Limit(1).Find(&user, "id = ?", uid).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
-	}
-	if user.ID == 0 {
-		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
+	uid_uint, err := strconv.ParseUint(uid, 10, 32)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
 
-	user = CleanUser(user)
+	var following_num int64
+	var follower_num int64
+	following := false
+	follower := false
+	database.DB.Model(&database.Follow{}).Where("uid = ?", uid).Count(&following_num)
+	database.DB.Model(&database.Follow{}).Where("follow_uid = ?", uid).Count(&follower_num)
+	var follow database.Follow
+	var follow_ database.Follow
+	database.DB.Limit(1).Find(&follow, "uid = ? AND follow_uid = ?", c.GetString("uid"), uid)
+	if follow.ID != 0 {
+		following = true
+	}
+	database.DB.Limit(1).Find(&follow_, "uid = ? AND follow_uid = ?", uid, c.GetString("uid"))
+	if follow_.ID != 0 {
+		follower = true
+	}
 
-	c.JSON(200, user)
+	c.JSON(200, UserGetInfoResponse{
+		GetUserAPI(int(uid_uint)),
+		following_num,
+		follower_num,
+		following,
+		follower,
+	})
 }
 
 // 修改用户信息请求结构
@@ -372,4 +403,71 @@ func UserSetInfo(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"msg": "修改成功OvO"})
+}
+
+// 关注请求结构
+type ReactionFollowQuery struct {
+	Uid string `json:"uid" binding:"required"` // 操作对象
+}
+
+// 关注
+func ReactionFollow(c *gin.Context) {
+	var query ReactionFollowQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	follow_uid, err := strconv.ParseUint(query.Uid, 10, 32)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	var user database.User
+	database.DB.Unscoped().Where("id = ?", follow_uid).Limit(1).Find(&user)
+	if user.ID == 0 {
+		c.JSON(404, gin.H{"msg": "不存在此对象Orz"})
+		return
+	}
+
+	var follow database.Follow
+	database.DB.Unscoped().Where("uid = ?", c.GetString("uid")).Where("follow_uid = ?", query.Uid).Limit(1).Find(&follow)
+	if follow.ID == 0 { //新建
+		follow = database.Follow{
+			Uid:       c.GetUint("uid_uint"),
+			FollowUid: uint(follow_uid),
+		}
+		database.DB.Create(&follow)
+	} else if follow.DeletedAt.Valid { //取消删除
+		follow.DeletedAt = gorm.DeletedAt{}
+		database.DB.Unscoped().Save(&follow)
+	} else { //删除
+		database.DB.Delete(&follow)
+	}
+	if follow.DeletedAt.Valid {
+		c.JSON(200, gin.H{"msg": "取消关注成功OvO"})
+	} else {
+		c.JSON(200, gin.H{"msg": "关注成功OvO"})
+	}
+}
+
+// 获取关注列表
+func GetFollowList(c *gin.Context) {
+	var follow_list []database.Follow
+	database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
+	users := make([]UserAPI, 0, len(follow_list))
+	for _, follow := range follow_list {
+		users = append(users, GetUserAPI(int(follow.FollowUid)))
+	}
+	c.JSON(200, users)
+}
+
+// 获取粉丝列表
+func GetFansList(c *gin.Context) {
+	var follow_list []database.Follow
+	database.DB.Where("follow_uid = ?", c.GetString("uid")).Find(&follow_list)
+	users := make([]UserAPI, 0, len(follow_list))
+	for _, follow := range follow_list {
+		users = append(users, GetUserAPI(int(follow.Uid)))
+	}
+	c.JSON(200, users)
 }

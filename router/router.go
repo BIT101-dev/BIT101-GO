@@ -29,6 +29,9 @@ func SetRouter(router *gin.Engine) {
 		user.POST("/register", controller.UserRegister)
 		user.GET("/info", middleware.CheckLogin(false), controller.UserGetInfo)
 		user.PUT("/info", middleware.CheckLogin(true), controller.UserSetInfo)
+		user.POST("/follow", middleware.CheckLogin(true), controller.ReactionFollow)
+		user.GET("/followings", middleware.CheckLogin(true), controller.GetFollowList)
+		user.GET("/followers", middleware.CheckLogin(true), controller.GetFansList)
 	}
 	// 成绩模块
 	score := router.Group("/score")
@@ -45,8 +48,8 @@ func SetRouter(router *gin.Engine) {
 	// 帖子模块
 	post := router.Group("/posters")
 	{
-		post.GET("/:id", middleware.CheckLogin(false), controller.PostGet)
-		post.GET("", controller.PostList)
+		post.GET("/:id", middleware.CheckLogin(true), controller.PostGet)
+		post.GET("", middleware.CheckLogin(true), controller.PostList)
 		post.POST("", middleware.CheckLogin(true), controller.PostSubmit)
 		post.PUT("/:id", middleware.CheckLogin(true), controller.PostPut)
 		post.DELETE("/:id", middleware.CheckLogin(true), controller.PostDelete)

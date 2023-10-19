@@ -51,7 +51,7 @@ func CourseList(c *gin.Context) {
 	}
 
 	courses := make([]database.Course, 0)
-	err := search.Search(&courses, "course", query.Search, order, int64(query.Page))
+	err := search.Search(&courses, "course", query.Search, int64(query.Page), order, "")
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
