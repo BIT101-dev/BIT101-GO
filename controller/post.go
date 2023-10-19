@@ -154,10 +154,11 @@ func PostPut(c *gin.Context) {
 
 // PostListQuery 获取帖子列表
 type PostListQuery struct {
-	Search string `form:"search"`
-	Order  string `form:"order"` //recommend | new
+	Mode   string `form:"mode"` //recommend | search | follow | hot 默认为recommend
 	Page   int    `form:"page"`
-	Uid    uint   `form:"uid"`
+	Search string `form:"search"`
+	Order  string `form:"order"` //like | new 默认为new
+	Uid    int    `form:"uid"`
 }
 
 // PostListResponseItem 获取帖子列表返回结构
@@ -176,15 +177,41 @@ func PostList(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	// 排序
+	// recommend/hot模式
+	if query.Mode == "" || query.Mode == "recommend" {
+		c.JSON(500, gin.H{"msg": "暂时不支持Orz"})
+		return
+	} else if query.Mode == "hot" {
+		c.JSON(500, gin.H{"msg": "暂时不支持Orz"})
+		return
+	}
+	// follow/search模式
 	var order []string
-	if query.Order == "new" {
-		order = append(order, "update_time:desc")
-	} else { //默认recommend
-		order = append(order, "update_time:desc")
+	if query.Order == "like" {
+		order = append(order, "like_num:desc")
+	} else {
+		order = append(order, "edit_time:desc")
+	}
+	filter := ""
+	if query.Mode == "follow" {
+		var follow_list []database.Follow
+		database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
+		filter = "uid IN [ "
+		for _, follow := range follow_list {
+			filter += fmt.Sprintf("%v,", follow.FollowUid)
+		}
+		filter = filter[:len(filter)-1] + "]" + "AND (anonymous = false) AND (public = true)"
+	} else {
+		if query.Uid == 0 {
+			filter = "uid =" + c.GetString("uid")
+		} else if query.Uid != -1 {
+			filter = "uid =" + fmt.Sprintf("%v", query.Uid) + "AND (anonymous = false)  AND (public = true)"
+		} else {
+			filter = "public = true"
+		}
 	}
 	var posts []database.Post
-	err := search.Search(&posts, "post", query.Search, order, int64(query.Page))
+	err := search.Search(&posts, "post", query.Search, int64(query.Page), order, filter)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return

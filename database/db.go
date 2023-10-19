@@ -116,10 +116,17 @@ type Like struct {
 	Uid uint   `gorm:"not null;index" json:"uid"` //用户id
 }
 
+// 关注
+type Follow struct {
+	Base
+	Uid       uint `gorm:"not null;index" json:"uid"`        //用户id
+	FollowUid uint `gorm:"not null;index" json:"follow_uid"` //关注用户id
+}
+
 // 评论
 type Comment struct {
 	Base
-	Obj        string `gorm:"not null;index" json:"obj"`      //点赞对象
+	Obj        string `gorm:"not null;index" json:"obj"`      //评论对象
 	Uid        uint   `gorm:"not null;index" json:"uid"`      //用户id
 	Text       string `gorm:"not null" json:"text"`           //评论内容
 	Anonymous  bool   `gorm:"default:false" json:"anonymous"` //是否匿名
@@ -237,7 +244,7 @@ func Init() {
 	db.AutoMigrate(
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
-		&Tag{}, &Claim{}, &Post{}, &Identity{},
+		&Tag{}, &Claim{}, &Post{}, &Identity{}, &Follow{},
 	)
 	InitMaps()
 }

@@ -12,7 +12,7 @@ import (
 var client *meilisearch.Client
 
 // createAndConfigureIndex 创建并配置索引
-func createAndConfigureIndex(uid, primaryKey string, sortableAttributes []string) {
+func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
 	index, err := client.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        uid,
 		PrimaryKey: primaryKey,
@@ -23,7 +23,9 @@ func createAndConfigureIndex(uid, primaryKey string, sortableAttributes []string
 	}
 	client.WaitForTask(index.TaskUID)
 	indexToUpdate, _ := client.GetIndex(uid)
-	indexToUpdate.UpdateSortableAttributes(&sortableAttributes)
+	indexToUpdate.UpdateSortableAttributes(&sortAttr)
+	indexToUpdate.UpdateFilterableAttributes(&filterAttr)
+	indexToUpdate.UpdateSearchableAttributes(&searchAttr)
 }
 
 // importData 导入数据库表到MeiliSearch
@@ -74,11 +76,12 @@ func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 }
 
 // Search 搜索
-func Search(result interface{}, indexName string, query string, sort []string, page int64) error {
+func Search(result interface{}, indexName string, query string, page int64, sort []string, filter string) error {
 	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
 		Limit:  int64(config.Config.PaperPageSize),
 		Offset: page * int64(config.Config.PaperPageSize),
 		Sort:   sort,
+		Filter: filter,
 	})
 	if err != nil {
 		return err
@@ -112,13 +115,22 @@ func Init() {
 		Host:   config.Config.Meilisearch.Url,
 		APIKey: config.Config.Meilisearch.MasterKey,
 	})
-	sortableAttributesCourse := []string{"comment_num", "like_num", "rate", "update_time"}
-	sortableAttributesPaper := []string{"like_num", "update_time"}
-	sortableAttributesPost := []string{"like_num", "comment_num", "update_time"}
+	// 可排序参数
+	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}
+	sortAttrPaper := []string{"like_num", "update_time"}
+	sortAttrPost := []string{"like_num", "comment_num", "edit_time"}
+	// 可筛选参数
+	filterAttrCourse := []string{}
+	filterAttrPaper := []string{}
+	filterAttrPost := []string{"uid", "anonymous", "public"}
+	// 可搜索参数
+	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers"}
+	searchAttrPaper := []string{"id", "title", "intro", "content"}
+	searchAttrPost := []string{"title", "text", "tags"}
 
-	createAndConfigureIndex("course", "id", sortableAttributesCourse)
-	createAndConfigureIndex("paper", "id", sortableAttributesPaper)
-	createAndConfigureIndex("post", "id", sortableAttributesPost)
+	createAndConfigureIndex("course", "id", sortAttrCourse, filterAttrCourse, searchAttrCourse)
+	createAndConfigureIndex("paper", "id", sortAttrPaper, filterAttrPaper, searchAttrPaper)
+	createAndConfigureIndex("post", "id", sortAttrPost, filterAttrPost, searchAttrPost)
 
 	// 与pg数据库同步
 	importData("course", &[]database.Course{})
