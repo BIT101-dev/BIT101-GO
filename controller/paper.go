@@ -8,6 +8,7 @@ package controller
 
 import (
 	"BIT101-GO/database"
+	"BIT101-GO/util/config"
 	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
@@ -170,7 +171,7 @@ func pushHistory(paper *database.Paper) {
 type PaperListQuery struct {
 	Search string `form:"search"`
 	Order  string `form:"order"` //rand | new | like
-	Page   int    `form:"page"`
+	Page   uint   `form:"page"`
 }
 
 // 获取文章列表返回结构
@@ -202,7 +203,7 @@ func PaperList(c *gin.Context) {
 	}
 
 	var papers []database.Paper
-	err := search.Search(&papers, "paper", query.Search, int64(query.Page), order, "")
+	err := search.Search(&papers, "paper", query.Search, query.Page, config.Config.PaperPageSize, order, "")
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return

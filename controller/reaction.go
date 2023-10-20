@@ -80,6 +80,8 @@ func ReactionLike(c *gin.Context) {
 		like_num, err = CommentOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	case "course":
 		like_num, err = CourseOnLike(obj_id, delta)
+	case "post":
+		like_num, err = PostOnLike(obj_id, delta)
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -426,6 +428,8 @@ func ReactionCommentDelete(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, -1, 0, true, "", "")
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
+	case "post":
+		_, err = PostOnComment(obj_id, -1)
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})

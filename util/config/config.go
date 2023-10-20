@@ -58,6 +58,7 @@ var Config = struct {
 	CommentPreviewSize uint   `yaml:"comment_preview_size"`
 	CoursePageSize     uint   `yaml:"course_page_size"`
 	MessagePageSize    uint   `yaml:"message_page_size"`
+	PostPageSize       uint   `yaml:"post_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
 	Meilisearch        struct {

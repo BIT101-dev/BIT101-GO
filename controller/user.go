@@ -10,6 +10,7 @@ import (
 	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/gorse"
 	"BIT101-GO/util/jwt"
 	"BIT101-GO/util/mail"
 	"encoding/base64"
@@ -270,12 +271,7 @@ func UserRegister(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
 }
 
-// 获取用户信息请求结构
-type UserGetInfoQuery struct {
-	Id string `form:"id"` // uid
-}
-
-// 获取用户信息返回结构
+// UserGetInfoResponse 获取用户信息返回结构
 type UserGetInfoResponse struct {
 	UserAPI      UserAPI `json:"user"`
 	FollowingNum int64   `json:"following_num"` // 关注数
@@ -284,15 +280,10 @@ type UserGetInfoResponse struct {
 	Follower     bool    `json:"follower"`      // 是否关注我
 }
 
-// 获取用户信息
+// UserGetInfo 获取用户信息
 func UserGetInfo(c *gin.Context) {
-	var query UserGetInfoQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-	// 匿名用户
-	if query.Id == "-1" {
+	id_str := c.Param("id")
+	if id_str == "-1" {
 		c.JSON(200, UserGetInfoResponse{
 			GetUserAPI(-1),
 			0,
@@ -302,21 +293,27 @@ func UserGetInfo(c *gin.Context) {
 		})
 		return
 	}
-	var uid string
-	if query.Id == "" || query.Id == "0" {
+	var uid uint
+	if id_str == "" || id_str == "0" {
 		// 获取自己的信息
-		uid = c.GetString("uid")
-		if uid == "" {
+		uid = c.GetUint("uid_uint")
+		if uid == 0 {
 			c.JSON(401, gin.H{"msg": "请先登录awa"})
 			return
 		}
 	} else {
-		uid = query.Id
-	}
-	uid_uint, err := strconv.ParseUint(uid, 10, 32)
-	if err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
+		uid_, err := strconv.ParseUint(id_str, 10, 32)
+		if err != nil {
+			c.JSON(400, gin.H{"msg": "参数错误awa"})
+			return
+		}
+		var user database.User
+		database.DB.Limit(1).Find(&user, "id = ?", uid_)
+		if user.ID == 0 {
+			c.JSON(404, gin.H{"msg": "用户不存在Orz"})
+			return
+		}
+		uid = uint(uid_)
 	}
 
 	var following_num int64
@@ -337,12 +334,58 @@ func UserGetInfo(c *gin.Context) {
 	}
 
 	c.JSON(200, UserGetInfoResponse{
-		GetUserAPI(int(uid_uint)),
+		GetUserAPI(int(uid)),
 		following_num,
 		follower_num,
 		following,
 		follower,
 	})
+}
+
+// OldUserGetInfoQuery 获取用户信息请求结构
+type OldUserGetInfoQuery struct {
+	Id string `form:"id"` // uid
+}
+
+// Deprecated: OldUserGetInfo 获取用户信息(旧)
+func OldUserGetInfo(c *gin.Context) {
+	var query OldUserGetInfoQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
+	// 匿名用户
+	if query.Id == "-1" {
+		c.JSON(200, GetUserAPI(-1))
+		return
+	}
+
+	var uid string
+	if query.Id == "" || query.Id == "0" {
+		// 获取自己的信息
+		uid = c.GetString("uid")
+		if uid == "" {
+			c.JSON(401, gin.H{"msg": "请先登录awa"})
+			return
+		}
+	} else {
+		uid = query.Id
+	}
+
+	var user database.User
+	if err := database.DB.Limit(1).Find(&user, "id = ?", uid).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
+	if user.ID == 0 {
+		c.JSON(500, gin.H{"msg": "用户不存在Orz"})
+		return
+	}
+
+	user = CleanUser(user)
+
+	c.JSON(200, user)
 }
 
 // 修改用户信息请求结构
@@ -402,22 +445,25 @@ func UserSetInfo(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
+	if user.Nickname != "" {
+		if err := gorse.UpdateUser(user); err != nil {
+			c.JSON(500, gin.H{"msg": "gorse更新user失败Orz"})
+			return
+		}
+	}
 	c.JSON(200, gin.H{"msg": "修改成功OvO"})
 }
 
-// 关注请求结构
-type ReactionFollowQuery struct {
-	Uid string `json:"uid" binding:"required"` // 操作对象
+// FollowPostResponse 关注请求返回结构
+type FollowPostResponse struct {
+	Following    bool  `json:"following"`
+	FollowingNum int64 `json:"following_num"`
 }
 
-// 关注
-func ReactionFollow(c *gin.Context) {
-	var query ReactionFollowQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-	follow_uid, err := strconv.ParseUint(query.Uid, 10, 32)
+// FollowPost 关注
+func FollowPost(c *gin.Context) {
+	// 将字符串转换为uint
+	follow_uid, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -430,7 +476,8 @@ func ReactionFollow(c *gin.Context) {
 	}
 
 	var follow database.Follow
-	database.DB.Unscoped().Where("uid = ?", c.GetString("uid")).Where("follow_uid = ?", query.Uid).Limit(1).Find(&follow)
+	database.DB.Unscoped().Where("uid = ?", c.GetString("uid")).
+		Where("follow_uid = ?", c.Param("id")).Limit(1).Find(&follow)
 	if follow.ID == 0 { //新建
 		follow = database.Follow{
 			Uid:       c.GetUint("uid_uint"),
@@ -443,15 +490,23 @@ func ReactionFollow(c *gin.Context) {
 	} else { //删除
 		database.DB.Delete(&follow)
 	}
+	var followingNum int64
+	database.DB.Model(&database.Follow{}).Where("uid = ?", c.GetString("uid")).Count(&followingNum)
 	if follow.DeletedAt.Valid {
-		c.JSON(200, gin.H{"msg": "取消关注成功OvO"})
+		c.JSON(200, FollowPostResponse{
+			false,
+			followingNum,
+		})
 	} else {
-		c.JSON(200, gin.H{"msg": "关注成功OvO"})
+		c.JSON(200, FollowPostResponse{
+			true,
+			followingNum,
+		})
 	}
 }
 
-// 获取关注列表
-func GetFollowList(c *gin.Context) {
+// FollowListGet 获取关注列表
+func FollowListGet(c *gin.Context) {
 	var follow_list []database.Follow
 	database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
@@ -461,8 +516,8 @@ func GetFollowList(c *gin.Context) {
 	c.JSON(200, users)
 }
 
-// 获取粉丝列表
-func GetFansList(c *gin.Context) {
+// FansListGet 获取粉丝列表
+func FansListGet(c *gin.Context) {
 	var follow_list []database.Follow
 	database.DB.Where("follow_uid = ?", c.GetString("uid")).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
