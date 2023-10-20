@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/zhenghaoz/gorse/client"
 	"strings"
 	"time"
 )
@@ -220,6 +221,9 @@ func PostList(c *gin.Context) {
 			c.JSON(500, gin.H{"msg": "获取推荐失败Orz"})
 			return
 		}
+		for i := range recommend {
+			println(recommend[i])
+		}
 		var posts []database.Post
 		database.DB.Find(&posts, "id IN ?", recommend)
 		c.JSON(200, buildPostListResponse(posts))
@@ -229,6 +233,9 @@ func PostList(c *gin.Context) {
 		if err != nil {
 			c.JSON(500, gin.H{"msg": "获取热榜失败Orz"})
 			return
+		}
+		for i := range popular {
+			println(popular[i])
 		}
 		var posts []database.Post
 		database.DB.Find(&posts, "id IN ?", popular)
@@ -294,6 +301,10 @@ func PostDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
 		return
 	}
+	if err := gorse.DeletePost(c.Param("id")); err != nil {
+		c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
+		return
+	}
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
@@ -328,7 +339,7 @@ func updateTagHot(oldTags []string, newTags []string) {
 }
 
 // PostOnLike 点赞
-func PostOnLike(id string, delta int) (uint, error) {
+func PostOnLike(id string, delta int, uid string) (uint, error) {
 	var post database.Post
 	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
@@ -340,17 +351,29 @@ func PostOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&post).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
+
+	var err error
+	if delta > 0 {
+		err = gorse.InsertFeedback(client.Feedback{
+			FeedbackType: "like",
+			UserId:       uid,
+			ItemId:       id,
+			Timestamp:    time.Now().String(),
+		})
+	} else {
+		err = gorse.DeleteFeedback("like", uid, id)
+	}
+	if err != nil {
+		return 0, errors.New("gorse同步失败Orz")
+	}
 	if err := search.Update("post", post); err != nil {
 		return 0, errors.New("search同步失败Orz")
-	}
-	if err := gorse.UpdatePost(post); err != nil {
-		return 0, errors.New("gorse同步失败Orz")
 	}
 	return post.LikeNum, nil
 }
 
 // PostOnComment 评论
-func PostOnComment(id string, delta int) (uint, error) {
+func PostOnComment(id string, delta int, uid string) (uint, error) {
 	var post database.Post
 	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
@@ -362,11 +385,23 @@ func PostOnComment(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&post).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
+
+	var err error
+	if delta > 0 {
+		err = gorse.InsertFeedback(client.Feedback{
+			FeedbackType: "comment",
+			UserId:       uid,
+			ItemId:       id,
+			Timestamp:    time.Now().String(),
+		})
+	} else {
+		err = gorse.DeleteFeedback("comment", uid, id)
+	}
+	if err != nil {
+		return 0, errors.New("gorse同步失败Orz")
+	}
 	if err := search.Update("post", post); err != nil {
 		return 0, errors.New("search同步失败Orz")
-	}
-	if err := gorse.UpdatePost(post); err != nil {
-		return 0, errors.New("gorse同步失败Orz")
 	}
 	return post.CommentNum, nil
 }

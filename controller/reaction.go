@@ -19,14 +19,17 @@ import (
 
 // 获取对象的类型和对象的ID
 func getTypeID(obj string) (string, string) {
+	if obj[:4] == "post" {
+		return "post", obj[4:]
+	}
 	if obj[:5] == "paper" {
 		return "paper", obj[5:]
 	}
-	if obj[:7] == "comment" {
-		return "comment", obj[7:]
-	}
 	if obj[:6] == "course" {
 		return "course", obj[6:]
+	}
+	if obj[:7] == "comment" {
+		return "comment", obj[7:]
 	}
 	return "", ""
 }
@@ -81,7 +84,7 @@ func ReactionLike(c *gin.Context) {
 	case "course":
 		like_num, err = CourseOnLike(obj_id, delta)
 	case "post":
-		like_num, err = PostOnLike(obj_id, delta)
+		like_num, err = PostOnLike(obj_id, delta, c.GetString("uid"))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -279,6 +282,8 @@ func ReactionComment(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
 	case "course":
 		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
+	case "post":
+		_, err = PostOnComment(obj_id, 1, c.GetString("uid"))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -429,7 +434,7 @@ func ReactionCommentDelete(c *gin.Context) {
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
 	case "post":
-		_, err = PostOnComment(obj_id, -1)
+		_, err = PostOnComment(obj_id, -1, c.GetString("uid"))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
