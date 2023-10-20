@@ -76,10 +76,10 @@ func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 }
 
 // Search 搜索
-func Search(result interface{}, indexName string, query string, page int64, sort []string, filter string) error {
+func Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter string) error {
 	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
-		Limit:  int64(config.Config.PaperPageSize),
-		Offset: page * int64(config.Config.PaperPageSize),
+		Limit:  int64(limit),
+		Offset: int64(page * limit),
 		Sort:   sort,
 		Filter: filter,
 	})

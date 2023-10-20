@@ -10,6 +10,7 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/gorse"
 	"BIT101-GO/util/other"
 	"BIT101-GO/util/search"
 	"flag"
@@ -46,6 +47,7 @@ func runServer() {
 	config.Init()
 	database.Init()
 	search.Init()
+	gorse.Init()
 
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)

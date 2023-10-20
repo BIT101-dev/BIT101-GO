@@ -27,11 +27,12 @@ func SetRouter(router *gin.Engine) {
 		user.POST("/webvpn_verify", controller.UserWebvpnVerify)
 		user.POST("/mail_verify", controller.UserMailVerify)
 		user.POST("/register", controller.UserRegister)
-		user.GET("/info", middleware.CheckLogin(false), controller.UserGetInfo)
+		user.GET("/info", middleware.CheckLogin(false), controller.OldUserGetInfo)
+		user.GET("/info/:id", middleware.CheckLogin(false), controller.UserGetInfo)
 		user.PUT("/info", middleware.CheckLogin(true), controller.UserSetInfo)
-		user.POST("/follow", middleware.CheckLogin(true), controller.ReactionFollow)
-		user.GET("/followings", middleware.CheckLogin(true), controller.GetFollowList)
-		user.GET("/followers", middleware.CheckLogin(true), controller.GetFansList)
+		user.POST("/follow/:id", middleware.CheckLogin(true), controller.FollowPost)
+		user.GET("/followings", middleware.CheckLogin(true), controller.FollowListGet)
+		user.GET("/followers", middleware.CheckLogin(true), controller.FansListGet)
 	}
 	// 成绩模块
 	score := router.Group("/score")
