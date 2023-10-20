@@ -58,10 +58,8 @@ func InsertUsers(users []database.User) error {
 	for _, user := range users {
 		gorseUsers = append(gorseUsers, User2GorseUser(user))
 	}
-	if _, err := gorse.InsertUsers(context.Background(), gorseUsers); err != nil {
-		return err
-	}
-	return nil
+	_, err := gorse.InsertUsers(context.Background(), gorseUsers)
+	return err
 }
 
 // UpdateUser 更新用户
@@ -72,10 +70,7 @@ func UpdateUser(user database.User) error {
 		Subscribe: gorseUser.Subscribe,
 		Comment:   &gorseUser.Comment,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Post2GorseItem post转换为gorseItem
@@ -101,10 +96,8 @@ func InsertPosts(posts []database.Post) error {
 	for _, post := range posts {
 		gorseItems = append(gorseItems, Post2GorseItem(post))
 	}
-	if _, err := gorse.InsertItems(context.Background(), gorseItems); err != nil {
-		return err
-	}
-	return nil
+	_, err := gorse.InsertItems(context.Background(), gorseItems)
+	return err
 }
 
 // UpdatePost 更新post
@@ -117,10 +110,13 @@ func UpdatePost(post database.Post) error {
 		Timestamp:  &post.EditAt,
 		Comment:    &gorseItem.Comment,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
+}
+
+// DeletePost 删除post
+func DeletePost(id string) error {
+	_, err := gorse.DeleteItem(context.Background(), id)
+	return err
 }
 
 // InsertFeedback 插入反馈
@@ -130,10 +126,14 @@ func InsertFeedback(feedback client.Feedback) error {
 
 // InsertFeedbacks 插入多条反馈
 func InsertFeedbacks(feedbacks []client.Feedback) error {
-	if _, err := gorse.InsertFeedback(context.Background(), feedbacks); err != nil {
-		return err
-	}
-	return nil
+	_, err := gorse.InsertFeedback(context.Background(), feedbacks)
+	return err
+}
+
+// DeleteFeedback 删除反馈
+func DeleteFeedback(feedbackType, userId, itemId string) error {
+	_, err := gorse.DelFeedback(context.Background(), feedbackType, userId, itemId)
+	return err
 }
 
 // GetPopular 获取popular
