@@ -5,7 +5,6 @@ import (
 	"BIT101-GO/util/config"
 	"encoding/json"
 	"fmt"
-
 	"github.com/meilisearch/meilisearch-go"
 )
 
@@ -76,7 +75,7 @@ func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 }
 
 // Search 搜索
-func Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter string) error {
+func Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter []string) error {
 	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
 		Limit:  int64(limit),
 		Offset: int64(page * limit),
@@ -122,7 +121,7 @@ func Init() {
 	// 可筛选参数
 	filterAttrCourse := []string{}
 	filterAttrPaper := []string{}
-	filterAttrPost := []string{"uid", "anonymous", "public"}
+	filterAttrPost := []string{"uid", "public", "anonymous"}
 	// 可搜索参数
 	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers"}
 	searchAttrPaper := []string{"id", "title", "intro", "content"}
@@ -135,5 +134,5 @@ func Init() {
 	// 与pg数据库同步
 	importData("course", &[]database.Course{})
 	importData("paper", &[]database.Paper{})
-	importData("post", &[]database.Post{})
+	importData("post", &[]database.Poster{})
 }

@@ -19,20 +19,31 @@ import (
 	"time"
 )
 
-// PostGetResponse 获取帖子返回结构
-type PostGetResponse struct {
-	database.Post
+// PosterGetResponse 获取帖子返回结构
+type PosterGetResponse struct {
+	database.Poster
 	UserAPI `json:"user"`
-	Images  []string `json:"images"`
-	Tags    []string `json:"tags"`
-	Claim   string   `json:"claim"`
-	Like    bool     `json:"like"`
-	Own     bool     `json:"own"`
+	Images  []ImageAPI     `json:"images"`
+	Tags    []string       `json:"tags"`
+	Claim   database.Claim `json:"claim"`
+	Like    bool           `json:"like"`
+	Own     bool           `json:"own"`
 }
 
-// PostGet 获取帖子
-func PostGet(c *gin.Context) {
-	var post database.Post
+func spilt(str string) []string {
+	l := strings.Split(str, " ")
+	out := make([]string, 0)
+	for i := range l {
+		if l[i] != "" {
+			out = append(out, l[i])
+		}
+	}
+	return out
+}
+
+// PosterGet 获取帖子
+func PosterGet(c *gin.Context) {
+	var post database.Poster
 	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
@@ -50,23 +61,23 @@ func PostGet(c *gin.Context) {
 	} else {
 		userAPI = GetUserAPI(int(post.Uid))
 	}
-	var res = PostGetResponse{
-		Post:    post,
+	var res = PosterGetResponse{
+		Poster:  post,
 		UserAPI: userAPI,
-		Images:  strings.Split(post.Images, " "),
-		Tags:    strings.Split(post.Tags, " "),
-		Claim:   database.ClaimMap[post.ClaimID].Content,
+		Images:  GetImageAPIArr(spilt(post.Images)),
+		Tags:    spilt(post.Tags),
+		Claim:   database.ClaimMap[post.ClaimID],
 		Like:    CheckLike(fmt.Sprintf("post%v", post.ID), c.GetUint("uid_uint")),
 		Own:     own,
 	}
 	c.JSON(200, res)
 }
 
-// PostUpdateQuery 发布帖子请求接口
-type PostUpdateQuery struct {
+// PosterUpdateQuery 发布帖子请求接口
+type PosterUpdateQuery struct {
 	Title     string   `json:"title" binding:"required"`
 	Text      string   `json:"text" binding:"required"`
-	Mids      []string `json:"mids"`
+	ImageMids []string `json:"image_mids"`
 	Plugins   string   `json:"plugins"`
 	Anonymous bool     `json:"anonymous"`
 	Tags      []string `json:"tags"`
@@ -74,9 +85,9 @@ type PostUpdateQuery struct {
 	Public    bool     `json:"public"`
 }
 
-// PostSubmit 发布帖子
-func PostSubmit(c *gin.Context) {
-	var query PostUpdateQuery
+// PosterSubmit 发布帖子
+func PosterSubmit(c *gin.Context) {
+	var query PosterUpdateQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
 		c.JSON(500, gin.H{"msg": "参数错误Orz"})
 		return
@@ -86,10 +97,10 @@ func PostSubmit(c *gin.Context) {
 		return
 	}
 
-	var post = database.Post{
+	var post = database.Poster{
 		Title:      query.Title,
 		Text:       query.Text,
-		Images:     strings.Join(query.Mids, " "),
+		Images:     strings.Join(query.ImageMids, " "),
 		Uid:        c.GetUint("uid_uint"),
 		Anonymous:  query.Anonymous,
 		Public:     query.Public,
@@ -112,17 +123,17 @@ func PostSubmit(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
 		return
 	}
-	c.JSON(200, gin.H{"msg": "发布成功"})
+	c.JSON(200, gin.H{"msg": "发布成功", "id": post.ID})
 }
 
-// PostPut 修改帖子
-func PostPut(c *gin.Context) {
-	var query PostUpdateQuery
+// PosterPut 修改帖子
+func PosterPut(c *gin.Context) {
+	var query PosterUpdateQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
 		c.JSON(500, gin.H{"msg": "参数错误Orz"})
 		return
 	}
-	var post database.Post
+	var post database.Poster
 	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
@@ -141,7 +152,7 @@ func PostPut(c *gin.Context) {
 	}
 	post.Title = query.Title
 	post.Text = query.Text
-	post.Images = strings.Join(query.Mids, " ")
+	post.Images = strings.Join(query.ImageMids, " ")
 	post.Tags = strings.Join(query.Tags, " ")
 	post.Anonymous = query.Anonymous
 	post.Public = query.Public
@@ -164,8 +175,8 @@ func PostPut(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
 
-// PostListQuery 获取帖子列表
-type PostListQuery struct {
+// PosterListQuery 获取帖子列表
+type PosterListQuery struct {
 	Mode   string `form:"mode"` //recommend | search | follow | hot 默认为recommend
 	Page   uint   `form:"page"`
 	Search string `form:"search"`
@@ -173,18 +184,18 @@ type PostListQuery struct {
 	Uid    int    `form:"uid"`
 }
 
-// PostListResponseItem 获取帖子列表返回结构
-type PostListResponseItem struct {
-	database.Post
+// PosterListResponseItem 获取帖子列表返回结构
+type PosterListResponseItem struct {
+	database.Poster
 	UserAPI `json:"user"`
-	Images  []string `json:"images"`
-	Tags    []string `json:"tags"`
-	Claim   string   `json:"claim"`
+	Images  []ImageAPI     `json:"images"`
+	Tags    []string       `json:"tags"`
+	Claim   database.Claim `json:"claim"`
 }
 
 // 构建获取帖子列表返回结构
-func buildPostListResponse(posts []database.Post) []PostListResponseItem {
-	res := make([]PostListResponseItem, 0)
+func buildPostListResponse(posts []database.Poster) []PosterListResponseItem {
+	res := make([]PosterListResponseItem, 0)
 	for _, post := range posts {
 		var userAPI UserAPI
 		if post.Anonymous {
@@ -196,12 +207,12 @@ func buildPostListResponse(posts []database.Post) []PostListResponseItem {
 		var claim database.Claim
 		database.DB.Limit(1).Find(&claim, "id = ?", post.ClaimID)
 
-		res = append(res, PostListResponseItem{
-			Post:    post,
+		res = append(res, PosterListResponseItem{
+			Poster:  post,
 			UserAPI: userAPI,
-			Images:  strings.Split(post.Images, " "),
-			Tags:    strings.Split(post.Tags, " "),
-			Claim:   claim.Content,
+			Images:  GetImageAPIArr(spilt(post.Images)),
+			Tags:    spilt(post.Tags),
+			Claim:   claim,
 		})
 	}
 	return res
@@ -209,7 +220,7 @@ func buildPostListResponse(posts []database.Post) []PostListResponseItem {
 
 // PostList 获取帖子列表
 func PostList(c *gin.Context) {
-	var query PostListQuery
+	var query PosterListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
@@ -224,7 +235,7 @@ func PostList(c *gin.Context) {
 		for i := range recommend {
 			println(recommend[i])
 		}
-		var posts []database.Post
+		var posts []database.Poster
 		database.DB.Find(&posts, "id IN ?", recommend)
 		c.JSON(200, buildPostListResponse(posts))
 		return
@@ -237,7 +248,7 @@ func PostList(c *gin.Context) {
 		for i := range popular {
 			println(popular[i])
 		}
-		var posts []database.Post
+		var posts []database.Poster
 		database.DB.Find(&posts, "id IN ?", popular)
 		c.JSON(200, buildPostListResponse(posts))
 		return
@@ -249,37 +260,43 @@ func PostList(c *gin.Context) {
 	} else {
 		order = append(order, "edit_time:desc")
 	}
-	filter := ""
+	var filter []string
 	if query.Mode == "follow" {
 		var follow_list []database.Follow
 		database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
-		filter = "uid IN [ "
+		uid_filter := "uid IN [ "
 		for _, follow := range follow_list {
-			filter += fmt.Sprintf("%v,", follow.FollowUid)
+			uid_filter += fmt.Sprintf("%v,", follow.FollowUid)
 		}
-		filter = filter[:len(filter)-1] + "]" + "AND (anonymous = false) AND (public = true)"
+		uid_filter = uid_filter[:len(uid_filter)-1] + "]"
+		filter = append(filter, uid_filter)
+		filter = append(filter, "anonymous = false")
+		filter = append(filter, "public = true")
 	} else {
 		switch query.Uid {
 		case 0:
-			filter = "uid =" + c.GetString("uid")
+			filter = append(filter, "uid ="+c.GetString("uid"))
 		case -1:
-			filter = "public = true"
+			filter = append(filter, "public = true")
 		default:
-			filter = "uid =" + fmt.Sprintf("%v", query.Uid) + "AND (anonymous = false)  AND (public = true)"
+			filter = append(filter, "uid ="+fmt.Sprintf("%v", query.Uid))
+			filter = append(filter, "anonymous = false")
+			filter = append(filter, "public = true")
 		}
 	}
-	var posts []database.Post
+	var posts []database.Poster
 	err := search.Search(&posts, "post", query.Search, query.Page, config.Config.PostPageSize, order, filter)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
+		println(err.Error())
 		return
 	}
 	c.JSON(200, buildPostListResponse(posts))
 }
 
-// PostDelete 删除帖子
-func PostDelete(c *gin.Context) {
-	var post database.Post
+// PosterDelete 删除帖子
+func PosterDelete(c *gin.Context) {
+	var post database.Poster
 	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
@@ -338,9 +355,9 @@ func updateTagHot(oldTags []string, newTags []string) {
 	}
 }
 
-// PostOnLike 点赞
-func PostOnLike(id string, delta int, uid string) (uint, error) {
-	var post database.Post
+// PosterOnLike 点赞
+func PosterOnLike(id string, delta int, uid string) (uint, error) {
+	var post database.Poster
 	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
@@ -372,9 +389,9 @@ func PostOnLike(id string, delta int, uid string) (uint, error) {
 	return post.LikeNum, nil
 }
 
-// PostOnComment 评论
-func PostOnComment(id string, delta int, uid string) (uint, error) {
-	var post database.Post
+// PosterOnComment 评论
+func PosterOnComment(id string, delta int, uid string) (uint, error) {
+	var post database.Poster
 	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}

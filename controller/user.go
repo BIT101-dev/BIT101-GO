@@ -38,7 +38,7 @@ type UserAPI struct {
 	ID         int       `json:"id"`
 	CreateTime time.Time `json:"create_time"`
 	Nickname   string    `json:"nickname"`
-	Avatar     string    `json:"avatar"`
+	Avatar     ImageAPI  `json:"avatar"`
 	Motto      string    `json:"motto"`
 	Type       Type      `json:"type"`
 }
@@ -63,7 +63,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 				ID:         -1,
 				CreateTime: time.Now(),
 				Nickname:   "匿名者",
-				Avatar:     GetImageUrl(""),
+				Avatar:     GetImageAPI(""),
 				Motto:      "面对愚昧，匿名者自己也缄口不言。",
 				Type:       Type{database.IdentityMap[1].Text, database.IdentityMap[1].Color},
 			}
@@ -79,7 +79,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 			ID:         int(user.ID),
 			CreateTime: user.CreatedAt,
 			Nickname:   user.Nickname,
-			Avatar:     GetImageUrl(user.Avatar),
+			Avatar:     GetImageAPI(user.Avatar),
 			Motto:      user.Motto,
 			Type:       Type{database.IdentityMap[user.Level].Text, database.IdentityMap[user.Level].Color},
 		}
@@ -274,10 +274,10 @@ func UserRegister(c *gin.Context) {
 // UserGetInfoResponse 获取用户信息返回结构
 type UserGetInfoResponse struct {
 	UserAPI      UserAPI `json:"user"`
-	FollowingNum int64   `json:"following_num"` // 关注数
-	FollowerNum  int64   `json:"follower_num"`  // 粉丝数
-	Following    bool    `json:"following"`     // 是否被我关注
-	Follower     bool    `json:"follower"`      // 是否关注我
+	FollowingNum int64   `json:"following_num"`
+	FollowerNum  int64   `json:"follower_num"`
+	Following    bool    `json:"following"`
+	Follower     bool    `json:"follower"`
 }
 
 // UserGetInfo 获取用户信息
@@ -315,30 +315,13 @@ func UserGetInfo(c *gin.Context) {
 		}
 		uid = uint(uid_)
 	}
-
-	var following_num int64
-	var follower_num int64
-	following := false
-	follower := false
-	database.DB.Model(&database.Follow{}).Where("uid = ?", uid).Count(&following_num)
-	database.DB.Model(&database.Follow{}).Where("follow_uid = ?", uid).Count(&follower_num)
-	var follow database.Follow
-	var follow_ database.Follow
-	database.DB.Limit(1).Find(&follow, "uid = ? AND follow_uid = ?", c.GetString("uid"), uid)
-	if follow.ID != 0 {
-		following = true
-	}
-	database.DB.Limit(1).Find(&follow_, "uid = ? AND follow_uid = ?", uid, c.GetString("uid"))
-	if follow_.ID != 0 {
-		follower = true
-	}
-
+	followPostResponse := GetFollowPostResponse(uid, c.GetUint("uid_uint"))
 	c.JSON(200, UserGetInfoResponse{
 		GetUserAPI(int(uid)),
-		following_num,
-		follower_num,
-		following,
-		follower,
+		followPostResponse.FollowingNum,
+		followPostResponse.FollowerNum,
+		followPostResponse.Following,
+		followPostResponse.Follower,
 	})
 }
 
@@ -390,9 +373,9 @@ func OldUserGetInfo(c *gin.Context) {
 
 // 修改用户信息请求结构
 type UserSetInfoQuery struct {
-	Nickname string `json:"nickname"` // 昵称
-	Avatar   string `json:"avatar"`   // 头像
-	Motto    string `json:"motto"`    // 格言 简介
+	Nickname  string `json:"nickname"`   // 昵称
+	AvatarMid string `json:"avatar_mid"` // 头像
+	Motto     string `json:"motto"`      // 格言 简介
 }
 
 // 修改用户信息
@@ -425,10 +408,10 @@ func UserSetInfo(c *gin.Context) {
 		}
 		user.Nickname = query.Nickname
 	}
-	if query.Avatar != "" {
+	if query.AvatarMid != "" {
 		// 验证图片是否存在
 		avatar := database.Image{}
-		if err := database.DB.Limit(1).Find(&avatar, "mid = ?", query.Avatar).Error; err != nil {
+		if err := database.DB.Limit(1).Find(&avatar, "mid = ?", query.AvatarMid).Error; err != nil {
 			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 			return
 		}
@@ -436,7 +419,7 @@ func UserSetInfo(c *gin.Context) {
 			c.JSON(500, gin.H{"msg": "头像图片无效Orz"})
 			return
 		}
-		user.Avatar = query.Avatar
+		user.Avatar = query.AvatarMid
 	}
 	if query.Motto != "" {
 		user.Motto = query.Motto
@@ -456,8 +439,35 @@ func UserSetInfo(c *gin.Context) {
 
 // FollowPostResponse 关注请求返回结构
 type FollowPostResponse struct {
-	Following    bool  `json:"following"`
-	FollowingNum int64 `json:"following_num"`
+	FollowingNum int64 `json:"following_num"` // 关注数
+	FollowerNum  int64 `json:"follower_num"`  // 粉丝数
+	Following    bool  `json:"following"`     // 是否被我关注
+	Follower     bool  `json:"follower"`      // 是否关注我
+}
+
+func GetFollowPostResponse(targetUid uint, myUid uint) FollowPostResponse {
+	var following_num int64
+	var follower_num int64
+	following := false
+	follower := false
+	database.DB.Model(&database.Follow{}).Where("uid = ?", targetUid).Count(&following_num)
+	database.DB.Model(&database.Follow{}).Where("follow_uid = ?", targetUid).Count(&follower_num)
+	var follow database.Follow
+	var follow_ database.Follow
+	database.DB.Limit(1).Find(&follow, "uid = ? AND follow_uid = ?", myUid, targetUid)
+	if follow.ID != 0 {
+		following = true
+	}
+	database.DB.Limit(1).Find(&follow_, "uid = ? AND follow_uid = ?", targetUid, myUid)
+	if follow_.ID != 0 {
+		follower = true
+	}
+	return FollowPostResponse{
+		Follower:     follower,
+		FollowerNum:  follower_num,
+		Following:    following,
+		FollowingNum: following_num,
+	}
 }
 
 // FollowPost 关注
@@ -490,19 +500,7 @@ func FollowPost(c *gin.Context) {
 	} else { //删除
 		database.DB.Delete(&follow)
 	}
-	var followingNum int64
-	database.DB.Model(&database.Follow{}).Where("uid = ?", c.GetString("uid")).Count(&followingNum)
-	if follow.DeletedAt.Valid {
-		c.JSON(200, FollowPostResponse{
-			false,
-			followingNum,
-		})
-	} else {
-		c.JSON(200, FollowPostResponse{
-			true,
-			followingNum,
-		})
-	}
+	c.JSON(200, GetFollowPostResponse(uint(follow_uid), c.GetUint("uid_uint")))
 }
 
 // FollowListGet 获取关注列表

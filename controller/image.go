@@ -13,12 +13,35 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"path/filepath"
-
-	"github.com/gin-gonic/gin"
 )
+
+type ImageAPI struct {
+	Mid    string `json:"mid"`
+	Url    string `json:"url"`
+	LowURL string `json:"low_url"`
+}
+
+// GetImageAPI 生成ImageAPI
+func GetImageAPI(mid string) ImageAPI {
+	return ImageAPI{
+		Mid:    mid,
+		Url:    GetImageUrl(mid),
+		LowURL: GetImageUrl(mid),
+	}
+}
+
+// GetImageAPIArr 生成ImageAPIArr
+func GetImageAPIArr(mids []string) []ImageAPI {
+	imageAPIArr := []ImageAPI{}
+	for i := range mids {
+		imageAPIArr = append(imageAPIArr, GetImageAPI(mids[i]))
+	}
+	return imageAPIArr
+}
 
 // 将图片mid转换为url
 func GetImageUrl(mid string) string {

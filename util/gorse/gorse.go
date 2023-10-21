@@ -28,7 +28,7 @@ func InitUserAndItem() {
 		return
 	}
 	// 从db数据库取出所有post
-	var posts []database.Post
+	var posts []database.Poster
 	database.DB.Find(&posts)
 	err = InsertPosts(posts)
 	if err != nil {
@@ -74,7 +74,7 @@ func UpdateUser(user database.User) error {
 }
 
 // Post2GorseItem post转换为gorseItem
-func Post2GorseItem(post database.Post) client.Item {
+func Post2GorseItem(post database.Poster) client.Item {
 	return client.Item{
 		ItemId:     strconv.Itoa(int(post.ID)),
 		IsHidden:   !post.Public,
@@ -86,12 +86,12 @@ func Post2GorseItem(post database.Post) client.Item {
 }
 
 // InsertPost 插入post
-func InsertPost(post database.Post) error {
-	return InsertPosts([]database.Post{post})
+func InsertPost(post database.Poster) error {
+	return InsertPosts([]database.Poster{post})
 }
 
 // InsertPosts 插入多个post
-func InsertPosts(posts []database.Post) error {
+func InsertPosts(posts []database.Poster) error {
 	var gorseItems []client.Item
 	for _, post := range posts {
 		gorseItems = append(gorseItems, Post2GorseItem(post))
@@ -101,7 +101,7 @@ func InsertPosts(posts []database.Post) error {
 }
 
 // UpdatePost 更新post
-func UpdatePost(post database.Post) error {
+func UpdatePost(post database.Poster) error {
 	gorseItem := Post2GorseItem(post)
 	_, err := gorse.UpdateItem(context.Background(), gorseItem.ItemId, client.ItemPatch{
 		IsHidden:   &gorseItem.IsHidden,
