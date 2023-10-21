@@ -63,11 +63,11 @@ type Tag struct {
 // 申明
 type Claim struct {
 	Base
-	Content string `gorm:"not null" json:"content"` //申明内容
+	Text string `gorm:"not null" json:"text"` //申明内容
 }
 
 // 帖子
-type Post struct {
+type Poster struct {
 	Base
 	Title      string    `gorm:"not null" json:"title"`           //标题
 	Text       string    `gorm:"not null" json:"text"`            //内容
@@ -244,7 +244,7 @@ func Init() {
 	db.AutoMigrate(
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
-		&Tag{}, &Claim{}, &Post{}, &Identity{}, &Follow{},
+		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{},
 	)
 	InitMaps()
 }

@@ -49,11 +49,11 @@ func SetRouter(router *gin.Engine) {
 	// 帖子模块
 	post := router.Group("/posters")
 	{
-		post.GET("/:id", middleware.CheckLogin(true), controller.PostGet)
+		post.GET("/:id", middleware.CheckLogin(true), controller.PosterGet)
 		post.GET("", middleware.CheckLogin(true), controller.PostList)
-		post.POST("", middleware.CheckLogin(true), controller.PostSubmit)
-		post.PUT("/:id", middleware.CheckLogin(true), controller.PostPut)
-		post.DELETE("/:id", middleware.CheckLogin(true), controller.PostDelete)
+		post.POST("", middleware.CheckLogin(true), controller.PosterSubmit)
+		post.PUT("/:id", middleware.CheckLogin(true), controller.PosterPut)
+		post.DELETE("/:id", middleware.CheckLogin(true), controller.PosterDelete)
 		post.GET("/claims", controller.ClaimList)
 	}
 	// 文章模块
