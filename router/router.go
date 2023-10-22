@@ -94,7 +94,6 @@ func SetRouter(router *gin.Engine) {
 	{
 		message.GET("", middleware.CheckLogin(true), controller.MessageGetList)
 		message.GET("/unread_num", middleware.CheckLogin(true), controller.MessageGetUnreadNum)
-		message.GET("/unread_likes_num", middleware.CheckLogin(true), controller.MessageGetUnreadLikeNum)
-		message.GET("/unread_comments_num", middleware.CheckLogin(true), controller.MessageGetUnreadCommentNum)
+		message.GET("/unread_nums", middleware.CheckLogin(true), controller.MessageGetUnreadNums)
 	}
 }

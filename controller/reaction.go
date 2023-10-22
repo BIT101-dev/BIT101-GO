@@ -23,7 +23,7 @@ func getTypeID(obj string) (string, string) {
 		return "paper", obj[5:]
 	}
 	if obj[:6] == "poster" {
-		return "post", obj[6:]
+		return "poster", obj[6:]
 	}
 	if obj[:6] == "course" {
 		return "course", obj[6:]
@@ -83,8 +83,8 @@ func ReactionLike(c *gin.Context) {
 		like_num, err = CommentOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	case "course":
 		like_num, err = CourseOnLike(obj_id, delta)
-	case "post":
-		like_num, err = PosterOnLike(obj_id, delta, c.GetString("uid"))
+	case "poster":
+		like_num, err = PosterOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -98,6 +98,7 @@ func ReactionLike(c *gin.Context) {
 func CheckLike(obj string, uid uint) bool {
 	var like database.Like
 	database.DB.Where("uid = ?", uid).Where("obj = ?", obj).Limit(1).Find(&like)
+	println("like", like.ID)
 	return like.ID != 0
 }
 
@@ -282,8 +283,8 @@ func ReactionComment(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
 	case "course":
 		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
-	case "post":
-		_, err = PosterOnComment(obj_id, 1, c.GetString("uid"))
+	case "poster":
+		_, err = PosterOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.Text)
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -351,7 +352,7 @@ func CommentOnLike(id string, delta int, from_uid uint) (uint, error) {
 				link_obj = parent_comment.Obj
 			}
 
-			MessageSend(int(from_uid), comment.Uid, "like", fmt.Sprintf("comment%v", comment.ID), link_obj, comment.Text)
+			MessageSend(int(from_uid), comment.Uid, fmt.Sprintf("comment%v", comment.ID), "like", link_obj, comment.Text)
 		}()
 	}
 
@@ -400,7 +401,7 @@ func CommentOnComment(id string, delta int, from_uid uint, from_anonymous bool, 
 			if from_anonymous {
 				from_uid_ = -1
 			}
-			MessageSend(from_uid_, to_uid, "comment", fmt.Sprintf("comment%v", comment.ID), link_obj, content)
+			MessageSend(from_uid_, to_uid, fmt.Sprintf("comment%v", comment.ID), "comment", link_obj, content)
 		}()
 	}
 
@@ -434,7 +435,7 @@ func ReactionCommentDelete(c *gin.Context) {
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
 	case "post":
-		_, err = PosterOnComment(obj_id, -1, c.GetString("uid"))
+		_, err = PosterOnComment(obj_id, -1, c.GetUint("uid_uint"), true, "")
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
