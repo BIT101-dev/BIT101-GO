@@ -278,6 +278,7 @@ type UserGetInfoResponse struct {
 	FollowerNum  int64   `json:"follower_num"`
 	Following    bool    `json:"following"`
 	Follower     bool    `json:"follower"`
+	Own          bool    `json:"own"`
 }
 
 // UserGetInfo 获取用户信息
@@ -288,6 +289,7 @@ func UserGetInfo(c *gin.Context) {
 			GetUserAPI(-1),
 			0,
 			0,
+			false,
 			false,
 			false,
 		})
@@ -322,6 +324,7 @@ func UserGetInfo(c *gin.Context) {
 		followPostResponse.FollowerNum,
 		followPostResponse.Following,
 		followPostResponse.Follower,
+		uid == c.GetUint("uid_uint"),
 	})
 }
 
