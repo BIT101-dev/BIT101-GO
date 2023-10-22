@@ -472,6 +472,14 @@ func GetFollowPostResponse(targetUid uint, myUid uint) FollowPostResponse {
 
 // FollowPost 关注
 func FollowPost(c *gin.Context) {
+	if c.Param("id") == "-1" {
+		c.JSON(400, gin.H{"msg": "不能关注匿名者Orz"})
+		return
+	}
+	if c.Param("id") == c.GetString("uid") || c.Param("id") == "0" {
+		c.JSON(400, gin.H{"msg": "不能关注自己Orz"})
+		return
+	}
 	// 将字符串转换为uint
 	follow_uid, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -494,9 +502,11 @@ func FollowPost(c *gin.Context) {
 			FollowUid: uint(follow_uid),
 		}
 		database.DB.Create(&follow)
+		MessageSend(int(follow.Uid), follow.FollowUid, "", "follow", "", "")
 	} else if follow.DeletedAt.Valid { //取消删除
 		follow.DeletedAt = gorm.DeletedAt{}
 		database.DB.Unscoped().Save(&follow)
+		MessageSend(int(follow.Uid), follow.FollowUid, "", "follow", "", "")
 	} else { //删除
 		database.DB.Delete(&follow)
 	}

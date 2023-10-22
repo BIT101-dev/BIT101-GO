@@ -22,9 +22,12 @@ func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAt
 	}
 	client.WaitForTask(index.TaskUID)
 	indexToUpdate, _ := client.GetIndex(uid)
-	indexToUpdate.UpdateSortableAttributes(&sortAttr)
-	indexToUpdate.UpdateFilterableAttributes(&filterAttr)
-	indexToUpdate.UpdateSearchableAttributes(&searchAttr)
+	index, _ = indexToUpdate.UpdateSortableAttributes(&sortAttr)
+	client.WaitForTask(index.TaskUID)
+	index, _ = indexToUpdate.UpdateFilterableAttributes(&filterAttr)
+	client.WaitForTask(index.TaskUID)
+	index, _ = indexToUpdate.UpdateSearchableAttributes(&searchAttr)
+	client.WaitForTask(index.TaskUID)
 }
 
 // importData 导入数据库表到MeiliSearch

@@ -164,23 +164,5 @@ func GetRecommend(userid string, page uint) ([]string, error) {
 func Init() {
 	gorse = client.NewGorseClient("http://127.0.0.1:8088", "BIT101")
 
-	//InitUserAndItem()
-	//
-	//gorse.InsertFeedback(context.Background(), []client.Feedback{
-	//	{FeedbackType: "like", UserId: "bob", ItemId: "vuejs:vue", Timestamp: "2022-02-24"},
-	//	{FeedbackType: "like", UserId: "bob", ItemId: "d3:d3", Timestamp: "2022-02-25"},
-	//	{FeedbackType: "like", UserId: "bob", ItemId: "dogfalo:materialize", Timestamp: "2022-02-26"},
-	//	{FeedbackType: "like", UserId: "bob", ItemId: "mozilla:pdf.js", Timestamp: "2022-02-27"},
-	//	{FeedbackType: "like", UserId: "bob", ItemId: "moment:moment", Timestamp: "2022-02-28"},
-	//})
-
-	// Get recommendation.
-	//recommend, err := gorse.GetItemRecommend(context.Background(), "bob", []string{}, "", "", 10, 0)
-	//if err != nil {
-	//	println("err.............")
-	//	return
-	//}
-	//for _, item := range recommend {
-	//	println(item)
-	//}
+	InitUserAndItem()
 }

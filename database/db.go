@@ -198,7 +198,7 @@ type Variable struct {
 type MessageSummary struct {
 	Base
 	Uid       uint      `gorm:"not null;index" json:"uid"`       //用户id
-	Obj       string    `gorm:"not null;index" json:"obj"`       //对象
+	Type      string    `gorm:"not null;index" json:"type"`      //对象
 	UnreadNum uint      `gorm:"default:0" json:"unread_num"`     //未读数
 	LastTime  time.Time `gorm:"autoCreateTime" json:"last_time"` //最后时间
 	Content   string    `gorm:"not null" json:"content"`         //内容
