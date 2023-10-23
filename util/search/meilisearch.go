@@ -120,22 +120,22 @@ func Init() {
 	// 可排序参数
 	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}
 	sortAttrPaper := []string{"like_num", "update_time"}
-	sortAttrPost := []string{"like_num", "comment_num", "edit_time"}
+	sortAttrPoster := []string{"like_num", "comment_num", "edit_time"}
 	// 可筛选参数
 	filterAttrCourse := []string{}
 	filterAttrPaper := []string{}
-	filterAttrPost := []string{"uid", "public", "anonymous"}
+	filterAttrPoster := []string{"uid", "public", "anonymous"}
 	// 可搜索参数
 	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers"}
 	searchAttrPaper := []string{"id", "title", "intro", "content"}
-	searchAttrPost := []string{"title", "text", "tags"}
+	searchAttrPoster := []string{"title", "text", "tags"}
 
 	createAndConfigureIndex("course", "id", sortAttrCourse, filterAttrCourse, searchAttrCourse)
 	createAndConfigureIndex("paper", "id", sortAttrPaper, filterAttrPaper, searchAttrPaper)
-	createAndConfigureIndex("post", "id", sortAttrPost, filterAttrPost, searchAttrPost)
+	createAndConfigureIndex("poster", "id", sortAttrPoster, filterAttrPoster, searchAttrPoster)
 
 	// 与pg数据库同步
 	importData("course", &[]database.Course{})
 	importData("paper", &[]database.Paper{})
-	importData("post", &[]database.Poster{})
+	importData("poster", &[]database.Poster{})
 }
