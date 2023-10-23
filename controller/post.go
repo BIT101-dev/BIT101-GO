@@ -31,17 +31,6 @@ type PosterGetResponse struct {
 	Own     bool           `json:"own"`
 }
 
-func spilt(str string) []string {
-	l := strings.Split(str, " ")
-	out := make([]string, 0)
-	for i := range l {
-		if l[i] != "" {
-			out = append(out, l[i])
-		}
-	}
-	return out
-}
-
 // CheckTags 检查tags
 func CheckTags(tags []string) bool {
 	for i := range tags {
@@ -130,14 +119,10 @@ func PosterSubmit(c *gin.Context) {
 		return
 	}
 	updateTagHot([]string{}, query.Tags)
-	if err := search.Update("post", post); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
-	if err := gorse.InsertPost(post); err != nil {
-		c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("post", post)
+		gorse.InsertPost(post)
+	}()
 	c.JSON(200, gin.H{"msg": "发布成功", "id": post.ID})
 }
 
@@ -183,14 +168,10 @@ func PosterPut(c *gin.Context) {
 		return
 	}
 	updateTagHot(strings.Split(post.Tags, " "), query.Tags)
-	if err := search.Update("post", post); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
-	if err := gorse.UpdatePost(post); err != nil {
-		c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("post", post)
+		gorse.UpdatePost(post)
+	}()
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
 
@@ -333,14 +314,10 @@ func PosterDelete(c *gin.Context) {
 		return
 	}
 	updateTagHot(strings.Split(post.Tags, " "), []string{})
-	if err := search.Delete("post", []string{fmt.Sprintf("%v", post.ID)}); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
-	if err := gorse.DeletePost(c.Param("id")); err != nil {
-		c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Delete("post", []string{fmt.Sprintf("%v", post.ID)})
+		gorse.DeletePost(c.Param("id"))
+	}()
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
@@ -387,30 +364,23 @@ func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
 	if err := database.DB.Save(&post).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-
-	var err error
-	if delta > 0 {
-		err = gorse.InsertFeedback(client.Feedback{
-			FeedbackType: "like",
-			UserId:       strconv.Itoa(int(from_uid)),
-			ItemId:       id,
-			Timestamp:    time.Now().String(),
-		})
-		if from_uid != post.Uid {
-			go func() {
+	go func() {
+		if delta > 0 {
+			gorse.InsertFeedback(client.Feedback{
+				FeedbackType: "like",
+				UserId:       strconv.Itoa(int(from_uid)),
+				ItemId:       id,
+				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
+			})
+			if from_uid != post.Uid {
 				post_obj := fmt.Sprintf("poster%v", post.ID)
 				MessageSend(int(from_uid), post.Uid, post_obj, "like", post_obj, post.Title)
-			}()
+			}
+		} else {
+			gorse.DeleteFeedback("like", strconv.Itoa(int(from_uid)), id)
 		}
-	} else {
-		err = gorse.DeleteFeedback("like", strconv.Itoa(int(from_uid)), id)
-	}
-	if err != nil {
-		return 0, errors.New("gorse同步失败Orz")
-	}
-	if err := search.Update("post", post); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+		search.Update("post", post)
+	}()
 	return post.LikeNum, nil
 }
 
@@ -428,32 +398,26 @@ func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, c
 		return 0, errors.New("数据库错误Orz")
 	}
 
-	var err error
-	if delta > 0 {
-		err = gorse.InsertFeedback(client.Feedback{
-			FeedbackType: "comment",
-			UserId:       strconv.Itoa(int(from_uid)),
-			ItemId:       id,
-			Timestamp:    time.Now().String(),
-		})
-		if from_uid != post.Uid {
-			go func() {
+	go func() {
+		if delta > 0 {
+			gorse.InsertFeedback(client.Feedback{
+				FeedbackType: "comment",
+				UserId:       strconv.Itoa(int(from_uid)),
+				ItemId:       id,
+				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
+			})
+			if from_uid != post.Uid {
 				from_uid_ := int(from_uid)
 				if from_anonymous {
 					from_uid_ = -1
 				}
 				post_obj := fmt.Sprintf("poster%v", post.ID)
 				MessageSend(from_uid_, post.Uid, post_obj, "comment", post_obj, content)
-			}()
+			}
+		} else {
+			gorse.DeleteFeedback("comment", strconv.Itoa(int(from_uid)), id)
 		}
-	} else {
-		err = gorse.DeleteFeedback("comment", strconv.Itoa(int(from_uid)), id)
-	}
-	if err != nil {
-		return 0, errors.New("gorse同步失败Orz")
-	}
-	if err := search.Update("post", post); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+		search.Update("post", post)
+	}()
 	return post.CommentNum, nil
 }

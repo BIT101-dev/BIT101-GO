@@ -71,13 +71,13 @@ type Poster struct {
 	Base
 	Title      string    `gorm:"not null" json:"title"`           //标题
 	Text       string    `gorm:"not null" json:"text"`            //内容
-	Images     string    `json:"images"`                          //图片
+	Images     string    `json:"images"`                          //图片mids，以" "拼接
 	Uid        uint      `gorm:"not null;index" json:"uid"`       //用户id
 	Anonymous  bool      `gorm:"default:false" json:"anonymous"`  //是否匿名
 	Public     bool      `gorm:"default:true" json:"public"`      //是否可见
 	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
-	Tags       string    `json:"tags"`                            //标签
+	Tags       string    `json:"tags"`                            //标签，以" "拼接
 	ClaimID    uint      `json:"claim_id"`                        //申明id
 	Plugins    string    `json:"plugins"`                         //插件
 	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
@@ -135,6 +135,7 @@ type Comment struct {
 	ReplyObj   string `json:"reply_obj"`                      //回复对象
 	ReplyUid   int    `gorm:"default:0" json:"reply_uid"`     //回复用户id
 	Rate       uint   `gorm:"default:0" json:"rate"`          //评分
+	Images     string `json:"images"`                         //图片mids，以" "拼接
 }
 
 // 课程

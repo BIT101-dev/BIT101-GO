@@ -72,6 +72,7 @@ func SetRouter(router *gin.Engine) {
 		reaction.POST("/comments", middleware.CheckLogin(true), controller.ReactionComment)
 		reaction.GET("/comments", middleware.CheckLogin(false), controller.ReactionCommentList)
 		reaction.DELETE("/comments/:id", middleware.CheckLogin(true), controller.ReactionCommentDelete)
+		reaction.POST("/stay", middleware.CheckLogin(true), controller.ReactionStay)
 	}
 	// 课程模块
 	course := router.Group("/courses")

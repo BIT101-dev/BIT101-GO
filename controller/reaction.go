@@ -9,9 +9,12 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/gorse"
 	"errors"
 	"fmt"
+	"github.com/zhenghaoz/gorse/client"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -125,6 +128,7 @@ type ReactionCommentAPI struct {
 	ReplyUser UserAPI              `json:"reply_user"` // 回复的用户
 	Sub       []ReactionCommentAPI `json:"sub"`        // 子评论
 	User      UserAPI              `json:"user"`       // 评论用户
+	Images    []ImageAPI           `json:"images"`     // 图片
 }
 
 // 获取评论列表
@@ -208,6 +212,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 			ReplyUser: users[int(sub_comment.ReplyUid)],
 			User:      user,
 			Sub:       make([]ReactionCommentAPI, 0),
+			Images:    GetImageAPIArr(spilt(sub_comment.Images)),
 		})
 	}
 
@@ -226,6 +231,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 			Own:       old_comment.Uid == uid || admin,
 			ReplyUser: users[int(old_comment.ReplyUid)],
 			User:      user,
+			Images:    GetImageAPIArr(spilt(old_comment.Images)),
 		}
 
 		comment.Sub = sub_comment_map[comment_obj]
@@ -237,18 +243,13 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 
 // 评论请求结构
 type ReactionCommentQuery struct {
-	Obj       string `json:"obj" binding:"required"`  // 操作对象
-	Text      string `json:"text" binding:"required"` // 评论内容
-	Anonymous bool   `json:"anonymous"`               // 是否匿名
-	ReplyUid  int    `json:"reply_uid"`               //回复用户id
-	ReplyObj  string `json:"reply_obj"`               //回复对象
-	Rate      uint   `json:"rate"`                    //评分
-}
-
-// 评论返回结构
-type ReactionCommentResponse struct {
-	ReactionCommentAPI
-	Msg string `json:"msg"`
+	Obj       string   `json:"obj" binding:"required"`  // 操作对象
+	Text      string   `json:"text" binding:"required"` // 评论内容
+	Anonymous bool     `json:"anonymous"`               // 是否匿名
+	ReplyUid  int      `json:"reply_uid"`               //回复用户id
+	ReplyObj  string   `json:"reply_obj"`               //回复对象
+	Rate      uint     `json:"rate"`                    //评分
+	ImageMids []string `json:"image_mids"`              //图片
 }
 
 // 评论
@@ -300,13 +301,11 @@ func ReactionComment(c *gin.Context) {
 		ReplyObj:  query.ReplyObj,
 		Rate:      query.Rate,
 		Uid:       c.GetUint("uid_uint"),
+		Images:    strings.Join(query.ImageMids, " "),
 	}
 	database.DB.Create(&comment)
 
-	c.JSON(200, ReactionCommentResponse{
-		ReactionCommentAPI: CleanComment(comment, comment.Uid, c.GetBool("admin")),
-		Msg:                "评论成功OvO",
-	})
+	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin")))
 }
 
 // 获取评论列表请求结构
@@ -447,4 +446,37 @@ func ReactionCommentDelete(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
+}
+
+// ReactionStayQuery 停留请求结构
+type ReactionStayQuery struct {
+	Obj  string `json:"obj" binding:"required"`  // 操作对象
+	Time int    `json:"time" binding:"required"` // 停留时间
+}
+
+// ReactionStay 停留
+func ReactionStay(c *gin.Context) {
+	var query ReactionStayQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	obj_type, obj_id := getTypeID(query.Obj)
+	if obj_type == "" {
+		c.JSON(500, gin.H{"msg": "无效对象Orz"})
+		return
+	}
+	if obj_type == "poster" {
+		err := gorse.InsertFeedback(client.Feedback{
+			FeedbackType: "read",
+			UserId:       c.GetString("uid"),
+			ItemId:       obj_id,
+			Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效
+		})
+		if err != nil {
+			c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
+			return
+		}
+	}
+	c.JSON(200, gin.H{"msg": "成功OvO"})
 }

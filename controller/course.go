@@ -95,9 +95,9 @@ func CourseOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", course); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("course", course)
+	}()
 	return course.LikeNum, nil
 }
 
@@ -110,6 +110,9 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if course.ID == 0 {
 		return 0, errors.New("课程不存在Orz")
 	}
+	if delta_rate == 0 || delta_rate < -10 || delta_rate > 10 {
+		return 0, errors.New("评分错误Orz")
+	}
 	course.CommentNum = uint(int(course.CommentNum) + delta_num)
 	course.RateSum = uint(int(course.RateSum) + delta_rate)
 	if course.RateSum == 0 {
@@ -120,9 +123,9 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", course); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("course", course)
+	}()
 	return course.CommentNum, nil
 }
 

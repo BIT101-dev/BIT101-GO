@@ -89,10 +89,9 @@ func PaperPost(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", paper); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	c.JSON(200, gin.H{"msg": "发表成功OvO", "id": paper.ID})
 }
 
@@ -147,10 +146,9 @@ func PaperPut(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", paper); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
 
@@ -241,10 +239,9 @@ func PaperDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	if err := search.Delete("paper", []string{strconv.Itoa(int(paper.ID))}); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Delete("paper", []string{strconv.Itoa(int(paper.ID))})
+	}()
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
@@ -261,9 +258,9 @@ func PaperOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", paper); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	return paper.LikeNum, nil
 }
 
@@ -280,8 +277,8 @@ func PaperOnComment(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", paper); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	return paper.CommentNum, nil
 }
