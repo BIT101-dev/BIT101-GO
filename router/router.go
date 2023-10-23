@@ -47,14 +47,14 @@ func SetRouter(router *gin.Engine) {
 		upload.POST("/image/url", middleware.CheckLogin(true), controller.ImageUploadByUrl)
 	}
 	// 帖子模块
-	post := router.Group("/posters")
+	poster := router.Group("/posters")
 	{
-		post.GET("/:id", middleware.CheckLogin(true), controller.PosterGet)
-		post.GET("", middleware.CheckLogin(true), controller.PostList)
-		post.POST("", middleware.CheckLogin(true), controller.PosterSubmit)
-		post.PUT("/:id", middleware.CheckLogin(true), controller.PosterPut)
-		post.DELETE("/:id", middleware.CheckLogin(true), controller.PosterDelete)
-		post.GET("/claims", controller.ClaimList)
+		poster.GET("/:id", middleware.CheckLogin(true), controller.PosterGet)
+		poster.GET("", middleware.CheckLogin(true), controller.PostList)
+		poster.POST("", middleware.CheckLogin(true), controller.PosterSubmit)
+		poster.PUT("/:id", middleware.CheckLogin(true), controller.PosterPut)
+		poster.DELETE("/:id", middleware.CheckLogin(true), controller.PosterDelete)
+		poster.GET("/claims", controller.ClaimList)
 	}
 	// 文章模块
 	paper := router.Group("/papers")

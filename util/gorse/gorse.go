@@ -27,10 +27,10 @@ func InitUserAndItem() {
 		println("初始化users失败:", err.Error())
 		return
 	}
-	// 从db数据库取出所有post
-	var posts []database.Poster
-	database.DB.Find(&posts)
-	err = InsertPosts(posts)
+	// 从db数据库取出所有poster
+	var posters []database.Poster
+	database.DB.Find(&posters)
+	err = InsertPosters(posters)
 	if err != nil {
 		println("初始化items失败:", err.Error())
 		return
@@ -85,13 +85,13 @@ func Post2GorseItem(post database.Poster) client.Item {
 	}
 }
 
-// InsertPost 插入post
-func InsertPost(post database.Poster) error {
-	return InsertPosts([]database.Poster{post})
+// InsertPoster 插入poster
+func InsertPoster(post database.Poster) error {
+	return InsertPosters([]database.Poster{post})
 }
 
-// InsertPosts 插入多个post
-func InsertPosts(posts []database.Poster) error {
+// InsertPosters 插入多个poster
+func InsertPosters(posts []database.Poster) error {
 	var gorseItems []client.Item
 	for _, post := range posts {
 		gorseItems = append(gorseItems, Post2GorseItem(post))
@@ -100,8 +100,8 @@ func InsertPosts(posts []database.Poster) error {
 	return err
 }
 
-// UpdatePost 更新post
-func UpdatePost(post database.Poster) error {
+// UpdatePoster 更新poster
+func UpdatePoster(post database.Poster) error {
 	gorseItem := Post2GorseItem(post)
 	_, err := gorse.UpdateItem(context.Background(), gorseItem.ItemId, client.ItemPatch{
 		IsHidden:   &gorseItem.IsHidden,
@@ -113,8 +113,8 @@ func UpdatePost(post database.Poster) error {
 	return err
 }
 
-// DeletePost 删除post
-func DeletePost(id string) error {
+// DeletePoster 删除poster
+func DeletePoster(id string) error {
 	_, err := gorse.DeleteItem(context.Background(), id)
 	return err
 }
@@ -163,6 +163,5 @@ func GetRecommend(userid string, page uint) ([]string, error) {
 // Init 初始化
 func Init() {
 	gorse = client.NewGorseClient("http://127.0.0.1:8088", "BIT101")
-
 	InitUserAndItem()
 }

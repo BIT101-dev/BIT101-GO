@@ -43,31 +43,31 @@ func CheckTags(tags []string) bool {
 
 // PosterGet 获取帖子
 func PosterGet(c *gin.Context) {
-	var post database.Poster
-	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
+	var poster database.Poster
+	if err := database.DB.Limit(1).Find(&poster, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
 	// 帖子不可见也不返回
-	if post.ID == 0 || (!post.Public && post.Uid != c.GetUint("uid_uint") && !c.GetBool("admin")) {
+	if poster.ID == 0 || (!poster.Public && poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin")) {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	own := post.Uid == c.GetUint("uid_uint") || c.GetBool("admin")
+	own := poster.Uid == c.GetUint("uid_uint") || c.GetBool("admin")
 	var userAPI UserAPI
-	if post.Anonymous {
+	if poster.Anonymous {
 		userAPI = GetUserAPI(-1)
-		post.Uid = 0
+		poster.Uid = 0
 	} else {
-		userAPI = GetUserAPI(int(post.Uid))
+		userAPI = GetUserAPI(int(poster.Uid))
 	}
 	var res = PosterGetResponse{
-		Poster:  post,
+		Poster:  poster,
 		UserAPI: userAPI,
-		Images:  GetImageAPIArr(spilt(post.Images)),
-		Tags:    spilt(post.Tags),
-		Claim:   database.ClaimMap[post.ClaimID],
-		Like:    CheckLike(fmt.Sprintf("poster%v", post.ID), c.GetUint("uid_uint")),
+		Images:  GetImageAPIArr(spilt(poster.Images)),
+		Tags:    spilt(poster.Tags),
+		Claim:   database.ClaimMap[poster.ClaimID],
+		Like:    CheckLike(fmt.Sprintf("poster%v", poster.ID), c.GetUint("uid_uint")),
 		Own:     own,
 	}
 	c.JSON(200, res)
@@ -101,7 +101,7 @@ func PosterSubmit(c *gin.Context) {
 		return
 	}
 
-	var post = database.Poster{
+	var poster = database.Poster{
 		Title:      query.Title,
 		Text:       query.Text,
 		Images:     strings.Join(query.ImageMids, " "),
@@ -114,16 +114,16 @@ func PosterSubmit(c *gin.Context) {
 		ClaimID:    query.ClaimID,
 		Plugins:    query.Plugins,
 	}
-	if err := database.DB.Create(&post).Error; err != nil {
+	if err := database.DB.Create(&poster).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
 	updateTagHot([]string{}, query.Tags)
 	go func() {
-		search.Update("post", post)
-		gorse.InsertPost(post)
+		search.Update("poster", poster)
+		gorse.InsertPoster(poster)
 	}()
-	c.JSON(200, gin.H{"msg": "发布成功", "id": post.ID})
+	c.JSON(200, gin.H{"msg": "发布成功", "id": poster.ID})
 }
 
 // PosterPut 修改帖子
@@ -133,16 +133,16 @@ func PosterPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "参数错误Orz"})
 		return
 	}
-	var post database.Poster
-	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
+	var poster database.Poster
+	if err := database.DB.Limit(1).Find(&poster, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	if post.ID == 0 {
+	if poster.ID == 0 {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	if post.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
 		c.JSON(500, gin.H{"msg": "没有修改权限Orz"})
 		return
 	}
@@ -154,23 +154,23 @@ func PosterPut(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "tags/images检验错误Orz"})
 		return
 	}
-	post.Title = query.Title
-	post.Text = query.Text
-	post.Images = strings.Join(query.ImageMids, " ")
-	post.Tags = strings.Join(query.Tags, " ")
-	post.Anonymous = query.Anonymous
-	post.Public = query.Public
-	post.ClaimID = query.ClaimID
-	post.Plugins = query.Plugins
-	post.EditAt = time.Now()
-	if err := database.DB.Save(&post).Error; err != nil {
+	poster.Title = query.Title
+	poster.Text = query.Text
+	poster.Images = strings.Join(query.ImageMids, " ")
+	poster.Tags = strings.Join(query.Tags, " ")
+	poster.Anonymous = query.Anonymous
+	poster.Public = query.Public
+	poster.ClaimID = query.ClaimID
+	poster.Plugins = query.Plugins
+	poster.EditAt = time.Now()
+	if err := database.DB.Save(&poster).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	updateTagHot(strings.Split(post.Tags, " "), query.Tags)
+	updateTagHot(strings.Split(poster.Tags, " "), query.Tags)
 	go func() {
-		search.Update("post", post)
-		gorse.UpdatePost(post)
+		search.Update("poster", poster)
+		gorse.UpdatePoster(poster)
 	}()
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
@@ -194,24 +194,24 @@ type PosterListResponseItem struct {
 }
 
 // 构建获取帖子列表返回结构
-func buildPostListResponse(posts []database.Poster) []PosterListResponseItem {
+func buildPostListResponse(posters []database.Poster) []PosterListResponseItem {
 	res := make([]PosterListResponseItem, 0)
-	for _, post := range posts {
+	for _, poster := range posters {
 		var userAPI UserAPI
-		if post.Anonymous {
+		if poster.Anonymous {
 			userAPI = GetUserAPI(-1)
-			post.Uid = 0
+			poster.Uid = 0
 		} else {
-			userAPI = GetUserAPI(int(post.Uid))
+			userAPI = GetUserAPI(int(poster.Uid))
 		}
 		var claim database.Claim
-		database.DB.Limit(1).Find(&claim, "id = ?", post.ClaimID)
+		database.DB.Limit(1).Find(&claim, "id = ?", poster.ClaimID)
 
 		res = append(res, PosterListResponseItem{
-			Poster:  post,
+			Poster:  poster,
 			UserAPI: userAPI,
-			Images:  GetImageAPIArr(spilt(post.Images)),
-			Tags:    spilt(post.Tags),
+			Images:  GetImageAPIArr(spilt(poster.Images)),
+			Tags:    spilt(poster.Tags),
 			Claim:   claim,
 		})
 	}
@@ -235,9 +235,9 @@ func PostList(c *gin.Context) {
 		for i := range recommend {
 			println(recommend[i])
 		}
-		var posts []database.Poster
-		database.DB.Find(&posts, "id IN ?", recommend)
-		c.JSON(200, buildPostListResponse(posts))
+		var posters []database.Poster
+		database.DB.Find(&posters, "id IN ?", recommend)
+		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
 		popular, err := gorse.GetPopular(c.GetString("uid"), query.Page)
@@ -248,9 +248,9 @@ func PostList(c *gin.Context) {
 		for i := range popular {
 			println(popular[i])
 		}
-		var posts []database.Poster
-		database.DB.Find(&posts, "id IN ?", popular)
-		c.JSON(200, buildPostListResponse(posts))
+		var posters []database.Poster
+		database.DB.Find(&posters, "id IN ?", popular)
+		c.JSON(200, buildPostListResponse(posters))
 		return
 	}
 	// follow/search模式
@@ -284,39 +284,39 @@ func PostList(c *gin.Context) {
 			filter = append(filter, "public = true")
 		}
 	}
-	var posts []database.Poster
-	err := search.Search(&posts, "post", query.Search, query.Page, config.Config.PostPageSize, order, filter)
+	var posters []database.Poster
+	err := search.Search(&posters, "poster", query.Search, query.Page, config.Config.PostPageSize, order, filter)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		println(err.Error())
 		return
 	}
-	c.JSON(200, buildPostListResponse(posts))
+	c.JSON(200, buildPostListResponse(posters))
 }
 
 // PosterDelete 删除帖子
 func PosterDelete(c *gin.Context) {
-	var post database.Poster
-	if err := database.DB.Limit(1).Find(&post, "id = ?", c.Param("id")).Error; err != nil {
+	var poster database.Poster
+	if err := database.DB.Limit(1).Find(&poster, "id = ?", c.Param("id")).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	if post.ID == 0 {
+	if poster.ID == 0 {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	if post.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
 		c.JSON(500, gin.H{"msg": "没有删除权限Orz"})
 		return
 	}
-	if err := database.DB.Delete(&post).Error; err != nil {
+	if err := database.DB.Delete(&poster).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	updateTagHot(strings.Split(post.Tags, " "), []string{})
+	updateTagHot(strings.Split(poster.Tags, " "), []string{})
 	go func() {
-		search.Delete("post", []string{fmt.Sprintf("%v", post.ID)})
-		gorse.DeletePost(c.Param("id"))
+		search.Delete("poster", []string{fmt.Sprintf("%v", poster.ID)})
+		gorse.DeletePoster(c.Param("id"))
 	}()
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
@@ -353,15 +353,15 @@ func updateTagHot(oldTags []string, newTags []string) {
 
 // PosterOnLike 点赞
 func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
-	var post database.Poster
-	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
+	var poster database.Poster
+	if err := database.DB.Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if post.ID == 0 {
+	if poster.ID == 0 {
 		return 0, errors.New("帖子不存在Orz")
 	}
-	post.LikeNum = uint(int(post.LikeNum) + delta)
-	if err := database.DB.Save(&post).Error; err != nil {
+	poster.LikeNum = uint(int(poster.LikeNum) + delta)
+	if err := database.DB.Save(&poster).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
@@ -372,29 +372,29 @@ func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
 				ItemId:       id,
 				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
 			})
-			if from_uid != post.Uid {
-				post_obj := fmt.Sprintf("poster%v", post.ID)
-				MessageSend(int(from_uid), post.Uid, post_obj, "like", post_obj, post.Title)
+			if from_uid != poster.Uid {
+				post_obj := fmt.Sprintf("poster%v", poster.ID)
+				MessageSend(int(from_uid), poster.Uid, post_obj, "like", post_obj, poster.Title)
 			}
 		} else {
 			gorse.DeleteFeedback("like", strconv.Itoa(int(from_uid)), id)
 		}
-		search.Update("post", post)
+		search.Update("poster", poster)
 	}()
-	return post.LikeNum, nil
+	return poster.LikeNum, nil
 }
 
 // PosterOnComment 评论
 func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, content string) (uint, error) {
-	var post database.Poster
-	if err := database.DB.Limit(1).Find(&post, "id = ?", id).Error; err != nil {
+	var poster database.Poster
+	if err := database.DB.Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if post.ID == 0 {
+	if poster.ID == 0 {
 		return 0, errors.New("帖子不存在Orz")
 	}
-	post.CommentNum = uint(int(post.CommentNum) + delta)
-	if err := database.DB.Save(&post).Error; err != nil {
+	poster.CommentNum = uint(int(poster.CommentNum) + delta)
+	if err := database.DB.Save(&poster).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 
@@ -406,18 +406,18 @@ func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, c
 				ItemId:       id,
 				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
 			})
-			if from_uid != post.Uid {
+			if from_uid != poster.Uid {
 				from_uid_ := int(from_uid)
 				if from_anonymous {
 					from_uid_ = -1
 				}
-				post_obj := fmt.Sprintf("poster%v", post.ID)
-				MessageSend(from_uid_, post.Uid, post_obj, "comment", post_obj, content)
+				post_obj := fmt.Sprintf("poster%v", poster.ID)
+				MessageSend(from_uid_, poster.Uid, post_obj, "comment", post_obj, content)
 			}
 		} else {
 			gorse.DeleteFeedback("comment", strconv.Itoa(int(from_uid)), id)
 		}
-		search.Update("post", post)
+		search.Update("poster", poster)
 	}()
-	return post.CommentNum, nil
+	return poster.CommentNum, nil
 }
