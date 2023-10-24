@@ -511,7 +511,7 @@ func FollowPost(c *gin.Context) {
 
 // FollowListQuery 获取关注列表请求参数
 type FollowListQuery struct {
-	Page int `json:"page"` // 页数
+	Page uint `form:"page"` // 页数
 }
 
 // FollowListGet 获取关注列表
@@ -522,7 +522,7 @@ func FollowListGet(c *gin.Context) {
 		return
 	}
 	var follow_list []database.Follow
-	database.DB.Where("uid = ?", c.GetString("uid")).Offset(query.Page).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
+	database.DB.Where("uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users = append(users, GetUserAPI(int(follow.FollowUid)))
@@ -538,7 +538,7 @@ func FansListGet(c *gin.Context) {
 		return
 	}
 	var follow_list []database.Follow
-	database.DB.Where("follow_uid = ?", c.GetString("uid")).Offset(query.Page).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
+	database.DB.Where("follow_uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users = append(users, GetUserAPI(int(follow.Uid)))
