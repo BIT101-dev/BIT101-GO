@@ -29,9 +29,10 @@ var Config = struct {
 	}
 	Dsn   string
 	Saver struct {
-		MaxSize int64 `yaml:"max_size"`
-		Url     string
-		Local   struct {
+		MaxSize        int64 `yaml:"max_size"`
+		Url            string
+		ImageUrlSuffix string `yaml:"image_url_suffix"`
+		Local          struct {
 			Enable bool
 			Path   string
 		}
@@ -59,6 +60,7 @@ var Config = struct {
 	CoursePageSize     uint   `yaml:"course_page_size"`
 	MessagePageSize    uint   `yaml:"message_page_size"`
 	PostPageSize       uint   `yaml:"post_page_size"`
+	FollowPageSize     uint   `yaml:"follow_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
 	Meilisearch        struct {

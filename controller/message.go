@@ -138,7 +138,7 @@ type MessageGetUnreadNumsResponse struct {
 func MessageGetUnreadNums(c *gin.Context) {
 	res := MessageGetUnreadNumsResponse{0, 0, 0, 0}
 	var summaries []database.MessageSummary
-	if err := database.DB.Where("uid = ?", c.GetString("uid")).Limit(1).Find(&summaries).Error; err != nil {
+	if err := database.DB.Where("uid = ?", c.GetString("uid")).Find(&summaries).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "获取未读消息数失败Orz"})
 		return
 	}
