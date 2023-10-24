@@ -467,16 +467,14 @@ func ReactionStay(c *gin.Context) {
 		return
 	}
 	if obj_type == "poster" {
-		err := gorse.InsertFeedback(client.Feedback{
-			FeedbackType: "read",
-			UserId:       c.GetString("uid"),
-			ItemId:       obj_id,
-			Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效
-		})
-		if err != nil {
-			c.JSON(500, gin.H{"msg": "gorse同步失败Orz"})
-			return
-		}
+		go func() {
+			gorse.InsertFeedback(client.Feedback{
+				FeedbackType: "read",
+				UserId:       c.GetString("uid"),
+				ItemId:       obj_id,
+				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效
+			})
+		}()
 	}
-	c.JSON(200, gin.H{"msg": "成功OvO"})
+	c.JSON(200, gin.H{})
 }

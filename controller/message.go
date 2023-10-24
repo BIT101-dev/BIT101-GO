@@ -57,7 +57,7 @@ func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj stri
 	return nil
 }
 
-// 获取消息列表请求结构
+// MessageGetListQuery 获取消息列表请求结构
 type MessageGetListQuery struct {
 	Type   string `form:"type" binding:"required"` // 消息对象
 	LastID uint   `form:"last_id"`                 // 上次查询最后一条消息的ID 为0则不限制
@@ -65,15 +65,15 @@ type MessageGetListQuery struct {
 
 // MessageGetListResponseItem 获取消息列表返回结构
 type MessageGetListResponseItem struct {
-	FromUser   UserAPI `json:"from_user"`
-	ID         uint    `json:"id"`
-	LinkObj    string  `json:"link_obj"`
-	Obj        string  `json:"obj"`
-	Text       string  `json:"text"`
-	UpdateTime string  `json:"update_time"`
+	FromUser   UserAPI   `json:"from_user"`
+	ID         uint      `json:"id"`
+	LinkObj    string    `json:"link_obj"`
+	Obj        string    `json:"obj"`
+	Text       string    `json:"text"`
+	UpdateTime time.Time `json:"update_time"`
 }
 
-// MessageGetList 获取点赞消息列表
+// MessageGetList 获取消息列表
 func MessageGetList(c *gin.Context) {
 	var query MessageGetListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -120,7 +120,7 @@ func MessageGetList(c *gin.Context) {
 			LinkObj:    message.LinkObj,
 			Obj:        message.Obj,
 			Text:       message.Content,
-			UpdateTime: message.UpdatedAt.String(),
+			UpdateTime: message.UpdatedAt,
 		})
 	}
 	c.JSON(200, res)
@@ -136,28 +136,24 @@ type MessageGetUnreadNumsResponse struct {
 
 // MessageGetUnreadNums 获取未读消息数
 func MessageGetUnreadNums(c *gin.Context) {
-	res := MessageGetUnreadNumsResponse{}
-	var summary database.MessageSummary
-	if err := database.DB.Where("uid = ? AND type = ?", c.GetString("uid"), "comment").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读评论数失败Orz"})
+	res := MessageGetUnreadNumsResponse{0, 0, 0, 0}
+	var summaries []database.MessageSummary
+	if err := database.DB.Where("uid = ?", c.GetString("uid")).Limit(1).Find(&summaries).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "获取未读消息数失败Orz"})
 		return
 	}
-	res.Comment = int(summary.UnreadNum)
-	if err := database.DB.Where("uid = ? AND type = ?", c.GetString("uid"), "follow").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读关注数失败Orz"})
-		return
+	for _, summary := range summaries {
+		switch summary.Type {
+		case "comment":
+			res.Comment = int(summary.UnreadNum)
+		case "follow":
+			res.Follow = int(summary.UnreadNum)
+		case "like":
+			res.Like = int(summary.UnreadNum)
+		case "system":
+			res.System = int(summary.UnreadNum)
+		}
 	}
-	res.Follow = int(summary.UnreadNum)
-	if err := database.DB.Where("uid = ? AND type = ?", c.GetString("uid"), "like").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读点赞数失败Orz"})
-		return
-	}
-	res.Like = int(summary.UnreadNum)
-	if err := database.DB.Where("uid = ? AND type = ?", c.GetString("uid"), "system").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读系统消息数失败Orz"})
-		return
-	}
-	res.System = int(summary.UnreadNum)
 	c.JSON(200, res)
 }
 
