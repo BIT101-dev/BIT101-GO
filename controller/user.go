@@ -10,7 +10,6 @@ import (
 	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
-	"BIT101-GO/util/gorse"
 	"BIT101-GO/util/jwt"
 	"BIT101-GO/util/mail"
 	"encoding/base64"
@@ -430,12 +429,6 @@ func UserSetInfo(c *gin.Context) {
 	if err := database.DB.Save(&user).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
-	}
-	if user.Nickname != "" {
-		if err := gorse.UpdateUser(user); err != nil {
-			c.JSON(500, gin.H{"msg": "gorse更新user失败Orz"})
-			return
-		}
 	}
 	c.JSON(200, gin.H{"msg": "修改成功OvO"})
 }
