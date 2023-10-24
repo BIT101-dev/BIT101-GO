@@ -13,6 +13,7 @@ dsn: host=localhost user=bit101 password=BIT101 dbname=bit101 port=5432 sslmode=
 saver: #文件保存相关
   max_size: 24 #最大上传大小 单位MB
   url: "https://bit101-test-1255944436.cos.ap-beijing.myqcloud.com"
+  image_url_suffix: "!low"
   local:
     enable: true
     path: "./data/"

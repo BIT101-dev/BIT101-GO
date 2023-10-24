@@ -30,7 +30,7 @@ func GetImageAPI(mid string) ImageAPI {
 	return ImageAPI{
 		Mid:    mid,
 		Url:    GetImageUrl(mid),
-		LowURL: GetImageUrl(mid),
+		LowURL: GetImageUrl(mid) + config.Config.Saver.ImageUrlSuffix,
 	}
 }
 

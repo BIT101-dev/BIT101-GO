@@ -509,10 +509,20 @@ func FollowPost(c *gin.Context) {
 	c.JSON(200, GetFollowPostResponse(uint(follow_uid), c.GetUint("uid_uint")))
 }
 
+// FollowListQuery 获取关注列表请求参数
+type FollowListQuery struct {
+	Page int `json:"page"` // 页数
+}
+
 // FollowListGet 获取关注列表
 func FollowListGet(c *gin.Context) {
+	var query FollowListQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
 	var follow_list []database.Follow
-	database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
+	database.DB.Where("uid = ?", c.GetString("uid")).Offset(query.Page).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users = append(users, GetUserAPI(int(follow.FollowUid)))
@@ -522,8 +532,13 @@ func FollowListGet(c *gin.Context) {
 
 // FansListGet 获取粉丝列表
 func FansListGet(c *gin.Context) {
+	var query FollowListQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
 	var follow_list []database.Follow
-	database.DB.Where("follow_uid = ?", c.GetString("uid")).Find(&follow_list)
+	database.DB.Where("follow_uid = ?", c.GetString("uid")).Offset(query.Page).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
 	users := make([]UserAPI, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users = append(users, GetUserAPI(int(follow.Uid)))
