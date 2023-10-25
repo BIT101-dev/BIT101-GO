@@ -101,7 +101,6 @@ func ReactionLike(c *gin.Context) {
 func CheckLike(obj string, uid uint) bool {
 	var like database.Like
 	database.DB.Where("uid = ?", uid).Where("obj = ?", obj).Limit(1).Find(&like)
-	println("like", like.ID)
 	return like.ID != 0
 }
 
@@ -243,13 +242,13 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 
 // 评论请求结构
 type ReactionCommentQuery struct {
-	Obj       string   `json:"obj" binding:"required"`  // 操作对象
-	Text      string   `json:"text" binding:"required"` // 评论内容
-	Anonymous bool     `json:"anonymous"`               // 是否匿名
-	ReplyUid  int      `json:"reply_uid"`               //回复用户id
-	ReplyObj  string   `json:"reply_obj"`               //回复对象
-	Rate      uint     `json:"rate"`                    //评分
-	ImageMids []string `json:"image_mids"`              //图片
+	Obj       string   `json:"obj" binding:"required"` // 操作对象
+	Text      string   `json:"text"`                   // 评论内容
+	Anonymous bool     `json:"anonymous"`              // 是否匿名
+	ReplyUid  int      `json:"reply_uid"`              //回复用户id
+	ReplyObj  string   `json:"reply_obj"`              //回复对象
+	Rate      uint     `json:"rate"`                   //评分
+	ImageMids []string `json:"image_mids"`             //图片
 }
 
 // 评论
@@ -259,13 +258,19 @@ func ReactionComment(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-
+	if query.Text == "" && len(query.ImageMids) == 0 {
+		c.JSON(500, gin.H{"msg": "评论内容不能为空Orz"})
+		return
+	}
+	if !CheckImage(query.ImageMids) {
+		c.JSON(500, gin.H{"msg": "存在未上传成功的图片Orz"})
+		return
+	}
 	obj_type, obj_id := getTypeID(query.Obj)
 	if obj_type == "" {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return
 	}
-
 	var comment database.Comment
 	if query.Rate != 0 {
 		database.DB.Limit(1).Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Find(&comment)

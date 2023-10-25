@@ -96,8 +96,12 @@ func PosterSubmit(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "申明不存在Orz"})
 		return
 	}
-	if !CheckTags(query.Tags) || !CheckImage(query.ImageMids) {
-		c.JSON(400, gin.H{"msg": "tags/images检验错误Orz"})
+	if !CheckTags(query.Tags) {
+		c.JSON(400, gin.H{"msg": "tags过长Orz"})
+		return
+	}
+	if !CheckImage(query.ImageMids) {
+		c.JSON(400, gin.H{"msg": "存在未上传成功的图片Orz"})
 		return
 	}
 
@@ -150,8 +154,12 @@ func PosterPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "申明不存在Orz"})
 		return
 	}
-	if !CheckTags(query.Tags) || !CheckImage(query.ImageMids) {
-		c.JSON(400, gin.H{"msg": "tags/images检验错误Orz"})
+	if !CheckTags(query.Tags) {
+		c.JSON(400, gin.H{"msg": "tags过长Orz"})
+		return
+	}
+	if !CheckImage(query.ImageMids) {
+		c.JSON(400, gin.H{"msg": "存在未上传成功的图片Orz"})
 		return
 	}
 	poster.Title = query.Title
@@ -232,9 +240,6 @@ func PostList(c *gin.Context) {
 			c.JSON(500, gin.H{"msg": "获取推荐失败Orz"})
 			return
 		}
-		for i := range recommend {
-			println(recommend[i])
-		}
 		var posters []database.Poster
 		database.DB.Find(&posters, "id IN ?", recommend)
 		c.JSON(200, buildPostListResponse(posters))
@@ -244,9 +249,6 @@ func PostList(c *gin.Context) {
 		if err != nil {
 			c.JSON(500, gin.H{"msg": "获取热榜失败Orz"})
 			return
-		}
-		for i := range popular {
-			println(popular[i])
 		}
 		var posters []database.Poster
 		database.DB.Find(&posters, "id IN ?", popular)
