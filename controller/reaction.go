@@ -259,7 +259,7 @@ func ReactionComment(c *gin.Context) {
 		return
 	}
 	if query.Text == "" && len(query.ImageMids) == 0 {
-		c.JSON(500, gin.H{"msg": "评论内容不能为空Orz"})
+		c.JSON(500, gin.H{"msg": "内容不能为空Orz"})
 		return
 	}
 	if !CheckImage(query.ImageMids) {
