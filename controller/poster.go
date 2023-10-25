@@ -76,7 +76,7 @@ func PosterGet(c *gin.Context) {
 // PosterUpdateQuery 发布帖子请求接口
 type PosterUpdateQuery struct {
 	Title     string   `json:"title" binding:"required"`
-	Text      string   `json:"text" binding:"required"`
+	Text      string   `json:"text"`
 	ImageMids []string `json:"image_mids"`
 	Plugins   string   `json:"plugins"`
 	Anonymous bool     `json:"anonymous"`
@@ -90,6 +90,10 @@ func PosterSubmit(c *gin.Context) {
 	var query PosterUpdateQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
 		c.JSON(500, gin.H{"msg": "参数错误Orz"})
+		return
+	}
+	if query.Text == "" && len(query.ImageMids) == 0 {
+		c.JSON(500, gin.H{"msg": "内容不能为空Orz"})
 		return
 	}
 	if _, ok := database.ClaimMap[query.ClaimID]; !ok {
@@ -148,6 +152,10 @@ func PosterPut(c *gin.Context) {
 	}
 	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
 		c.JSON(500, gin.H{"msg": "没有修改权限Orz"})
+		return
+	}
+	if query.Text == "" && len(query.ImageMids) == 0 {
+		c.JSON(500, gin.H{"msg": "内容不能为空Orz"})
 		return
 	}
 	if _, ok := database.ClaimMap[query.ClaimID]; !ok {
