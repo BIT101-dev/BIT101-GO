@@ -474,10 +474,10 @@ func ReactionStay(c *gin.Context) {
 	if obj_type == "poster" {
 		go func() {
 			gorse.InsertFeedback(client.Feedback{
-				FeedbackType: "read",
+				FeedbackType: "stay",
 				UserId:       c.GetString("uid"),
 				ItemId:       obj_id,
-				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效
+				Timestamp:    time.Now().String(),
 			})
 		}()
 	}
