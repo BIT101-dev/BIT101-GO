@@ -249,7 +249,14 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
-		database.DB.Find(&posters, "id IN ?", recommend)
+		// 按照推荐顺序获取帖子
+		for _, item := range recommend {
+			var poster database.Poster
+			database.DB.Limit(1).Find(&poster, "id = ?", item)
+			if poster.ID != 0 {
+				posters = append(posters, poster)
+			}
+		}
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
@@ -259,7 +266,14 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
-		database.DB.Find(&posters, "id IN ?", popular)
+		// 按照推荐顺序获取帖子
+		for _, item := range popular {
+			var poster database.Poster
+			database.DB.Limit(1).Find(&poster, "id = ?", item)
+			if poster.ID != 0 {
+				posters = append(posters, poster)
+			}
+		}
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	}
