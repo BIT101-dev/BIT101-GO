@@ -209,6 +209,17 @@ type PosterListResponseItem struct {
 	Claim   database.Claim `json:"claim"`
 }
 
+// 批量获取帖子
+func getPostersMap(ids []string) map[string]database.Poster {
+	posters := make([]database.Poster, 0)
+	database.DB.Find(&posters, "id IN ?", ids)
+	res := make(map[string]database.Poster)
+	for _, poster := range posters {
+		res[strconv.Itoa(int(poster.ID))] = poster
+	}
+	return res
+}
+
 // 构建获取帖子列表返回结构
 func buildPostListResponse(posters []database.Poster) []PosterListResponseItem {
 	res := make([]PosterListResponseItem, 0)
@@ -249,12 +260,11 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
+		postersMap := getPostersMap(recommend)
 		// 按照推荐顺序获取帖子
 		for _, item := range recommend {
-			var poster database.Poster
-			database.DB.Limit(1).Find(&poster, "id = ?", item)
-			if poster.ID != 0 {
-				posters = append(posters, poster)
+			if _, ok := postersMap[item]; ok {
+				posters = append(posters, postersMap[item])
 			}
 		}
 		c.JSON(200, buildPostListResponse(posters))
@@ -266,12 +276,11 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
+		postersMap := getPostersMap(popular)
 		// 按照推荐顺序获取帖子
 		for _, item := range popular {
-			var poster database.Poster
-			database.DB.Limit(1).Find(&poster, "id = ?", item)
-			if poster.ID != 0 {
-				posters = append(posters, poster)
+			if _, ok := postersMap[item]; ok {
+				posters = append(posters, postersMap[item])
 			}
 		}
 		c.JSON(200, buildPostListResponse(posters))
@@ -281,11 +290,12 @@ func PostList(c *gin.Context) {
 	var order []string
 	if query.Order == "like" {
 		order = append(order, "like_num:desc")
-	} else {
+	} else if query.Order == "new" {
 		order = append(order, "edit_time:desc")
 	}
 	var filter []string
 	if query.Mode == "follow" {
+		query.Search = ""
 		var follow_list []database.Follow
 		database.DB.Where("uid = ?", c.GetString("uid")).Find(&follow_list)
 		uid_filter := "uid IN [ "
