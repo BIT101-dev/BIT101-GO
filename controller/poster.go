@@ -260,13 +260,22 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
+		var feedbacks []client.Feedback
 		postersMap := getPostersMap(recommend)
 		// 按照推荐顺序获取帖子
 		for _, item := range recommend {
 			if _, ok := postersMap[item]; ok {
 				posters = append(posters, postersMap[item])
+				feedbacks = append(feedbacks, client.Feedback{
+					FeedbackType: "read",
+					UserId:       c.GetString("uid"),
+					ItemId:       item,
+					Timestamp:    time.Now().String(),
+				})
 			}
 		}
+		// recommend的帖子设为已读，用于训练
+		gorse.InsertFeedbacks(feedbacks)
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
@@ -404,7 +413,7 @@ func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
 				FeedbackType: "like",
 				UserId:       strconv.Itoa(int(from_uid)),
 				ItemId:       id,
-				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
+				Timestamp:    time.Now().String(),
 			})
 			if from_uid != poster.Uid {
 				post_obj := fmt.Sprintf("poster%v", poster.ID)
@@ -438,7 +447,7 @@ func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, c
 				FeedbackType: "comment",
 				UserId:       strconv.Itoa(int(from_uid)),
 				ItemId:       id,
-				Timestamp:    time.Now().Add(time.Duration(config.Config.Gorse.SBEFB) * time.Second).String(), //一段时间后生效,
+				Timestamp:    time.Now().String(),
 			})
 			if from_uid != poster.Uid {
 				from_uid_ := int(from_uid)
