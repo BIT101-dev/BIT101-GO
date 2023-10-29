@@ -23,15 +23,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// 枚举用户类型(需要与数据库中定义一致)
-const (
-	Identity_Super = iota
-	Identity_Normal
-	Identity_Admin
-	Identity_Organization
-	Identity_Robot
-)
-
 // 清除敏感信息
 func CleanUser(old_user database.User) database.User {
 	user := old_user
@@ -73,7 +64,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 				Nickname:   "匿名者",
 				Avatar:     GetImageAPI(""),
 				Motto:      "面对愚昧，匿名者自己也缄口不言。",
-				Type:       Type{database.IdentityMap[Identity_Normal].Text, database.IdentityMap[Identity_Normal].Color},
+				Type:       Type{database.IdentityMap[database.Identity_Normal].Text, database.IdentityMap[database.Identity_Normal].Color},
 			}
 		} else {
 			uid_list = append(uid_list, uid)

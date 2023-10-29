@@ -7,7 +7,7 @@
 package jwt
 
 import (
-	"BIT101-GO/controller"
+	"BIT101-GO/database"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,8 +27,8 @@ func GetUserToken(id string, expire int64, key string, identity int) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, UserClaims{
 		id,
 		time.Now().Unix() + expire,
-		identity == controller.Identity_Super,
-		identity == controller.Identity_Admin,
+		identity == database.Identity_Super,
+		identity == database.Identity_Admin,
 		jwt.RegisteredClaims{},
 	})
 	tokenString, err := token.SignedString([]byte(key))
@@ -44,6 +44,7 @@ func VeirifyUserToken(tokenString string, key string) (string, bool, bool, bool)
 		return []byte(key), nil
 	})
 	if err != nil {
+		println(err.Error())
 		return "", false, false, false
 	}
 
