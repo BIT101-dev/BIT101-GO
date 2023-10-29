@@ -51,7 +51,7 @@ func SetRouter(router *gin.Engine) {
 	{
 		poster.GET("/:id", middleware.CheckLogin(true), controller.PosterGet)
 		poster.GET("", middleware.CheckLogin(true), controller.PostList)
-		poster.POST("", middleware.CheckLogin(true), controller.PosterSubmit)
+		poster.POST("", middleware.CheckLogin(true), controller.PosterPost)
 		poster.PUT("/:id", middleware.CheckLogin(true), controller.PosterPut)
 		poster.DELETE("/:id", middleware.CheckLogin(true), controller.PosterDelete)
 		poster.GET("/claims", controller.ClaimList)
@@ -96,5 +96,14 @@ func SetRouter(router *gin.Engine) {
 		message.GET("", middleware.CheckLogin(true), controller.MessageGetList)
 		message.GET("/unread_num", middleware.CheckLogin(true), controller.MessageGetUnreadNum)
 		message.GET("/unread_nums", middleware.CheckLogin(true), controller.MessageGetUnreadNums)
+	}
+	// 治理模块
+	manage := router.Group("/manage")
+	{
+		manage.GET("/report_types", controller.ReportTypeListGet)
+		manage.POST("/reports", middleware.CheckLogin(true), controller.ReportPost)
+		manage.GET("/reports", middleware.CheckLogin(true), controller.ReportList)
+		manage.POST("/bans", middleware.CheckLogin(true), controller.BanPost)
+		manage.GET("/bans", middleware.CheckLogin(true), controller.BanList)
 	}
 }

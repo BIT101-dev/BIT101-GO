@@ -120,7 +120,7 @@ func Init() {
 	// 可排序参数
 	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}
 	sortAttrPaper := []string{"like_num", "update_time"}
-	sortAttrPoster := []string{"like_num", "comment_num", "edit_time"}
+	sortAttrPoster := []string{"like_num", "comment_num", "create_time"}
 	// 可筛选参数
 	filterAttrCourse := []string{}
 	filterAttrPaper := []string{}

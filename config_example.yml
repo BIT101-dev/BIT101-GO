@@ -38,6 +38,8 @@ comment_preview_size: 3 #预览子评论数量
 course_page_size: 24 #每次加载课程数量
 message_page_size: 24 #每次加载信息数量
 post_page_size: 24 #每次加载帖子数量
+report_page_size: 24 #每次加载举报数量
+ban_page_size: 24 #每次加载封禁数量
 main_url: https://bit101.cn
 release_mode: true #是否为部署模式 开启后不显示DEBUG信息
 meilisearch:

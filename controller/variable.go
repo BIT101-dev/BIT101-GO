@@ -44,7 +44,7 @@ type VariablePostRequest struct {
 
 // 设置变量
 func VariablePost(c *gin.Context) {
-	if !c.GetBool("admin") {
+	if !c.GetBool("super") {
 		c.JSON(401, gin.H{"msg": "没有权限Orz"})
 		return
 	}

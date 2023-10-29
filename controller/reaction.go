@@ -328,7 +328,7 @@ func ReactionCommentList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin")))
+	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin") || c.GetBool("super")))
 }
 
 // 点赞评论
@@ -423,7 +423,7 @@ func ReactionCommentDelete(c *gin.Context) {
 		return
 	}
 
-	if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "无权删除Orz"})
 		return
 	}
