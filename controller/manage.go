@@ -10,13 +10,13 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"strconv"
-	"time"
 )
 
 // ReportTypeListGet 获取举报类型列表
 func ReportTypeListGet(c *gin.Context) {
-	var reportTypes []database.ReportType
+	reportTypes := make([]database.ReportType, 0)
 	for _, reportType := range database.ReportTypeMap {
 		reportTypes = append(reportTypes, reportType)
 	}
@@ -66,7 +66,7 @@ func ReportPost(c *gin.Context) {
 	report := database.Report{
 		Obj:    query.Obj,
 		Text:   query.Text,
-		Uid:    c.GetUint("uid"),
+		Uid:    c.GetUint("uid_uint"),
 		TypeId: query.TypeId,
 	}
 	database.DB.Create(&report)
@@ -99,7 +99,7 @@ func ReportList(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	if !c.GetBool("admin") || !c.GetBool("super") {
+	if !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(401, gin.H{"msg": "权限不足awa"})
 		return
 	}
@@ -114,11 +114,11 @@ func ReportList(c *gin.Context) {
 		q = q.Where("status = ?", query.Status)
 	}
 	var reports []database.Report
-	if err := q.Order("create_time DESC").Offset(int(query.Page * config.Config.ReportPageSize)).Limit(int(config.Config.ReportPageSize)).Find(&reports); err != nil {
+	if err := q.Order("created_at DESC").Offset(int(query.Page * config.Config.ReportPageSize)).Limit(int(config.Config.ReportPageSize)).Find(&reports).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	var response []ReportListResponseItem
+	response := make([]ReportListResponseItem, 0)
 	for _, report := range reports {
 		response = append(response, ReportListResponseItem{
 			CreatedTime: report.CreatedAt.String(),
@@ -135,7 +135,7 @@ func ReportList(c *gin.Context) {
 
 // BanPostQuery 关小黑屋请求结构
 type BanPostQuery struct {
-	Time string `json:"time"` // 解封时间，格式为ISO 8603带时区
+	Time string `json:"time"` // 解封时间，格式为ISO 8601带时区
 	Uid  uint   `json:"uid"`
 }
 
@@ -150,8 +150,13 @@ func BanPost(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	if !c.GetBool("admin") || !c.GetBool("super") {
+	if !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(401, gin.H{"msg": "权限不足awa"})
+		return
+	}
+	_, err := ParseTime(query.Time)
+	if err != nil {
+		c.JSON(400, gin.H{"msg": "时间格式错误awa"})
 		return
 	}
 	var user database.User
@@ -160,19 +165,23 @@ func BanPost(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "用户不存在Orz"})
 		return
 	}
-	if user.Identity == Identity_Super || user.Identity == Identity_Admin {
+	if user.Identity == database.Identity_Super || user.Identity == database.Identity_Admin {
 		c.JSON(400, gin.H{"msg": "此用户无法被封禁Orz"})
+		return
+	}
+	if _, ok := database.BanMap[query.Uid]; ok {
+		var _ban database.Ban
+		database.DB.Unscoped().Where("uid = ?", query.Uid).Limit(1).Find(&_ban)
+		_ban.DeletedAt = gorm.DeletedAt{}
+		_ban.Time = query.Time
+		go func() { database.DB.Unscoped().Save(_ban) }()
+		database.BanMap[query.Uid] = _ban
+		c.JSON(200, gin.H{"msg": "修改封禁时间成功OvO"})
 		return
 	}
 	ban := database.Ban{
 		Uid:  query.Uid,
 		Time: query.Time,
-	}
-	if _, ok := database.BanMap[query.Uid]; ok {
-		database.DB.Model(&database.Ban{}).Where("uid = ?", query.Uid).Update("time", query.Time)
-		database.BanMap[query.Uid] = ban
-		c.JSON(200, gin.H{"msg": "修改封禁时间成功OvO"})
-		return
 	}
 	database.DB.Create(&ban)
 	database.BanMap[query.Uid] = ban
@@ -199,7 +208,7 @@ func BanList(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	if !c.GetBool("admin") || !c.GetBool("super") {
+	if !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(400, gin.H{"msg": "权限不足awa"})
 		return
 	}
@@ -208,12 +217,12 @@ func BanList(c *gin.Context) {
 	if query.Uid != "" {
 		q = q.Where("uid = ?", query.Uid)
 	}
-	var bans []database.Ban
-	if err := q.Order("create_time DESC").Offset(int(query.Page * config.Config.BanPageSize)).Limit(int(config.Config.BanPageSize)).Find(&bans).Error; err != nil {
+	bans := make([]database.Ban, 0)
+	if err := q.Order("created_at DESC").Offset(int(query.Page * config.Config.BanPageSize)).Limit(int(config.Config.BanPageSize)).Find(&bans).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	var response []BanListResponseItem
+	response := make([]BanListResponseItem, 0)
 	for _, ban := range bans {
 		response = append(response, BanListResponseItem{
 			ID:   strconv.Itoa(int(ban.ID)),
@@ -227,11 +236,11 @@ func BanList(c *gin.Context) {
 // CheckBans 检查map里的封禁是否过期
 func CheckBans() {
 	for _, ban := range database.BanMap {
-		t, err := time.Parse(time.RFC3339, ban.Time)
+		t, err := ParseTime(ban.Time)
 		if err != nil {
 			continue
 		}
-		if time.Now().After(t) {
+		if GetNowTime().After(t) {
 			database.DB.Delete(&ban)
 			delete(database.BanMap, ban.Uid)
 		}
@@ -241,11 +250,11 @@ func CheckBans() {
 // CheckBan 检查用户是否被封禁
 func CheckBan(uid uint) bool {
 	if ban, ok := database.BanMap[uid]; ok {
-		t, err := time.Parse(time.RFC3339, ban.Time)
+		t, err := ParseTime(ban.Time)
 		if err != nil {
 			return false
 		}
-		if time.Now().After(t) {
+		if GetNowTime().After(t) {
 			database.DB.Delete(&ban)
 			delete(database.BanMap, ban.Uid)
 			return false

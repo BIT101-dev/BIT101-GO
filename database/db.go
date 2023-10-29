@@ -20,6 +20,15 @@ var IdentityMap map[uint]Identity
 var ReportTypeMap map[uint]ReportType
 var BanMap map[uint]Ban
 
+// 枚举用户类型(需要与数据库中定义一致)
+const (
+	Identity_Super = iota
+	Identity_Normal
+	Identity_Admin
+	Identity_Organization
+	Identity_Robot
+)
+
 // 基本模型
 type Base struct {
 	ID        uint           `gorm:"primarykey" json:"id"`

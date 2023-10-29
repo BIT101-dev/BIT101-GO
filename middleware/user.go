@@ -8,11 +8,11 @@ package middleware
 
 import (
 	"BIT101-GO/controller"
+	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/jwt"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 // 验证用户是否登录
@@ -28,7 +28,8 @@ func CheckLogin(strict bool) gin.HandlerFunc {
 				return
 			}
 			if controller.CheckBan(uint(uid_uint)) {
-				c.JSON(401, gin.H{"msg": "您已被关小黑屋Orz"})
+				t, _ := controller.ParseTime(database.BanMap[uint(uid_uint)].Time)
+				c.JSON(401, gin.H{"msg": "您已被关小黑屋Orz,解封时间：" + t.Format("2006-01-02 15:04:05")})
 				c.Abort()
 				return
 			}

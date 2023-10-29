@@ -6,7 +6,10 @@
  */
 package controller
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // 用于分割字符串（处理空元素的情况）
 func spilt(str string) []string {
@@ -18,4 +21,20 @@ func spilt(str string) []string {
 		}
 	}
 	return out
+}
+
+// GetNowTime 当前时间
+func GetNowTime() time.Time {
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	return time.Now().In(loc)
+}
+
+// ParseTime 解析时间
+func ParseTime(t string) (time.Time, error) {
+	loc, _ := time.LoadLocation("Asia/Shanghai")
+	_time, err := time.Parse(time.RFC3339, t)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return _time.In(loc), nil
 }
