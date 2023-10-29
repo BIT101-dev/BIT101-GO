@@ -43,7 +43,7 @@ func PaperGet(c *gin.Context) {
 		update_uid = int(paper.UpdateUid)
 	}
 
-	own := paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin")
+	own := paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin") || c.GetBool("super")
 	paper.CreateUid = 0
 	paper.UpdatedAt = paper.EditAt
 	var res = PaperGetResponse{
@@ -123,7 +123,7 @@ func PaperPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	if paper.CreateUid != c.GetUint("uid_uint") && !paper.PublicEdit && !c.GetBool("admin") {
+	if paper.CreateUid != c.GetUint("uid_uint") && !paper.PublicEdit && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有编辑权限Orz"})
 		return
 	}
@@ -231,7 +231,7 @@ func PaperDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	if paper.CreateUid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if paper.CreateUid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有删除权限Orz"})
 		return
 	}

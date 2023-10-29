@@ -16,7 +16,9 @@ import (
 
 var DB *gorm.DB
 var ClaimMap map[uint]Claim
-var IdentityMap map[int]Identity
+var IdentityMap map[uint]Identity
+var ReportTypeMap map[uint]ReportType
+var BanMap map[uint]Ban
 
 // 基本模型
 type Base struct {
@@ -34,13 +36,12 @@ type User struct {
 	Nickname string `gorm:"not null;unique" json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Motto    string `json:"motto"`
-	Level    int    `gorm:"default:1" json:"level"`
+	Identity uint   `gorm:"default:1" json:"identity"`
 }
 
 // 身份
 type Identity struct {
 	Base
-	Level int    `gorm:"not null;uniqueIndex" json:"level"`
 	Text  string `gorm:"not null" json:"text"`
 	Color string `json:"color"`
 }
@@ -63,7 +64,7 @@ type Tag struct {
 // 申明
 type Claim struct {
 	Base
-	Text string `gorm:"not null" json:"text"` //申明内容
+	Text string `gorm:"not null;unique" json:"text"` //申明内容
 }
 
 // 帖子
@@ -73,8 +74,8 @@ type Poster struct {
 	Text       string    `gorm:"not null" json:"text"`            //内容
 	Images     string    `json:"images"`                          //图片mids，以" "拼接
 	Uid        uint      `gorm:"not null;index" json:"uid"`       //用户id
-	Anonymous  bool      `gorm:"default:false" json:"anonymous"`  //是否匿名
-	Public     bool      `gorm:"default:true" json:"public"`      //是否可见
+	Anonymous  bool      `json:"anonymous"`                       //是否匿名
+	Public     bool      `json:"public"`                          //是否可见
 	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
 	Tags       string    `json:"tags"`                            //标签，以" "拼接
@@ -216,7 +217,30 @@ type Message struct {
 	Content string `json:"content"`                        //内容
 }
 
-// 初始化Map(针对常用且稳定的数据)
+// 举报
+type Report struct {
+	Base
+	Obj    string `gorm:"not null;index" json:"obj"`     //举报对象
+	Text   string `gorm:"not null" json:"text"`          //举报理由
+	Uid    uint   `gorm:"not null;index" json:"uid"`     //举报人id
+	Status int    `gorm:"default:0" json:"status"`       //状态 0为未处理 1为举报成功 2为举报失败
+	TypeId uint   `gorm:"not null;index" json:"type_id"` //举报类型id
+}
+
+// 举报类型
+type ReportType struct {
+	Base
+	Text string `gorm:"not null" json:"text"` //类型内容
+}
+
+// 小黑屋
+type Ban struct {
+	Base
+	Uid  uint   `gorm:"not null;unique" json:"uid"` //封禁id
+	Time string `gorm:"not null" json:"time"`       //解封时间
+}
+
+// InitMaps 初始化Map(针对常用且稳定的数据)
 func InitMaps() {
 	//初始化 ClaimMap
 	ClaimMap = make(map[uint]Claim)
@@ -226,11 +250,25 @@ func InitMaps() {
 		ClaimMap[claim.ID] = claim
 	}
 	//初始化 IdentityMap
-	IdentityMap = make(map[int]Identity)
+	IdentityMap = make(map[uint]Identity)
 	var identities []Identity
 	DB.Find(&identities)
 	for _, identity := range identities {
-		IdentityMap[identity.Level] = identity
+		IdentityMap[identity.ID] = identity
+	}
+	//初始化 ReportTypeMap
+	ReportTypeMap = make(map[uint]ReportType)
+	var reportTypes []ReportType
+	DB.Find(&reportTypes)
+	for _, reportType := range reportTypes {
+		ReportTypeMap[reportType.ID] = reportType
+	}
+	// 初始化 BanMap
+	BanMap = make(map[uint]Ban)
+	var bans []Ban
+	DB.Find(&bans)
+	for _, ban := range bans {
+		BanMap[ban.Uid] = ban
 	}
 }
 
@@ -245,7 +283,7 @@ func Init() {
 	db.AutoMigrate(
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
-		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{},
+		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
 	)
 	InitMaps()
 }

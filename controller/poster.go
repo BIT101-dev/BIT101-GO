@@ -49,7 +49,7 @@ func PosterGet(c *gin.Context) {
 		return
 	}
 	// 帖子不可见也不返回
-	if poster.ID == 0 || (!poster.Public && poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin")) {
+	if poster.ID == 0 || (!poster.Public && poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super")) {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
@@ -85,8 +85,8 @@ type PosterUpdateQuery struct {
 	Public    bool     `json:"public"`
 }
 
-// PosterSubmit 发布帖子
-func PosterSubmit(c *gin.Context) {
+// PosterPost 发布帖子
+func PosterPost(c *gin.Context) {
 	var query PosterUpdateQuery
 	if err := c.ShouldBindJSON(&query); err != nil {
 		c.JSON(500, gin.H{"msg": "参数错误Orz"})
@@ -150,7 +150,7 @@ func PosterPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有修改权限Orz"})
 		return
 	}
@@ -279,7 +279,7 @@ func PostList(c *gin.Context) {
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
-		popular, err := gorse.GetPopular(c.GetString("uid"), query.Page)
+		popular, err := gorse.GetPopular(query.Page)
 		if err != nil {
 			c.JSON(500, gin.H{"msg": "获取热榜失败Orz"})
 			return
@@ -300,7 +300,7 @@ func PostList(c *gin.Context) {
 	if query.Order == "like" {
 		order = append(order, "like_num:desc")
 	} else if query.Order == "new" {
-		order = append(order, "edit_time:desc")
+		order = append(order, "create_time:desc")
 	}
 	var filter []string
 	if query.Mode == "follow" {
@@ -348,7 +348,7 @@ func PosterDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if poster.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有删除权限Orz"})
 		return
 	}
@@ -367,9 +367,8 @@ func PosterDelete(c *gin.Context) {
 // ClaimList 获取申明列表
 func ClaimList(c *gin.Context) {
 	var claims []database.Claim
-	if err := database.DB.Find(&claims).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
+	for _, claim := range database.ClaimMap {
+		claims = append(claims, claim)
 	}
 	c.JSON(200, claims)
 }

@@ -23,6 +23,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// 枚举用户类型(需要与数据库中定义一致)
+const (
+	Identity_Super = iota
+	Identity_Normal
+	Identity_Admin
+	Identity_Organization
+	Identity_Robot
+)
+
 // 清除敏感信息
 func CleanUser(old_user database.User) database.User {
 	user := old_user
@@ -64,7 +73,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 				Nickname:   "匿名者",
 				Avatar:     GetImageAPI(""),
 				Motto:      "面对愚昧，匿名者自己也缄口不言。",
-				Type:       Type{database.IdentityMap[1].Text, database.IdentityMap[1].Color},
+				Type:       Type{database.IdentityMap[Identity_Normal].Text, database.IdentityMap[Identity_Normal].Color},
 			}
 		} else {
 			uid_list = append(uid_list, uid)
@@ -80,7 +89,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 			Nickname:   user.Nickname,
 			Avatar:     GetImageAPI(user.Avatar),
 			Motto:      user.Motto,
-			Type:       Type{database.IdentityMap[user.Level].Text, database.IdentityMap[user.Level].Color},
+			Type:       Type{database.IdentityMap[user.Identity].Text, database.IdentityMap[user.Identity].Color},
 		}
 	}
 	return out
@@ -108,7 +117,7 @@ func UserLogin(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "登录失败Orz"})
 		return
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, user.Level == 0)
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, int(user.Identity))
 	c.JSON(200, gin.H{"msg": "登录成功OvO", "fake_cookie": token})
 }
 
@@ -175,7 +184,7 @@ func UserWebvpnVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, false)
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, -1)
 	c.JSON(200, gin.H{"msg": "统一身份认证成功OvO", "token": token, "code": code})
 }
 
@@ -194,7 +203,7 @@ func UserMailVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, false)
+	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, -1)
 	//发送邮件
 	err := mail.Send(query.Sid+"@bit.edu.cn", "[BIT101]验证码", fmt.Sprintf("【%v】 是你的验证码ヾ(^▽^*)))", code))
 	if err != nil {
@@ -221,7 +230,7 @@ func UserRegister(c *gin.Context) {
 	}
 
 	// 验证token
-	sid, ok, _ := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
+	sid, ok, _, _ := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
 	if !ok {
 		c.JSON(500, gin.H{"msg": "验证码无效Orz"})
 		return
@@ -266,7 +275,7 @@ func UserRegister(c *gin.Context) {
 			}
 		}
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, user.Level == 0)
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, int(user.Identity))
 	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
 }
 

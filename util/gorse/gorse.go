@@ -137,9 +137,9 @@ func DeleteFeedback(feedbackType, userId, itemId string) error {
 }
 
 // GetPopular 获取popular
-func GetPopular(userid string, page uint) ([]string, error) {
+func GetPopular(page uint) ([]string, error) {
 	limit := int(config.Config.PostPageSize)
-	score, err := gorse.GetItemPopular(context.Background(), userid, limit, int(page)*limit)
+	score, err := gorse.GetItemPopular(context.Background(), "", limit, int(page)*limit)
 	if err != nil {
 		return nil, err
 	}
