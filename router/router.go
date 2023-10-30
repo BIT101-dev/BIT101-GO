@@ -88,7 +88,7 @@ func SetRouter(router *gin.Engine) {
 	variable := router.Group("/variables")
 	{
 		variable.GET("", controller.VariableGet)
-		variable.POST("", middleware.CheckLogin(true), controller.VariablePost)
+		variable.POST("", middleware.CheckLogin(true), middleware.CheckSuper(), controller.VariablePost)
 	}
 	// 消息模块
 	message := router.Group("/messages")
@@ -96,14 +96,16 @@ func SetRouter(router *gin.Engine) {
 		message.GET("", middleware.CheckLogin(true), controller.MessageGetList)
 		message.GET("/unread_num", middleware.CheckLogin(true), controller.MessageGetUnreadNum)
 		message.GET("/unread_nums", middleware.CheckLogin(true), controller.MessageGetUnreadNums)
+		message.POST("/system", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.SystemMessagePost)
 	}
 	// 治理模块
 	manage := router.Group("/manage")
 	{
 		manage.GET("/report_types", controller.ReportTypeListGet)
 		manage.POST("/reports", middleware.CheckLogin(true), controller.ReportPost)
-		manage.GET("/reports", middleware.CheckLogin(true), controller.ReportList)
-		manage.POST("/bans", middleware.CheckLogin(true), controller.BanPost)
-		manage.GET("/bans", middleware.CheckLogin(true), controller.BanList)
+		manage.GET("/reports", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.ReportList)
+		manage.PUT("reports/:id", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.ReportPut)
+		manage.POST("/bans", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.BanPost)
+		manage.GET("/bans", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.BanList)
 	}
 }

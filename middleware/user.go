@@ -43,3 +43,23 @@ func CheckLogin(strict bool) gin.HandlerFunc {
 		}
 	}
 }
+
+// CheckAdmin 验证用户是否为admin/super
+func CheckAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !c.GetBool("admin") && !c.GetBool("super") {
+			c.JSON(401, gin.H{"msg": "权限不足awa"})
+			c.Abort()
+		}
+	}
+}
+
+// CheckSuper 验证用户是否为super
+func CheckSuper() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !c.GetBool("super") {
+			c.JSON(401, gin.H{"msg": "权限不足awa"})
+			c.Abort()
+		}
+	}
+}

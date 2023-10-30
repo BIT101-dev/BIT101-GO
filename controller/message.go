@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 推送消息
+// MessageSend 推送消息
 func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj string, content string) error {
 	// 创建消息
 	short_msg := []rune(content)
@@ -55,6 +55,30 @@ func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj stri
 		return err
 	}
 	return nil
+}
+
+// SystemMessagePostQuery 发送系统消息请求结构
+type SystemMessagePostQuery struct {
+	FromUid int    `json:"from_uid"`
+	LinkObj string `json:"link_obj"`
+	Obj     string `json:"obj"`
+	Text    string `json:"text"`
+	ToUid   uint   `json:"to_uid"`
+}
+
+// SystemMessagePost 发送系统消息
+func SystemMessagePost(c *gin.Context) {
+	var query SystemMessagePostQuery
+	if err := c.ShouldBindJSON(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误Orz"})
+		return
+	}
+	err := MessageSend(query.FromUid, query.ToUid, query.Obj, "system", query.LinkObj, query.Text)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "发送失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "发送成功OvO"})
 }
 
 // MessageGetListQuery 获取消息列表请求结构
@@ -157,7 +181,7 @@ func MessageGetUnreadNums(c *gin.Context) {
 	c.JSON(200, res)
 }
 
-// 获取总未读消息数
+// MessageGetUnreadNum 获取总未读消息数
 func MessageGetUnreadNum(c *gin.Context) {
 	var count sql.NullInt64
 	if err := database.DB.Model(&database.MessageSummary{}).Select("SUM(unread_num)").Where("uid = ?", c.GetString("uid")).Pluck("sum", &count).Error; err != nil {

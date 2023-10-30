@@ -22,10 +22,12 @@ var BanMap map[uint]Ban
 
 // 枚举用户类型(需要与数据库中定义一致)
 const (
-	Identity_Super = iota
-	Identity_Normal
+	Identity_Normal = iota
 	Identity_Admin
+	Identity_Super
 	Identity_Organization
+	Identity_Club
+	Identity_NGO
 	Identity_Robot
 )
 
@@ -45,7 +47,7 @@ type User struct {
 	Nickname string `gorm:"not null;unique" json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Motto    string `json:"motto"`
-	Identity uint   `gorm:"default:1" json:"identity"`
+	Identity uint   `gorm:"default:0" json:"identity"`
 }
 
 // 身份

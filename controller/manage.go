@@ -73,6 +73,32 @@ func ReportPost(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "举报成功"})
 }
 
+// ReportPutQuery 修改举报状态请求接口
+type ReportPutQuery struct {
+	Status int `form:"status"`
+}
+
+// ReportPut 修改举报状态
+func ReportPut(c *gin.Context) {
+	var query ReportPutQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	var report database.Report
+	if err := database.DB.Limit(1).Find(&report, "id = ?", c.Param("id")).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
+	if report.ID == 0 {
+		c.JSON(500, gin.H{"msg": "举报不存在Orz"})
+		return
+	}
+	report.Status = query.Status
+	database.DB.Save(&report)
+	c.JSON(200, gin.H{"msg": "修改成功OvO"})
+}
+
 // ReportListQuery 获取举报类型请求接口
 type ReportListQuery struct {
 	Page   uint   `form:"page"`
