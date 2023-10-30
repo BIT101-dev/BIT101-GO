@@ -5,6 +5,7 @@ proxy: #代理请求
 key: "BIT101" #加密密钥
 verify_code_expire: 300 #验证码有效期 单位秒
 login_expire: 2073600 #登录有效期 单位秒
+sync_interval: 3600 #同步间隔 单位秒
 mail: #邮箱
   host: smtp.qq.com
   user: bit101@qq.com

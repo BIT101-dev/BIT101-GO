@@ -13,6 +13,7 @@ import (
 	"github.com/zhenghaoz/gorse/client"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var gorse *client.GorseClient
@@ -35,6 +36,47 @@ func InitUserAndItem() {
 		println("初始化items失败:", err.Error())
 		return
 	}
+}
+
+// Sync 同步
+func Sync(time_after time.Time) {
+	users := []database.User{}
+	users_update := []database.User{}
+	q := database.DB.Model(database.User{}).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&users).Error; err != nil {
+		println("同步users失败:", err.Error())
+	}
+	for _, v := range users {
+		if v.DeletedAt.Valid {
+			DeleteUser(strconv.Itoa(int(v.ID)))
+		} else {
+			users_update = append(users_update, v)
+		}
+	}
+	go func() {
+		if err := InsertUsers(users_update); err != nil {
+			println("同步users失败:", err.Error())
+		}
+	}()
+
+	posters := []database.Poster{}
+	posters_update := []database.Poster{}
+	q = database.DB.Model(database.Poster{}).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&posters).Error; err != nil {
+		println("同步items失败:", err.Error())
+	}
+	for _, v := range posters {
+		if v.DeletedAt.Valid {
+			DeletePoster(strconv.Itoa(int(v.ID)))
+		} else {
+			posters_update = append(posters_update, v)
+		}
+	}
+	go func() {
+		if err := InsertPosters(posters_update); err != nil {
+			println("同步items失败:", err.Error())
+		}
+	}()
 }
 
 // User2GorseUser user转换为gorseUser
@@ -73,8 +115,14 @@ func UpdateUser(user database.User) error {
 	return err
 }
 
-// Post2GorseItem post转换为gorseItem
-func Post2GorseItem(post database.Poster) client.Item {
+// DeleteUser 删除用户
+func DeleteUser(id string) error {
+	_, err := gorse.DeleteUser(context.Background(), id)
+	return err
+}
+
+// Poster2GorseItem post转换为gorseItem
+func Poster2GorseItem(post database.Poster) client.Item {
 	return client.Item{
 		ItemId:     strconv.Itoa(int(post.ID)),
 		IsHidden:   !post.Public,
@@ -94,7 +142,7 @@ func InsertPoster(post database.Poster) error {
 func InsertPosters(posts []database.Poster) error {
 	var gorseItems []client.Item
 	for _, post := range posts {
-		gorseItems = append(gorseItems, Post2GorseItem(post))
+		gorseItems = append(gorseItems, Poster2GorseItem(post))
 	}
 	_, err := gorse.InsertItems(context.Background(), gorseItems)
 	return err
@@ -102,7 +150,7 @@ func InsertPosters(posts []database.Poster) error {
 
 // UpdatePoster 更新poster
 func UpdatePoster(post database.Poster) error {
-	gorseItem := Post2GorseItem(post)
+	gorseItem := Poster2GorseItem(post)
 	_, err := gorse.UpdateItem(context.Background(), gorseItem.ItemId, client.ItemPatch{
 		IsHidden:   &gorseItem.IsHidden,
 		Labels:     gorseItem.Labels,

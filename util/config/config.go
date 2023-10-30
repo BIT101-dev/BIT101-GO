@@ -22,6 +22,7 @@ var Config = struct {
 	Key              string
 	VerifyCodeExpire int64 `yaml:"verify_code_expire"`
 	LoginExpire      int64 `yaml:"login_expire"`
+	SyncInterval     int64 `yaml:"sync_interval"`
 	Mail             struct {
 		Host     string
 		User     string
