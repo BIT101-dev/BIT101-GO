@@ -56,6 +56,12 @@ func ReportPost(c *gin.Context) {
 		if poster.ID != 0 {
 			isExist = true
 		}
+	case "comment":
+		var comment database.Comment
+		database.DB.Where("id = ?", obj_id).Limit(1).Find(&comment)
+		if comment.ID != 0 {
+			isExist = true
+		}
 	default:
 		isExist = false
 	}

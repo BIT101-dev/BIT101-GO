@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/meilisearch/meilisearch-go"
+	"strconv"
+	"time"
 )
 
 var client *meilisearch.Client
@@ -111,6 +113,72 @@ func Delete(indexName string, ids []string) error {
 	return deleteDocumentFromMeiliSearch(indexName, ids)
 }
 
+// Sync 同步
+func Sync(time_after time.Time) {
+	dataSlice_course := []database.Course{}
+	data_update_course := []database.Course{}
+	data_delete_course := []string{}
+	q := database.DB.Model(dataSlice_course).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_course).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+	for _, v := range dataSlice_course {
+		if v.DeletedAt.Valid {
+			data_delete_course = append(data_delete_course, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_course = append(data_update_course, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("course", data_update_course); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+	if err := deleteDocumentFromMeiliSearch("course", data_delete_course); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+
+	dataSlice_paper := []database.Paper{}
+	data_update_paper := []database.Paper{}
+	data_delete_paper := []string{}
+	q = database.DB.Model(dataSlice_paper).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_paper).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+	for _, v := range dataSlice_paper {
+		if v.DeletedAt.Valid {
+			data_delete_paper = append(data_delete_paper, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_paper = append(data_update_paper, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("paper", data_update_paper); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+	if err := deleteDocumentFromMeiliSearch("paper", data_delete_paper); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+
+	dataSlice_poster := []database.Poster{}
+	data_update_poster := []database.Poster{}
+	data_delete_poster := []string{}
+	q = database.DB.Model(dataSlice_poster).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_poster).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+	for _, v := range dataSlice_poster {
+		if v.DeletedAt.Valid {
+			data_delete_poster = append(data_delete_poster, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_poster = append(data_update_poster, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("poster", data_update_poster); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+	if err := deleteDocumentFromMeiliSearch("poster", data_delete_poster); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+}
+
 // Init 初始化
 func Init() {
 	client = meilisearch.NewClient(meilisearch.ClientConfig{
@@ -138,4 +206,5 @@ func Init() {
 	importData("course", &[]database.Course{})
 	importData("paper", &[]database.Paper{})
 	importData("poster", &[]database.Poster{})
+
 }
