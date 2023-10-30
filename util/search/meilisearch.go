@@ -12,12 +12,6 @@ import (
 
 var client *meilisearch.Client
 
-var ModelMapping = map[string]interface{}{
-	"course": database.Course{},
-	"paper":  database.Paper{},
-	"poster": database.Poster{},
-}
-
 // createAndConfigureIndex 创建并配置索引
 func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
 	index, err := client.CreateIndex(&meilisearch.IndexConfig{
