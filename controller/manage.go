@@ -43,6 +43,7 @@ func ReportPost(c *gin.Context) {
 	}
 	obj_type, obj_id := getTypeID(query.Obj)
 	var isExist bool
+	var isSelf bool
 	switch obj_type {
 	case "user":
 		var user database.User
@@ -50,11 +51,17 @@ func ReportPost(c *gin.Context) {
 		if user.ID != 0 {
 			isExist = true
 		}
+		if user.ID == c.GetUint("uid_uint") {
+			isSelf = true
+		}
 	case "poster":
 		var poster database.Poster
 		database.DB.Where("id = ?", obj_id).Limit(1).Find(&poster)
 		if poster.ID != 0 {
 			isExist = true
+		}
+		if poster.Uid == c.GetUint("uid_uint") {
+			isSelf = true
 		}
 	case "comment":
 		var comment database.Comment
@@ -62,11 +69,19 @@ func ReportPost(c *gin.Context) {
 		if comment.ID != 0 {
 			isExist = true
 		}
+		if comment.Uid == c.GetUint("uid_uint") {
+			isSelf = true
+		}
 	default:
 		isExist = false
+		isSelf = false
 	}
 	if !isExist {
 		c.JSON(500, gin.H{"msg": "举报对象不存在Orz"})
+		return
+	}
+	if isSelf {
+		c.JSON(500, gin.H{"msg": "不能举报自己Orz"})
 		return
 	}
 	report := database.Report{

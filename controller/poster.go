@@ -53,7 +53,7 @@ func PosterGet(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "帖子不存在Orz"})
 		return
 	}
-	own := poster.Uid == c.GetUint("uid_uint") || c.GetBool("admin")
+	own := poster.Uid == c.GetUint("uid_uint") || c.GetBool("admin") || c.GetBool("super")
 	var userAPI UserAPI
 	if poster.Anonymous {
 		userAPI = GetUserAPI(-1)
