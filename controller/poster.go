@@ -254,7 +254,7 @@ func PostList(c *gin.Context) {
 	}
 	// recommend/hot模式
 	if query.Mode == "" || query.Mode == "recommend" {
-		recommend, err := gorse.GetRecommend(c.GetString("uid"), query.Page)
+		recommend, err := gorse.GetRecommend(c.GetString("uid"), 0)
 		if err != nil {
 			c.JSON(500, gin.H{"msg": "获取推荐失败Orz"})
 			return

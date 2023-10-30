@@ -64,6 +64,7 @@ var Config = struct {
 	FollowPageSize     uint   `yaml:"follow_page_size"`
 	ReportPageSize     uint   `yaml:"report_page_size"`
 	BanPageSize        uint   `yaml:"ban_page_size"`
+	RecommendPageSize  uint   `yaml:"recommend_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
 	Meilisearch        struct {
