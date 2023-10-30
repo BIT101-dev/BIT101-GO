@@ -34,17 +34,12 @@ func CleanUser(old_user database.User) database.User {
 }
 
 type UserAPI struct {
-	ID         int       `json:"id"`
-	CreateTime time.Time `json:"create_time"`
-	Nickname   string    `json:"nickname"`
-	Avatar     ImageAPI  `json:"avatar"`
-	Motto      string    `json:"motto"`
-	Type       Type      `json:"type"`
-}
-
-type Type struct {
-	Text  string `json:"text"`
-	Color string `json:"color"`
+	ID         int               `json:"id"`
+	CreateTime time.Time         `json:"create_time"`
+	Nickname   string            `json:"nickname"`
+	Avatar     ImageAPI          `json:"avatar"`
+	Motto      string            `json:"motto"`
+	Identity   database.Identity `json:"identity"`
 }
 
 // 获取用户信息
@@ -64,7 +59,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 				Nickname:   "匿名者",
 				Avatar:     GetImageAPI(""),
 				Motto:      "面对愚昧，匿名者自己也缄口不言。",
-				Type:       Type{database.IdentityMap[database.Identity_Normal].Text, database.IdentityMap[database.Identity_Normal].Color},
+				Identity:   database.IdentityMap[database.Identity_Normal],
 			}
 		} else {
 			uid_list = append(uid_list, uid)
@@ -80,7 +75,7 @@ func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 			Nickname:   user.Nickname,
 			Avatar:     GetImageAPI(user.Avatar),
 			Motto:      user.Motto,
-			Type:       Type{database.IdentityMap[user.Identity].Text, database.IdentityMap[user.Identity].Color},
+			Identity:   database.IdentityMap[user.Identity],
 		}
 	}
 	return out
