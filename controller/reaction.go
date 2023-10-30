@@ -438,7 +438,7 @@ func ReactionCommentDelete(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, -1, 0, true, "", "")
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
-	case "post":
+	case "poster":
 		_, err = PosterOnComment(obj_id, -1, c.GetUint("uid_uint"), true, "")
 	}
 	if err != nil {
