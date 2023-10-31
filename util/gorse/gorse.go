@@ -201,7 +201,7 @@ func GetPopular(page uint) ([]string, error) {
 // GetRecommend 获取recommend
 func GetRecommend(userid string, page uint) ([]string, error) {
 	limit := int(config.Config.RecommendPageSize)
-	recommend, err := gorse.GetItemRecommend(context.Background(), userid, []string{}, "", "", limit, int(page)*limit)
+	recommend, err := gorse.GetItemRecommend(context.Background(), userid, []string{}, "read", "", limit, int(page)*limit)
 	if err != nil {
 		return nil, err
 	}
