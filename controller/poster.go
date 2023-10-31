@@ -224,16 +224,23 @@ func getPostersMap(ids []string) map[string]database.Poster {
 // 构建获取帖子列表返回结构
 func buildPostListResponse(posters []database.Poster) []PosterListResponseItem {
 	res := make([]PosterListResponseItem, 0)
+	// 构造map[int]bool
+	uid_map := make(map[int]bool)
+	uid_map[-1] = true
+	for _, poster := range posters {
+		uid_map[int(poster.Uid)] = true
+	}
+	userAPIMap := GetUserAPIMap(uid_map)
+
 	for _, poster := range posters {
 		var userAPI UserAPI
 		if poster.Anonymous {
-			userAPI = GetUserAPI(-1)
+			userAPI = userAPIMap[-1]
 			poster.Uid = 0
 		} else {
-			userAPI = GetUserAPI(int(poster.Uid))
+			userAPI = userAPIMap[int(poster.Uid)]
 		}
-		var claim database.Claim
-		database.DB.Limit(1).Find(&claim, "id = ?", poster.ClaimID)
+		claim := database.ClaimMap[poster.ClaimID]
 
 		res = append(res, PosterListResponseItem{
 			Poster:  poster,
@@ -261,22 +268,13 @@ func PostList(c *gin.Context) {
 			return
 		}
 		var posters []database.Poster
-		var feedbacks []client.Feedback
 		postersMap := getPostersMap(recommend)
 		// 按照推荐顺序获取帖子
 		for _, item := range recommend {
 			if _, ok := postersMap[item]; ok {
 				posters = append(posters, postersMap[item])
-				feedbacks = append(feedbacks, client.Feedback{
-					FeedbackType: "read",
-					UserId:       c.GetString("uid"),
-					ItemId:       item,
-					Timestamp:    time.Now().String(),
-				})
 			}
 		}
-		// recommend的帖子设为已读，用于训练
-		gorse.InsertFeedbacks(feedbacks)
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
