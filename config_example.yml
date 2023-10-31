@@ -38,7 +38,7 @@ comment_page_size: 24 #每次加载评论数量
 comment_preview_size: 3 #预览子评论数量
 course_page_size: 24 #每次加载课程数量
 message_page_size: 24 #每次加载信息数量
-post_page_size: 24 #每次加载帖子数量
+post_page_size: 10 #每次加载帖子数量
 follow_page_size: 24 #每次加载 关注/粉丝 数量
 report_page_size: 24 #每次加载举报数量
 ban_page_size: 24 #每次加载封禁数量

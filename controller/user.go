@@ -550,7 +550,7 @@ func FansListGet(c *gin.Context) {
 	database.DB.Where("follow_uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
 	users_ids := make([]int, 0, len(follow_list))
 	for _, follow := range follow_list {
-		users_ids = append(users_ids, int(follow.FollowUid))
+		users_ids = append(users_ids, int(follow.Uid))
 	}
 	users := GetUserAPIList(users_ids)
 	c.JSON(200, users)
