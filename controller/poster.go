@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/zhenghaoz/gorse/client"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -366,8 +367,15 @@ func PosterDelete(c *gin.Context) {
 
 // ClaimList 获取申明列表
 func ClaimList(c *gin.Context) {
+	keys := make([]uint, 0, len(database.ClaimMap))
+	for key := range database.ClaimMap {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
 	var claims []database.Claim
-	for _, claim := range database.ClaimMap {
+	for _, key := range keys {
+		claim := database.ClaimMap[key]
 		claims = append(claims, claim)
 	}
 	c.JSON(200, claims)

@@ -73,13 +73,16 @@ func runServer() {
 
 func sync() {
 	// 每隔SyncTime s同步一次
+	time_after := time.Time{}
 	for {
-		time_after := time.Now()
-		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
+		t_ := time_after
 		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
 		gorse.Sync(time_after)
 		search.Sync(time_after)
+		time_after = t_
 		println("Synced! ")
+
+		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
 	}
 }
 
