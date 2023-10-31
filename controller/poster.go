@@ -275,6 +275,11 @@ func PostList(c *gin.Context) {
 				posters = append(posters, postersMap[item])
 			}
 		}
+		if len(posters) < int(config.Config.RecommendPageSize) {
+			var posters2 []database.Poster
+			database.DB.Order("RAND()").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
+			posters = append(posters, posters2...)
+		}
 		c.JSON(200, buildPostListResponse(posters))
 		return
 	} else if query.Mode == "hot" {
@@ -290,11 +295,6 @@ func PostList(c *gin.Context) {
 			if _, ok := postersMap[item]; ok {
 				posters = append(posters, postersMap[item])
 			}
-		}
-		if len(posters) < int(config.Config.RecommendPageSize) {
-			var posters2 []database.Poster
-			database.DB.Order("RAND()").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
-			posters = append(posters, posters2...)
 		}
 		c.JSON(200, buildPostListResponse(posters))
 		return
