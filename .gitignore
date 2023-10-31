@@ -5,5 +5,5 @@ config.yml
 meilisearch.exe
 data.ms
 dumps
-Gorse
+Gorse/bin
 gorse.zip
