@@ -29,7 +29,7 @@ func CheckLogin(strict bool) gin.HandlerFunc {
 			}
 			if controller.CheckBan(uint(uid_uint)) {
 				t, _ := controller.ParseTime(database.BanMap[uint(uid_uint)].Time)
-				c.JSON(401, gin.H{"msg": "您已被关小黑屋Orz,解封时间：" + t.Format("2006-01-02 15:04:05")})
+				c.JSON(403, gin.H{"msg": "您已被关小黑屋Orz,解封时间：" + t.Format("2006-01-02 15:04:05")})
 				c.Abort()
 				return
 			}
@@ -48,7 +48,7 @@ func CheckLogin(strict bool) gin.HandlerFunc {
 func CheckAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !c.GetBool("admin") && !c.GetBool("super") {
-			c.JSON(401, gin.H{"msg": "权限不足awa"})
+			c.JSON(403, gin.H{"msg": "权限不足awa"})
 			c.Abort()
 		}
 	}
@@ -58,7 +58,7 @@ func CheckAdmin() gin.HandlerFunc {
 func CheckSuper() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !c.GetBool("super") {
-			c.JSON(401, gin.H{"msg": "权限不足awa"})
+			c.JSON(403, gin.H{"msg": "权限不足awa"})
 			c.Abort()
 		}
 	}

@@ -147,7 +147,7 @@ func ReportList(c *gin.Context) {
 		return
 	}
 	if !c.GetBool("admin") && !c.GetBool("super") {
-		c.JSON(401, gin.H{"msg": "权限不足awa"})
+		c.JSON(403, gin.H{"msg": "权限不足awa"})
 		return
 	}
 	q := database.DB
@@ -198,7 +198,7 @@ func BanPost(c *gin.Context) {
 		return
 	}
 	if !c.GetBool("admin") && !c.GetBool("super") {
-		c.JSON(401, gin.H{"msg": "权限不足awa"})
+		c.JSON(403, gin.H{"msg": "权限不足awa"})
 		return
 	}
 	_, err := ParseTime(query.Time)
