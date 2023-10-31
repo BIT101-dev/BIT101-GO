@@ -47,6 +47,19 @@ func GetUserAPI(uid int) UserAPI {
 	return GetUserAPIMap(map[int]bool{uid: true})[uid]
 }
 
+func GetUserAPIList(uid_list []int) []UserAPI {
+	uid_map := make(map[int]bool)
+	for _, uid := range uid_list {
+		uid_map[uid] = true
+	}
+	user_api_map := GetUserAPIMap(uid_map)
+	user_api_list := make([]UserAPI, 0, len(uid_list))
+	for _, uid := range uid_list {
+		user_api_list = append(user_api_list, user_api_map[uid])
+	}
+	return user_api_list
+}
+
 // 批量获取用户信息
 func GetUserAPIMap(uid_map map[int]bool) map[int]UserAPI {
 	out := make(map[int]UserAPI)
@@ -518,10 +531,11 @@ func FollowListGet(c *gin.Context) {
 	}
 	var follow_list []database.Follow
 	database.DB.Where("uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
-	users := make([]UserAPI, 0, len(follow_list))
+	users_ids := make([]int, 0, len(follow_list))
 	for _, follow := range follow_list {
-		users = append(users, GetUserAPI(int(follow.FollowUid)))
+		users_ids = append(users_ids, int(follow.FollowUid))
 	}
+	users := GetUserAPIList(users_ids)
 	c.JSON(200, users)
 }
 
@@ -534,9 +548,10 @@ func FansListGet(c *gin.Context) {
 	}
 	var follow_list []database.Follow
 	database.DB.Where("follow_uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
-	users := make([]UserAPI, 0, len(follow_list))
+	users_ids := make([]int, 0, len(follow_list))
 	for _, follow := range follow_list {
-		users = append(users, GetUserAPI(int(follow.Uid)))
+		users_ids = append(users_ids, int(follow.FollowUid))
 	}
+	users := GetUserAPIList(users_ids)
 	c.JSON(200, users)
 }
