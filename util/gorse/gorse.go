@@ -18,19 +18,45 @@ import (
 
 var gorse *client.GorseClient
 
-// InitUserAndItem 初始化用户和item(仅使用一次)
-func InitUserAndItem() {
-	// 从db数据库取出所有user
-	var users []database.User
-	database.DB.Find(&users)
-	err := InsertUsers(users)
+// SyncUsers 同步用户
+func SyncUsers(users []database.User) {
+	userMap := make(map[string]database.User)
+	for _, user := range users {
+		userMap[strconv.Itoa(int(user.ID))] = user
+	}
+	gorseUsers, err := gorse.GetUsers(context.Background(), "", 2147483647)
 	if err != nil {
 		println("初始化users失败:", err.Error())
 		return
 	}
-	// 从db数据库取出所有poster
-	var posters []database.Poster
-	database.DB.Find(&posters)
+	for _, gorseUser := range gorseUsers.Users {
+		if _, ok := userMap[gorseUser.UserId]; !ok {
+			DeleteUser(gorseUser.UserId)
+		}
+	}
+	err = InsertUsers(users)
+	if err != nil {
+		println("初始化users失败:", err.Error())
+		return
+	}
+}
+
+// SyncPosters 同步posters
+func SyncPosters(posters []database.Poster) {
+	posterMap := make(map[string]database.Poster)
+	for _, poster := range posters {
+		posterMap[strconv.Itoa(int(poster.ID))] = poster
+	}
+	gorseItems, err := gorse.GetItems(context.Background(), "", 2147483647)
+	if err != nil {
+		println("初始化items失败:", err.Error())
+		return
+	}
+	for _, gorseItem := range gorseItems.Items {
+		if _, ok := posterMap[gorseItem.ItemId]; !ok {
+			DeletePoster(gorseItem.ItemId)
+		}
+	}
 	err = InsertPosters(posters)
 	if err != nil {
 		println("初始化items失败:", err.Error())
@@ -38,45 +64,34 @@ func InitUserAndItem() {
 	}
 }
 
+// InitUserAndItem 初始化用户和item(仅使用一次)
+func InitUserAndItem() {
+	// 从db数据库取出所有user
+	var users []database.User
+	database.DB.Find(&users)
+	SyncUsers(users)
+
+	// 从db数据库取出所有poster
+	var posters []database.Poster
+	database.DB.Find(&posters)
+	SyncPosters(posters)
+}
+
 // Sync 同步
 func Sync(time_after time.Time) {
 	users := []database.User{}
-	users_update := []database.User{}
-	q := database.DB.Model(database.User{}).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	q := database.DB.Model(database.User{}).Where("updated_at > ?", time_after)
 	if err := q.Find(&users).Error; err != nil {
-		println("同步users失败:", err.Error())
+		println("获取users失败:", err.Error())
 	}
-	for _, v := range users {
-		if v.DeletedAt.Valid {
-			DeleteUser(strconv.Itoa(int(v.ID)))
-		} else {
-			users_update = append(users_update, v)
-		}
-	}
-	go func() {
-		if err := InsertUsers(users_update); err != nil {
-			println("同步users失败:", err.Error())
-		}
-	}()
+	SyncUsers(users)
 
 	posters := []database.Poster{}
-	posters_update := []database.Poster{}
 	q = database.DB.Model(database.Poster{}).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
 	if err := q.Find(&posters).Error; err != nil {
-		println("同步items失败:", err.Error())
+		println("获取items失败:", err.Error())
 	}
-	for _, v := range posters {
-		if v.DeletedAt.Valid {
-			DeletePoster(strconv.Itoa(int(v.ID)))
-		} else {
-			posters_update = append(posters_update, v)
-		}
-	}
-	go func() {
-		if err := InsertPosters(posters_update); err != nil {
-			println("同步items失败:", err.Error())
-		}
-	}()
+	SyncPosters(posters)
 }
 
 // User2GorseUser user转换为gorseUser
