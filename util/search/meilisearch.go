@@ -12,6 +12,7 @@ import (
 
 var client *meilisearch.Client
 
+
 // createAndConfigureIndex 创建并配置索引
 func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
 	index, err := client.CreateIndex(&meilisearch.IndexConfig{
@@ -62,6 +63,7 @@ func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	}
 	return nil
 }
+
 
 // deleteDocumentFromMeiliSearch 将数据从MeiliSearch中删除
 func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
@@ -206,5 +208,4 @@ func Init() {
 	importData("course", &[]database.Course{})
 	importData("paper", &[]database.Paper{})
 	importData("poster", &[]database.Poster{})
-
 }
