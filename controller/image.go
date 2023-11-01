@@ -13,19 +13,57 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"path/filepath"
-
-	"github.com/gin-gonic/gin"
 )
 
-// 将图片mid转换为url
+type ImageAPI struct {
+	Mid    string `json:"mid"`
+	Url    string `json:"url"`
+	LowURL string `json:"low_url"`
+}
+
+// GetImageAPI 生成ImageAPI
+func GetImageAPI(mid string) ImageAPI {
+	return ImageAPI{
+		Mid:    mid,
+		Url:    GetImageUrl(mid),
+		LowURL: GetImageUrl(mid) + config.Config.Saver.ImageUrlSuffix,
+	}
+}
+
+// GetImageAPIArr 生成ImageAPIArr
+func GetImageAPIArr(mids []string) []ImageAPI {
+	imageAPIArr := []ImageAPI{}
+	for i := range mids {
+		imageAPIArr = append(imageAPIArr, GetImageAPI(mids[i]))
+	}
+	return imageAPIArr
+}
+
+// GetImageUrl 将图片mid转换为url
 func GetImageUrl(mid string) string {
 	if mid == "" {
 		return saver.GetUrl(filepath.Join("img", config.Config.DefaultAvatar))
 	}
 	return saver.GetUrl(filepath.Join("img", mid))
+}
+
+// CheckImage 检验mids是否有效
+func CheckImage(mids []string) bool {
+	for i := range mids {
+		if mids[i] == "" {
+			continue
+		}
+		image := database.Image{}
+		database.DB.Limit(1).Find(&image, "mid = ?", mids[i])
+		if image.Mid == "" {
+			return false
+		}
+	}
+	return true
 }
 
 // 获取图片后缀名 无效返回空字符串
@@ -62,12 +100,12 @@ func save(c *gin.Context, content []byte) {
 	image := database.Image{}
 	database.DB.Limit(1).Find(&image, "mid = ?", mid)
 	if image.Mid != "" {
-		c.JSON(200, gin.H{"url": saver.GetUrl(path), "mid": image.Mid})
+		c.JSON(200, GetImageAPI(mid))
 		return
 	}
 
 	// 保存文件
-	url, err := saver.Save(path, content)
+	_, err := saver.Save(path, content)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "保存图片出错Orz"})
 		return
@@ -80,7 +118,7 @@ func save(c *gin.Context, content []byte) {
 	}
 	database.DB.Create(&image)
 
-	c.JSON(200, gin.H{"url": url, "mid": image.Mid})
+	c.JSON(200, GetImageAPI(mid))
 }
 
 // 通过文件上传图片

@@ -10,11 +10,14 @@ import (
 	"BIT101-GO/util/config"
 	"errors"
 	"path/filepath"
+	"strings"
 )
 
 // 保存文件 返回url
 func Save(path string, content []byte) (string, error) {
+	println(path)
 	err1 := SaveLocal(path, content)
+	path = strings.ReplaceAll(path, "\\", "/")
 	err2 := SaveCOS(path, content)
 	if err1 != nil || err2 != nil {
 		return "", errors.New("save failed")

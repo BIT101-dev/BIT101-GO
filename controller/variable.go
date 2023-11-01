@@ -44,11 +44,6 @@ type VariablePostRequest struct {
 
 // 设置变量
 func VariablePost(c *gin.Context) {
-	if !c.GetBool("admin") {
-		c.JSON(401, gin.H{"msg": "没有权限Orz"})
-		return
-	}
-
 	var query VariablePostRequest
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})

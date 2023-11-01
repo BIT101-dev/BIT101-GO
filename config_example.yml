@@ -5,6 +5,7 @@ proxy: #代理请求
 key: "BIT101" #加密密钥
 verify_code_expire: 300 #验证码有效期 单位秒
 login_expire: 2073600 #登录有效期 单位秒
+sync_interval: 3600 #同步间隔 单位秒
 mail: #邮箱
   host: smtp.qq.com
   user: bit101@qq.com
@@ -13,6 +14,7 @@ dsn: host=localhost user=bit101 password=BIT101 dbname=bit101 port=5432 sslmode=
 saver: #文件保存相关
   max_size: 24 #最大上传大小 单位MB
   url: "https://bit101-test-1255944436.cos.ap-beijing.myqcloud.com"
+  image_url_suffix: "!low"
   local:
     enable: true
     path: "./data/"
@@ -35,7 +37,12 @@ paper_page_size: 24 #每次加载文章数量
 comment_page_size: 24 #每次加载评论数量
 comment_preview_size: 3 #预览子评论数量
 course_page_size: 24 #每次加载课程数量
-message_page_size: 24
+message_page_size: 24 #每次加载信息数量
+post_page_size: 10 #每次加载帖子数量
+follow_page_size: 24 #每次加载 关注/粉丝 数量
+report_page_size: 24 #每次加载举报数量
+ban_page_size: 24 #每次加载封禁数量
+recommend_page_size: 5 #每次加载推荐数量
 main_url: https://bit101.cn
 release_mode: true #是否为部署模式 开启后不显示DEBUG信息
 meilisearch:

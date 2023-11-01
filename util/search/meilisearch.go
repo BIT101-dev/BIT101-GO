@@ -5,42 +5,47 @@ import (
 	"BIT101-GO/util/config"
 	"encoding/json"
 	"fmt"
-
 	"github.com/meilisearch/meilisearch-go"
+	"strconv"
+	"time"
 )
 
 var client *meilisearch.Client
 
-// ImportCourse 将Course表中的数据导入到MeiliSearch中
-func ImportCourse() {
-	var courses []database.Course
-	q := database.DB.Model(&database.Course{})
-	if err := q.Find(&courses).Error; err != nil {
+
+// createAndConfigureIndex 创建并配置索引
+func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
+	index, err := client.CreateIndex(&meilisearch.IndexConfig{
+		Uid:        uid,
+		PrimaryKey: primaryKey,
+	})
+	if err != nil {
+		fmt.Println("[Search] CreateIndex failed:", err)
 		panic(err)
 	}
-
-	err := addDocumentToMeiliSearch("course", courses)
-	if err != nil {
-		fmt.Println("[Search] Course导入失败")
-		return
-	}
-	fmt.Println("[Search] Course导入完成")
+	client.WaitForTask(index.TaskUID)
+	indexToUpdate, _ := client.GetIndex(uid)
+	index, _ = indexToUpdate.UpdateSortableAttributes(&sortAttr)
+	client.WaitForTask(index.TaskUID)
+	index, _ = indexToUpdate.UpdateFilterableAttributes(&filterAttr)
+	client.WaitForTask(index.TaskUID)
+	index, _ = indexToUpdate.UpdateSearchableAttributes(&searchAttr)
+	client.WaitForTask(index.TaskUID)
 }
 
-// ImportPaper 将Paper表中的数据导入到MeiliSearch中
-func ImportPaper() {
-	var papers []database.Paper
-	q := database.DB.Model(&database.Paper{})
-	if err := q.Find(&papers).Error; err != nil {
+// importData 导入数据库表到MeiliSearch
+func importData(indexName string, dataSlice interface{}) {
+	q := database.DB.Model(dataSlice)
+	if err := q.Find(dataSlice).Error; err != nil {
 		panic(err)
 	}
 
-	err := addDocumentToMeiliSearch("paper", papers)
+	err := addDocumentToMeiliSearch(indexName, dataSlice)
 	if err != nil {
-		fmt.Println("[Search] Paper导入失败")
+		fmt.Printf("[Search] %s导入失败\n", indexName)
 		return
 	}
-	fmt.Println("[Search] Paper导入完成")
+	fmt.Printf("[Search] %s导入完成\n", indexName)
 }
 
 // addDocumentToMeiliSearch 将数据添加到MeiliSearch中
@@ -59,7 +64,8 @@ func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	return nil
 }
 
-// 将数据从MeiliSearch中删除
+
+// deleteDocumentFromMeiliSearch 将数据从MeiliSearch中删除
 func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 	index, err := client.GetIndex(indexName)
 	if err != nil {
@@ -76,11 +82,12 @@ func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 }
 
 // Search 搜索
-func Search(result interface{}, indexName string, query string, sort []string, page int64) error {
+func Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter []string) error {
 	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
-		Limit:  int64(config.Config.PaperPageSize),
-		Offset: page * int64(config.Config.PaperPageSize),
+		Limit:  int64(limit),
+		Offset: int64(page * limit),
 		Sort:   sort,
+		Filter: filter,
 	})
 	if err != nil {
 		return err
@@ -108,41 +115,97 @@ func Delete(indexName string, ids []string) error {
 	return deleteDocumentFromMeiliSearch(indexName, ids)
 }
 
+// Sync 同步
+func Sync(time_after time.Time) {
+	dataSlice_course := []database.Course{}
+	data_update_course := []database.Course{}
+	data_delete_course := []string{}
+	q := database.DB.Model(dataSlice_course).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_course).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+	for _, v := range dataSlice_course {
+		if v.DeletedAt.Valid {
+			data_delete_course = append(data_delete_course, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_course = append(data_update_course, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("course", data_update_course); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+	if err := deleteDocumentFromMeiliSearch("course", data_delete_course); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "course")
+	}
+
+	dataSlice_paper := []database.Paper{}
+	data_update_paper := []database.Paper{}
+	data_delete_paper := []string{}
+	q = database.DB.Model(dataSlice_paper).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_paper).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+	for _, v := range dataSlice_paper {
+		if v.DeletedAt.Valid {
+			data_delete_paper = append(data_delete_paper, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_paper = append(data_update_paper, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("paper", data_update_paper); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+	if err := deleteDocumentFromMeiliSearch("paper", data_delete_paper); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "paper")
+	}
+
+	dataSlice_poster := []database.Poster{}
+	data_update_poster := []database.Poster{}
+	data_delete_poster := []string{}
+	q = database.DB.Model(dataSlice_poster).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	if err := q.Find(&dataSlice_poster).Error; err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+	for _, v := range dataSlice_poster {
+		if v.DeletedAt.Valid {
+			data_delete_poster = append(data_delete_poster, strconv.Itoa(int(v.ID)))
+		} else {
+			data_update_poster = append(data_update_poster, v)
+		}
+	}
+	if err := addDocumentToMeiliSearch("poster", data_update_poster); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+	if err := deleteDocumentFromMeiliSearch("poster", data_delete_poster); err != nil {
+		fmt.Printf("[Search] %s同步失败\n", "poster")
+	}
+}
+
 // Init 初始化
 func Init() {
 	client = meilisearch.NewClient(meilisearch.ClientConfig{
 		Host:   config.Config.Meilisearch.Url,
 		APIKey: config.Config.Meilisearch.MasterKey,
 	})
-	// 创建index
-	courseInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
-		Uid:        "course",
-		PrimaryKey: "id",
-	})
-	if err != nil {
-		fmt.Println("[Search] CreateIndex failed:", err)
-		panic(err)
-	}
-	paperInfo, err := client.CreateIndex(&meilisearch.IndexConfig{
-		Uid:        "paper",
-		PrimaryKey: "id",
-	})
-	if err != nil {
-		fmt.Println("[Search] CreateIndex failed:", err)
-		panic(err)
-	}
-	client.WaitForTask(courseInfo.TaskUID)
-	client.WaitForTask(paperInfo.TaskUID)
+	// 可排序参数
+	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}
+	sortAttrPaper := []string{"like_num", "update_time"}
+	sortAttrPoster := []string{"like_num", "comment_num", "create_time"}
+	// 可筛选参数
+	filterAttrCourse := []string{}
+	filterAttrPaper := []string{}
+	filterAttrPoster := []string{"uid", "public", "anonymous"}
+	// 可搜索参数
+	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers"}
+	searchAttrPaper := []string{"id", "title", "intro", "content"}
+	searchAttrPoster := []string{"title", "text", "tags"}
 
-	// 设置sort
-	courseIndex, _ := client.GetIndex("course")
-	paperIndex, _ := client.GetIndex("paper")
-	sortableAttributes := []string{"comment_num", "like_num", "rate", "update_time"}
-	courseIndex.UpdateSortableAttributes(&sortableAttributes)
-	sortableAttributes = []string{"like_num", "update_time"}
-	paperIndex.UpdateSortableAttributes(&sortableAttributes)
+	createAndConfigureIndex("course", "id", sortAttrCourse, filterAttrCourse, searchAttrCourse)
+	createAndConfigureIndex("paper", "id", sortAttrPaper, filterAttrPaper, searchAttrPaper)
+	createAndConfigureIndex("poster", "id", sortAttrPoster, filterAttrPoster, searchAttrPoster)
 
 	// 与pg数据库同步
-	ImportCourse()
-	ImportPaper()
+	importData("course", &[]database.Course{})
+	importData("paper", &[]database.Paper{})
+	importData("poster", &[]database.Poster{})
 }

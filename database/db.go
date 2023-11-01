@@ -15,6 +15,21 @@ import (
 )
 
 var DB *gorm.DB
+var ClaimMap map[uint]Claim
+var IdentityMap map[uint]Identity
+var ReportTypeMap map[uint]ReportType
+var BanMap map[uint]Ban
+
+// 枚举用户类型(需要与数据库中定义一致)
+const (
+	Identity_Normal = iota
+	Identity_Admin
+	Identity_Super
+	Identity_Organization
+	Identity_Club
+	Identity_NGO
+	Identity_Robot
+)
 
 // 基本模型
 type Base struct {
@@ -32,7 +47,14 @@ type User struct {
 	Nickname string `gorm:"not null;unique" json:"nickname"`
 	Avatar   string `json:"avatar"`
 	Motto    string `json:"motto"`
-	Level    int    `gorm:"default:1" json:"level"`
+	Identity uint   `gorm:"default:0" json:"identity"`
+}
+
+// 身份
+type Identity struct {
+	Base
+	Text  string `gorm:"not null" json:"text"`
+	Color string `json:"color"`
 }
 
 // 图片
@@ -41,6 +63,36 @@ type Image struct {
 	Mid  string `gorm:"not null;uniqueIndex" json:"mid"`
 	Size uint   `gorm:"not null" json:"size"`
 	Uid  uint   `gorm:"not null" json:"uid"`
+}
+
+// 标签
+type Tag struct {
+	Base
+	Name string `gorm:"not null;unique" json:"name"` //标签名
+	Hot  uint   `gorm:"default:0" json:"hot"`        //热度
+}
+
+// 申明
+type Claim struct {
+	Base
+	Text string `gorm:"not null;unique" json:"text"` //申明内容
+}
+
+// 帖子
+type Poster struct {
+	Base
+	Title      string    `gorm:"not null" json:"title"`           //标题
+	Text       string    `gorm:"not null" json:"text"`            //内容
+	Images     string    `json:"images"`                          //图片mids，以" "拼接
+	Uid        uint      `gorm:"not null;index" json:"uid"`       //用户id
+	Anonymous  bool      `json:"anonymous"`                       //是否匿名
+	Public     bool      `json:"public"`                          //是否可见
+	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
+	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
+	Tags       string    `json:"tags"`                            //标签，以" "拼接
+	ClaimID    uint      `json:"claim_id"`                        //申明id
+	Plugins    string    `json:"plugins"`                         //插件
+	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
 }
 
 // 文章
@@ -76,10 +128,17 @@ type Like struct {
 	Uid uint   `gorm:"not null;index" json:"uid"` //用户id
 }
 
+// 关注
+type Follow struct {
+	Base
+	Uid       uint `gorm:"not null;index" json:"uid"`        //用户id
+	FollowUid uint `gorm:"not null;index" json:"follow_uid"` //关注用户id
+}
+
 // 评论
 type Comment struct {
 	Base
-	Obj        string `gorm:"not null;index" json:"obj"`      //点赞对象
+	Obj        string `gorm:"not null;index" json:"obj"`      //评论对象
 	Uid        uint   `gorm:"not null;index" json:"uid"`      //用户id
 	Text       string `gorm:"not null" json:"text"`           //评论内容
 	Anonymous  bool   `gorm:"default:false" json:"anonymous"` //是否匿名
@@ -88,6 +147,7 @@ type Comment struct {
 	ReplyObj   string `json:"reply_obj"`                      //回复对象
 	ReplyUid   int    `gorm:"default:0" json:"reply_uid"`     //回复用户id
 	Rate       uint   `gorm:"default:0" json:"rate"`          //评分
+	Images     string `json:"images"`                         //图片mids，以" "拼接
 }
 
 // 课程
@@ -151,7 +211,7 @@ type Variable struct {
 type MessageSummary struct {
 	Base
 	Uid       uint      `gorm:"not null;index" json:"uid"`       //用户id
-	Obj       string    `gorm:"not null;index" json:"obj"`       //对象
+	Type      string    `gorm:"not null;index" json:"type"`      //对象
 	UnreadNum uint      `gorm:"default:0" json:"unread_num"`     //未读数
 	LastTime  time.Time `gorm:"autoCreateTime" json:"last_time"` //最后时间
 	Content   string    `gorm:"not null" json:"content"`         //内容
@@ -168,6 +228,61 @@ type Message struct {
 	Content string `json:"content"`                        //内容
 }
 
+// 举报
+type Report struct {
+	Base
+	Obj    string `gorm:"not null;index" json:"obj"`     //举报对象
+	Text   string `gorm:"not null" json:"text"`          //举报理由
+	Uid    uint   `gorm:"not null;index" json:"uid"`     //举报人id
+	Status int    `gorm:"default:0" json:"status"`       //状态 0为未处理 1为举报成功 2为举报失败
+	TypeId uint   `gorm:"not null;index" json:"type_id"` //举报类型id
+}
+
+// 举报类型
+type ReportType struct {
+	Base
+	Text string `gorm:"not null" json:"text"` //类型内容
+}
+
+// 小黑屋
+type Ban struct {
+	Base
+	Uid  uint   `gorm:"not null;unique" json:"uid"` //封禁id
+	Time string `gorm:"not null" json:"time"`       //解封时间
+}
+
+// InitMaps 初始化Map(针对常用且稳定的数据)
+func InitMaps() {
+	//初始化 ClaimMap
+	ClaimMap = make(map[uint]Claim)
+	var claims []Claim
+	DB.Find(&claims)
+	for _, claim := range claims {
+		ClaimMap[claim.ID] = claim
+	}
+	//初始化 IdentityMap
+	IdentityMap = make(map[uint]Identity)
+	var identities []Identity
+	DB.Find(&identities)
+	for _, identity := range identities {
+		IdentityMap[identity.ID] = identity
+	}
+	//初始化 ReportTypeMap
+	ReportTypeMap = make(map[uint]ReportType)
+	var reportTypes []ReportType
+	DB.Find(&reportTypes)
+	for _, reportType := range reportTypes {
+		ReportTypeMap[reportType.ID] = reportType
+	}
+	// 初始化 BanMap
+	BanMap = make(map[uint]Ban)
+	var bans []Ban
+	DB.Find(&bans)
+	for _, ban := range bans {
+		BanMap[ban.Uid] = ban
+	}
+}
+
 func Init() {
 	dsn := config.Config.Dsn
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -176,5 +291,10 @@ func Init() {
 	}
 	DB = db
 
-	db.AutoMigrate(&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{}, &Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{})
+	db.AutoMigrate(
+		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
+		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
+		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
+	)
+	InitMaps()
 }

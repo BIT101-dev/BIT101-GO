@@ -10,6 +10,7 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/router"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/gorse"
 	"BIT101-GO/util/other"
 	"BIT101-GO/util/search"
 	"flag"
@@ -46,6 +47,8 @@ func runServer() {
 	config.Init()
 	database.Init()
 	search.Init()
+	gorse.Init()
+	go sync()
 
 	if config.Config.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
@@ -66,6 +69,17 @@ func runServer() {
 	router.SetRouter(app)
 	fmt.Println("BIT101-GO will run on port " + config.Config.Port)
 	app.Run(":" + config.Config.Port)
+}
+
+func sync() {
+	// 每隔SyncTime s同步一次
+	for {
+		time_after := time.Now()
+		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
+		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
+		go gorse.Sync(time_after)
+		go search.Sync(time_after)
+	}
 }
 
 func main() {

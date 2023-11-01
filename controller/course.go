@@ -25,7 +25,7 @@ import (
 type CourseListQuery struct {
 	Search string `form:"search"`
 	Order  string `form:"order"` //like | comment | rate | new
-	Page   int    `form:"page"`
+	Page   uint   `form:"page"`
 }
 
 // CourseList 获取课程列表
@@ -51,7 +51,7 @@ func CourseList(c *gin.Context) {
 	}
 
 	courses := make([]database.Course, 0)
-	err := search.Search(&courses, "course", query.Search, order, int64(query.Page))
+	err := search.Search(&courses, "course", query.Search, query.Page, config.Config.CoursePageSize, order, nil)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
@@ -95,9 +95,9 @@ func CourseOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", course); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("course", course)
+	}()
 	return course.LikeNum, nil
 }
 
@@ -110,6 +110,9 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if course.ID == 0 {
 		return 0, errors.New("课程不存在Orz")
 	}
+	if delta_rate == 0 || delta_rate < -10 || delta_rate > 10 {
+		return 0, errors.New("评分错误Orz")
+	}
 	course.CommentNum = uint(int(course.CommentNum) + delta_num)
 	course.RateSum = uint(int(course.RateSum) + delta_rate)
 	if course.RateSum == 0 {
@@ -120,9 +123,9 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	if err := database.DB.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("course", course); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("course", course)
+	}()
 	return course.CommentNum, nil
 }
 

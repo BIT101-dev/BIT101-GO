@@ -9,9 +9,12 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/gorse"
 	"errors"
 	"fmt"
+	"github.com/zhenghaoz/gorse/client"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -22,11 +25,14 @@ func getTypeID(obj string) (string, string) {
 	if obj[:5] == "paper" {
 		return "paper", obj[5:]
 	}
-	if obj[:7] == "comment" {
-		return "comment", obj[7:]
+	if obj[:6] == "poster" {
+		return "poster", obj[6:]
 	}
 	if obj[:6] == "course" {
 		return "course", obj[6:]
+	}
+	if obj[:7] == "comment" {
+		return "comment", obj[7:]
 	}
 	return "", ""
 }
@@ -80,6 +86,8 @@ func ReactionLike(c *gin.Context) {
 		like_num, err = CommentOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	case "course":
 		like_num, err = CourseOnLike(obj_id, delta)
+	case "poster":
+		like_num, err = PosterOnLike(obj_id, delta, c.GetUint("uid_uint"))
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -119,6 +127,7 @@ type ReactionCommentAPI struct {
 	ReplyUser UserAPI              `json:"reply_user"` // 回复的用户
 	Sub       []ReactionCommentAPI `json:"sub"`        // 子评论
 	User      UserAPI              `json:"user"`       // 评论用户
+	Images    []ImageAPI           `json:"images"`     // 图片
 }
 
 // 获取评论列表
@@ -202,6 +211,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 			ReplyUser: users[int(sub_comment.ReplyUid)],
 			User:      user,
 			Sub:       make([]ReactionCommentAPI, 0),
+			Images:    GetImageAPIArr(spilt(sub_comment.Images)),
 		})
 	}
 
@@ -220,6 +230,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 			Own:       old_comment.Uid == uid || admin,
 			ReplyUser: users[int(old_comment.ReplyUid)],
 			User:      user,
+			Images:    GetImageAPIArr(spilt(old_comment.Images)),
 		}
 
 		comment.Sub = sub_comment_map[comment_obj]
@@ -231,18 +242,13 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 
 // 评论请求结构
 type ReactionCommentQuery struct {
-	Obj       string `json:"obj" binding:"required"`  // 操作对象
-	Text      string `json:"text" binding:"required"` // 评论内容
-	Anonymous bool   `json:"anonymous"`               // 是否匿名
-	ReplyUid  int    `json:"reply_uid"`               //回复用户id
-	ReplyObj  string `json:"reply_obj"`               //回复对象
-	Rate      uint   `json:"rate"`                    //评分
-}
-
-// 评论返回结构
-type ReactionCommentResponse struct {
-	ReactionCommentAPI
-	Msg string `json:"msg"`
+	Obj       string   `json:"obj" binding:"required"` // 操作对象
+	Text      string   `json:"text"`                   // 评论内容
+	Anonymous bool     `json:"anonymous"`              // 是否匿名
+	ReplyUid  int      `json:"reply_uid"`              //回复用户id
+	ReplyObj  string   `json:"reply_obj"`              //回复对象
+	Rate      uint     `json:"rate"`                   //评分
+	ImageMids []string `json:"image_mids"`             //图片
 }
 
 // 评论
@@ -252,13 +258,19 @@ func ReactionComment(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-
+	if query.Text == "" && len(query.ImageMids) == 0 {
+		c.JSON(500, gin.H{"msg": "内容不能为空Orz"})
+		return
+	}
+	if !CheckImage(query.ImageMids) {
+		c.JSON(500, gin.H{"msg": "存在未上传成功的图片Orz"})
+		return
+	}
 	obj_type, obj_id := getTypeID(query.Obj)
 	if obj_type == "" {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return
 	}
-
 	var comment database.Comment
 	if query.Rate != 0 {
 		database.DB.Limit(1).Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Find(&comment)
@@ -277,6 +289,8 @@ func ReactionComment(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
 	case "course":
 		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
+	case "poster":
+		_, err = PosterOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.Text)
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -292,13 +306,11 @@ func ReactionComment(c *gin.Context) {
 		ReplyObj:  query.ReplyObj,
 		Rate:      query.Rate,
 		Uid:       c.GetUint("uid_uint"),
+		Images:    strings.Join(query.ImageMids, " "),
 	}
 	database.DB.Create(&comment)
 
-	c.JSON(200, ReactionCommentResponse{
-		ReactionCommentAPI: CleanComment(comment, comment.Uid, c.GetBool("admin")),
-		Msg:                "评论成功OvO",
-	})
+	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin")))
 }
 
 // 获取评论列表请求结构
@@ -316,7 +328,7 @@ func ReactionCommentList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin")))
+	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin") || c.GetBool("super")))
 }
 
 // 点赞评论
@@ -344,7 +356,7 @@ func CommentOnLike(id string, delta int, from_uid uint) (uint, error) {
 				link_obj = parent_comment.Obj
 			}
 
-			MessageSend(int(from_uid), comment.Uid, "like", fmt.Sprintf("comment%v", comment.ID), link_obj, comment.Text)
+			MessageSend(int(from_uid), comment.Uid, fmt.Sprintf("comment%v", comment.ID), "like", link_obj, comment.Text)
 		}()
 	}
 
@@ -393,7 +405,7 @@ func CommentOnComment(id string, delta int, from_uid uint, from_anonymous bool, 
 			if from_anonymous {
 				from_uid_ = -1
 			}
-			MessageSend(from_uid_, to_uid, "comment", fmt.Sprintf("comment%v", comment.ID), link_obj, content)
+			MessageSend(from_uid_, to_uid, fmt.Sprintf("comment%v", comment.ID), "comment", link_obj, content)
 		}()
 	}
 
@@ -411,7 +423,7 @@ func ReactionCommentDelete(c *gin.Context) {
 		return
 	}
 
-	if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "无权删除Orz"})
 		return
 	}
@@ -426,6 +438,8 @@ func ReactionCommentDelete(c *gin.Context) {
 		_, err = CommentOnComment(obj_id, -1, 0, true, "", "")
 	case "course":
 		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
+	case "poster":
+		_, err = PosterOnComment(obj_id, -1, c.GetUint("uid_uint"), true, "")
 	}
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
@@ -437,4 +451,35 @@ func ReactionCommentDelete(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
+}
+
+// ReactionStayQuery 停留请求结构
+type ReactionStayQuery struct {
+	Obj  string `json:"obj" binding:"required"`  // 操作对象
+	Time int    `json:"time" binding:"required"` // 停留时间
+}
+
+// ReactionStay 停留
+func ReactionStay(c *gin.Context) {
+	var query ReactionStayQuery
+	if err := c.ShouldBind(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+	obj_type, obj_id := getTypeID(query.Obj)
+	if obj_type == "" {
+		c.JSON(500, gin.H{"msg": "无效对象Orz"})
+		return
+	}
+	if obj_type == "poster" {
+		go func() {
+			gorse.InsertFeedback(client.Feedback{
+				FeedbackType: "stay",
+				UserId:       c.GetString("uid"),
+				ItemId:       obj_id,
+				Timestamp:    time.Now().String(),
+			})
+		}()
+	}
+	c.JSON(200, gin.H{})
 }

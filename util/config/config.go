@@ -22,6 +22,7 @@ var Config = struct {
 	Key              string
 	VerifyCodeExpire int64 `yaml:"verify_code_expire"`
 	LoginExpire      int64 `yaml:"login_expire"`
+	SyncInterval     int64 `yaml:"sync_interval"`
 	Mail             struct {
 		Host     string
 		User     string
@@ -29,9 +30,10 @@ var Config = struct {
 	}
 	Dsn   string
 	Saver struct {
-		MaxSize int64 `yaml:"max_size"`
-		Url     string
-		Local   struct {
+		MaxSize        int64 `yaml:"max_size"`
+		Url            string
+		ImageUrlSuffix string `yaml:"image_url_suffix"`
+		Local          struct {
 			Enable bool
 			Path   string
 		}
@@ -58,6 +60,11 @@ var Config = struct {
 	CommentPreviewSize uint   `yaml:"comment_preview_size"`
 	CoursePageSize     uint   `yaml:"course_page_size"`
 	MessagePageSize    uint   `yaml:"message_page_size"`
+	PostPageSize       uint   `yaml:"post_page_size"`
+	FollowPageSize     uint   `yaml:"follow_page_size"`
+	ReportPageSize     uint   `yaml:"report_page_size"`
+	BanPageSize        uint   `yaml:"ban_page_size"`
+	RecommendPageSize  uint   `yaml:"recommend_page_size"`
 	MainUrl            string `yaml:"main_url"`
 	ReleaseMode        bool   `yaml:"release_mode"`
 	Meilisearch        struct {

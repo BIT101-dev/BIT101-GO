@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// 推送消息
+// MessageSend 推送消息
 func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj string, content string) error {
 	// 创建消息
 	short_msg := []rune(content)
@@ -36,13 +36,13 @@ func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj stri
 
 	// 更新消息摘要
 	var summary database.MessageSummary
-	if err := database.DB.Where("obj = ? AND uid = ?", obj, to_uid).Limit(1).Find(&summary).Error; err != nil {
+	if err := database.DB.Where("uid = ? AND type = ?", to_uid, tp).Limit(1).Find(&summary).Error; err != nil {
 		return err
 	}
 	if summary.ID == 0 {
 		summary = database.MessageSummary{
-			Uid: to_uid,
-			Obj: obj,
+			Uid:  to_uid,
+			Type: tp,
 		}
 		if err := database.DB.Create(&summary).Error; err != nil {
 			return err
@@ -57,32 +57,47 @@ func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj stri
 	return nil
 }
 
-// 获取未读点赞数
-func MessageGetUnreadLikeNum(c *gin.Context) {
-	var summary database.MessageSummary
-	if err := database.DB.Where("uid = ? AND obj = ?", c.GetString("uid"), "like").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读点赞数失败Orz"})
-		return
-	}
-	if summary.ID == 0 {
-		c.JSON(200, gin.H{"unread_num": 0})
-		return
-	}
-	c.JSON(200, gin.H{"unread_num": summary.UnreadNum})
+// SystemMessagePostQuery 发送系统消息请求结构
+type SystemMessagePostQuery struct {
+	FromUid int    `json:"from_uid"`
+	LinkObj string `json:"link_obj"`
+	Obj     string `json:"obj"`
+	Text    string `json:"text"`
+	ToUid   uint   `json:"to_uid"`
 }
 
-// 获取消息列表请求结构
+// SystemMessagePost 发送系统消息
+func SystemMessagePost(c *gin.Context) {
+	var query SystemMessagePostQuery
+	if err := c.ShouldBindJSON(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误Orz"})
+		return
+	}
+	err := MessageSend(query.FromUid, query.ToUid, query.Obj, "system", query.LinkObj, query.Text)
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "发送失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "发送成功OvO"})
+}
+
+// MessageGetListQuery 获取消息列表请求结构
 type MessageGetListQuery struct {
-	Obj    string `form:"obj" binding:"required"` // 消息对象
-	LastID uint   `form:"last_id"`                // 上次查询最后一条消息的ID 为0则不限制
+	Type   string `form:"type" binding:"required"` // 消息对象
+	LastID uint   `form:"last_id"`                 // 上次查询最后一条消息的ID 为0则不限制
 }
 
+// MessageGetListResponseItem 获取消息列表返回结构
 type MessageGetListResponseItem struct {
-	database.Message
-	FromUser UserAPI `json:"from_user"`
+	FromUser   UserAPI   `json:"from_user"`
+	ID         uint      `json:"id"`
+	LinkObj    string    `json:"link_obj"`
+	Obj        string    `json:"obj"`
+	Text       string    `json:"text"`
+	UpdateTime time.Time `json:"update_time"`
 }
 
-// 获取点赞消息列表
+// MessageGetList 获取消息列表
 func MessageGetList(c *gin.Context) {
 	var query MessageGetListQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -91,7 +106,7 @@ func MessageGetList(c *gin.Context) {
 	}
 
 	var messages []database.Message
-	q := database.DB.Where("to_uid = ? AND obj = ?", c.GetString("uid"), query.Obj)
+	q := database.DB.Where("to_uid = ? AND type = ?", c.GetString("uid"), query.Type)
 	if query.LastID != 0 {
 		q = q.Where("id < ?", query.LastID)
 	}
@@ -104,7 +119,7 @@ func MessageGetList(c *gin.Context) {
 	// 清空未读
 	if query.LastID == 0 && len(messages) > 0 {
 		var summary database.MessageSummary
-		if err := database.DB.Where("uid = ? AND obj = ?", c.GetString("uid"), query.Obj).Limit(1).Find(&summary).Error; err != nil || summary.ID == 0 {
+		if err := database.DB.Where("uid = ? AND type = ?", c.GetString("uid"), query.Type).Limit(1).Find(&summary).Error; err != nil || summary.ID == 0 {
 			c.JSON(500, gin.H{"msg": "清空未读失败Orz"})
 			return
 		}
@@ -124,29 +139,49 @@ func MessageGetList(c *gin.Context) {
 	res := make([]MessageGetListResponseItem, 0)
 	for _, message := range messages {
 		res = append(res, MessageGetListResponseItem{
-			Message:  message,
-			FromUser: user_map[message.FromUid],
+			FromUser:   user_map[message.FromUid],
+			ID:         message.ID,
+			LinkObj:    message.LinkObj,
+			Obj:        message.Obj,
+			Text:       message.Content,
+			UpdateTime: message.UpdatedAt,
 		})
 	}
-
 	c.JSON(200, res)
 }
 
-// 获取未读评论数
-func MessageGetUnreadCommentNum(c *gin.Context) {
-	var summary database.MessageSummary
-	if err := database.DB.Where("uid = ? AND obj = ?", c.GetString("uid"), "comment").Limit(1).Find(&summary).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "获取未读评论数失败Orz"})
-		return
-	}
-	if summary.ID == 0 {
-		c.JSON(200, gin.H{"unread_num": 0})
-		return
-	}
-	c.JSON(200, gin.H{"unread_num": summary.UnreadNum})
+// MessageGetUnreadNumsResponse 获取分类未读消息返回结构
+type MessageGetUnreadNumsResponse struct {
+	Comment int `json:"comment"`
+	Follow  int `json:"follow"`
+	Like    int `json:"like"`
+	System  int `json:"system"`
 }
 
-// 获取总未读消息数
+// MessageGetUnreadNums 获取未读消息数
+func MessageGetUnreadNums(c *gin.Context) {
+	res := MessageGetUnreadNumsResponse{0, 0, 0, 0}
+	var summaries []database.MessageSummary
+	if err := database.DB.Where("uid = ?", c.GetString("uid")).Find(&summaries).Error; err != nil {
+		c.JSON(500, gin.H{"msg": "获取未读消息数失败Orz"})
+		return
+	}
+	for _, summary := range summaries {
+		switch summary.Type {
+		case "comment":
+			res.Comment = int(summary.UnreadNum)
+		case "follow":
+			res.Follow = int(summary.UnreadNum)
+		case "like":
+			res.Like = int(summary.UnreadNum)
+		case "system":
+			res.System = int(summary.UnreadNum)
+		}
+	}
+	c.JSON(200, res)
+}
+
+// MessageGetUnreadNum 获取总未读消息数
 func MessageGetUnreadNum(c *gin.Context) {
 	var count sql.NullInt64
 	if err := database.DB.Model(&database.MessageSummary{}).Select("SUM(unread_num)").Where("uid = ?", c.GetString("uid")).Pluck("sum", &count).Error; err != nil {

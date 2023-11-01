@@ -48,6 +48,18 @@ meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
 
 其中`master key`需要和`config.yml`中对应。
 
+
+### 推荐系统部署
+1. 下载gorse-in-one:`Invoke-WebRequest https://github.com/gorse-io/gorse/releases/latest/download/gorse_windows_amd64.zip -OutFile gorse.zip`
+2. 在项目中创建目录`./Gorse/bin`
+3. 解压zip到目录 
+4. 基于配置文件模板 创建配置文件 `config.toml`,放到Gorse目录下 
+5. 与pg数据库创建对应database
+6. 运行`gorse-in-one`:
+```shell
+./Gorse/bin/gorse-in-one -c ./Gorse/config.toml
+```
+
 ### 身份验证说明
 
 使用`JWT`作为身份验证的方式，这样服务器就不用缓存任何信息，只要验证数字签名就可以，数字签名的密钥在`config.yml`中配置，绝对不可以泄漏。登录成功时会下发一个`fake-cookie`，之后只需要每次请求携带`fake-cookie`头即可。

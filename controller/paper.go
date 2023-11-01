@@ -8,6 +8,7 @@ package controller
 
 import (
 	"BIT101-GO/database"
+	"BIT101-GO/util/config"
 	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
@@ -42,7 +43,7 @@ func PaperGet(c *gin.Context) {
 		update_uid = int(paper.UpdateUid)
 	}
 
-	own := paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin")
+	own := paper.CreateUid == c.GetUint("uid_uint") || c.GetBool("admin") || c.GetBool("super")
 	paper.CreateUid = 0
 	paper.UpdatedAt = paper.EditAt
 	var res = PaperGetResponse{
@@ -88,10 +89,9 @@ func PaperPost(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", paper); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	c.JSON(200, gin.H{"msg": "发表成功OvO", "id": paper.ID})
 }
 
@@ -123,7 +123,7 @@ func PaperPut(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	if paper.CreateUid != c.GetUint("uid_uint") && !paper.PublicEdit && !c.GetBool("admin") {
+	if paper.CreateUid != c.GetUint("uid_uint") && !paper.PublicEdit && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有编辑权限Orz"})
 		return
 	}
@@ -146,10 +146,9 @@ func PaperPut(c *gin.Context) {
 		return
 	}
 	pushHistory(&paper)
-	if err := search.Update("paper", paper); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	c.JSON(200, gin.H{"msg": "编辑成功OvO"})
 }
 
@@ -170,7 +169,7 @@ func pushHistory(paper *database.Paper) {
 type PaperListQuery struct {
 	Search string `form:"search"`
 	Order  string `form:"order"` //rand | new | like
-	Page   int    `form:"page"`
+	Page   uint   `form:"page"`
 }
 
 // 获取文章列表返回结构
@@ -202,7 +201,7 @@ func PaperList(c *gin.Context) {
 	}
 
 	var papers []database.Paper
-	err := search.Search(&papers, "paper", query.Search, order, int64(query.Page))
+	err := search.Search(&papers, "paper", query.Search, query.Page, config.Config.PaperPageSize, order, nil)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
@@ -232,7 +231,7 @@ func PaperDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "文章不存在Orz"})
 		return
 	}
-	if paper.CreateUid != c.GetUint("uid_uint") && !c.GetBool("admin") {
+	if paper.CreateUid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
 		c.JSON(500, gin.H{"msg": "没有删除权限Orz"})
 		return
 	}
@@ -240,10 +239,9 @@ func PaperDelete(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
-	if err := search.Delete("paper", []string{strconv.Itoa(int(paper.ID))}); err != nil {
-		c.JSON(500, gin.H{"msg": "search同步失败Orz"})
-		return
-	}
+	go func() {
+		search.Delete("paper", []string{strconv.Itoa(int(paper.ID))})
+	}()
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
@@ -260,9 +258,9 @@ func PaperOnLike(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", paper); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	return paper.LikeNum, nil
 }
 
@@ -279,8 +277,8 @@ func PaperOnComment(id string, delta int) (uint, error) {
 	if err := database.DB.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
-	if err := search.Update("paper", paper); err != nil {
-		return 0, errors.New("search同步失败Orz")
-	}
+	go func() {
+		search.Update("paper", paper)
+	}()
 	return paper.CommentNum, nil
 }
