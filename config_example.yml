@@ -48,5 +48,3 @@ release_mode: true #是否为部署模式 开启后不显示DEBUG信息
 meilisearch:
   url: http://localhost:7700
   master_key: BIT101
-gorse:
-  second_before_effect_feedback: 300 #插入的反馈多少s后生效
