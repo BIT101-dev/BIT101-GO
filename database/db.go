@@ -106,7 +106,7 @@ type Paper struct {
 	Anonymous  bool      `gorm:"default:false" json:"anonymous"`  //是否匿名
 	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
-	PublicEdit bool      `gorm:"default:true" json:"public_edit"` //是否共享编辑
+	PublicEdit bool      `json:"public_edit"`                     //是否共享编辑
 	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
 }
 
