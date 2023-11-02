@@ -271,7 +271,7 @@ func PostList(c *gin.Context) {
 		postersMap := getPostersMap(recommend)
 		// 按照推荐顺序获取帖子
 		for _, item := range recommend {
-			if _, ok := postersMap[item]; ok {
+			if _, ok := postersMap[item]; ok && postersMap[item].Public {
 				posters = append(posters, postersMap[item])
 			}
 		}
@@ -292,7 +292,7 @@ func PostList(c *gin.Context) {
 		postersMap := getPostersMap(popular)
 		// 按照推荐顺序获取帖子
 		for _, item := range popular {
-			if _, ok := postersMap[item]; ok {
+			if _, ok := postersMap[item]; ok && postersMap[item].Public {
 				posters = append(posters, postersMap[item])
 			}
 		}
