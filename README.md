@@ -48,6 +48,7 @@ meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
 
 其中`master key`需要和`config.yml`中对应。
 
+
 ### 推荐系统部署
 1. 下载gorse-in-one:`Invoke-WebRequest https://github.com/gorse-io/gorse/releases/latest/download/gorse_windows_amd64.zip -OutFile gorse.zip`
 2. 在项目中创建目录`./Gorse/bin`

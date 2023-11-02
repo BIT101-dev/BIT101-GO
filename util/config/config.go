@@ -71,9 +71,6 @@ var Config = struct {
 		Url       string
 		MasterKey string `yaml:"master_key"`
 	}
-	Gorse struct {
-		SBEFB int `yaml:"second_before_effect_feedback"`
-	}
 }{}
 
 func Init() {
