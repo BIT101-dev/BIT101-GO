@@ -277,7 +277,7 @@ func PostList(c *gin.Context) {
 		}
 		if len(posters) < int(config.Config.RecommendPageSize) {
 			var posters2 []database.Poster
-			database.DB.Order("RANDOM()").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
+			database.DB.Order("RANDOM()").Where("public = true").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
 			posters = append(posters, posters2...)
 		}
 		c.JSON(200, buildPostListResponse(posters))
