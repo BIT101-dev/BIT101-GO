@@ -19,15 +19,35 @@
 
 ## 部署指南
 
-以`Ubuntu`为例。
+### 配置依赖服务
 
-* 安装`PostgreSQL`并配置启动
-* 安装`Meilisearch`并配置启动
+`BIT101-GO`主要使用了`PostgreSQL`数据库、`Meilisearch`推荐系统和`Gorse`推荐系统三大依赖服务，你可以选择使用`docker`或手动安装的方式，推荐使用`docker`方式，只需要进入到`env`目录并运行`docker-compose up`即可一键运行所有依赖服务。关于更多`docker`和`docker-compose`的相关操作可自行查询。
+
+注意需要同步`docker-compose.yaml`和`config.yml`中的配置。
+
+默认情况况下，将在几个端口上提供服务：
+* `7700`：`meilisearch`的端口，除了提供`API`外，浏览器访问还有交互式搜索测试网页
+* `8086`：`gorse`的`gRPC`端口
+* `8088`：`gorse`的`HTTP`端口，浏览器访问显示后台网页
+
+### 启动主程序
+
+需要先配置好依赖服务。
+
+* 克隆并进入代码仓库
 * 安装`GO`并配置
-* 执行`go build -o main main.go`以编译
 * 复制`config_example.yaml`为`config.yaml`并配置
+* 执行`go run .`以启动调试
+* 执行`go build -o main main.go`以编译为可执行文件`main`
 
-### 数据库配置
+假设编译后程序为`main`
+* 开启服务：`./main`或`./main server`
+* 备份数据：`./main bakcup`，默认备份到`./data/backup/`文件夹下
+* 导入课程表：`./main import_course [path]`，其中`path`为课程表`.csv`文件所在的目录，默认为`./data/course/`
+* 获取课程历史：`./main course_history [start_year] [end_year] [webvpn_cookie]`，现阶段测试最早的课程历史为`2005-2006`学年
+
+
+### 数据库手动配置
 
 使用`postgresql`作为数据库。
 
@@ -37,7 +57,7 @@ CREATE DATABASE bit101 OWNER bit101;
 GRANT ALL PRIVILEGES ON DATABASE bit101 TO bit101;
 ```
 
-### 搜索系统配置
+### 搜索系统手动配置
 
 使用`Meilisearch`作为搜索系统。可前往[官网链接](https://www.meilisearch.com/)查看安装和实用教程。
 
@@ -48,16 +68,13 @@ meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
 
 其中`master key`需要和`config.yml`中对应。
 
+### 推荐系统手动部署
 
-### 推荐系统部署
-1. 下载gorse-in-one:`Invoke-WebRequest https://github.com/gorse-io/gorse/releases/latest/download/gorse_windows_amd64.zip -OutFile gorse.zip`
-2. 在项目中创建目录`./Gorse/bin`
-3. 解压zip到目录 
-4. 基于配置文件模板 创建配置文件 `config.toml`,放到Gorse目录下 
-5. 与pg数据库创建对应database
-6. 运行`gorse-in-one`:
+1. 前往[Gorse仓库Release](https://github.com/gorse-io/gorse/releases/)下载对应平台`latest`版本
+2. 修改配置文件`./env/gorse_config.toml` 
+3. 运行`gorse-in-one`:
 ```shell
-./Gorse/bin/gorse-in-one -c ./Gorse/config.toml
+./gorse-in-one -c ./env/config.toml
 ```
 
 ### 身份验证说明
@@ -87,12 +104,58 @@ meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
 
 另外需要注意函数配置中几个参数的设置：超时时间、请求多并发等。
 
-## 使用方法
+### 生产环境部署最佳实践
 
-假设编译后程序为`main`
-* 开启服务：`./main`或`./main server`
-* 导入课程表：`./main import_course [path]`，其中`path`为课程表`.csv`文件所在的目录，默认为`./data/course/`
-* 获取课程历史：`./main course_history [start_year] [end_year] [webvpn_cookie]`，现阶段测试最早的课程历史为`2005-2006`学年
+当前部署在`Ubuntu`上，使用`screen`来实现后台运行。
+
+首先按照之前的说明跑起依赖服务并编译好`main`程序，然后创建`production`文件夹，将`config_example.yml`复制为`production/config.yml`并进行配置，同时将`main`也复制到`production`文件夹下。
+
+使用`screen -S bit101-go`创建一个后台运行控制台，并使用`screen -r bit101-go`进入，然后`cd`到`production`文件夹下，使用`./main`启动。
+
+#### Nginx配置
+
+创建`/etc/nginx/conf.d/bit101_go.conf`文件进行反向代理：
+```nginx
+server{
+
+  listen 80;
+  server_name  bit101.flwfdd.xyz;
+  index  index.html index.htm;
+
+  client_max_body_size 124m;
+
+  location / {
+    proxy_pass  http://127.0.0.1:8080;
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+
+  gzip on;
+  gzip_disable "MSIE [1-6]";
+  gzip_buffers 32 4K;
+  gzip_comp_level 6;
+  gzip_min_length 1024;
+  gzip_types text/plain text/css application/javascript application/xml application/json;
+}
+```
+
+以及反向代理的地图服务，需要在`/etc/hosts`中添加`151.101.1.91 tile.openstreetmap.org`防止`DNS`污染，然后创建文件`/etc/nginx/conf.d/openstreetmap.conf`：
+```nginx
+proxy_cache_path /data/nginx/cache keys_zone=map_zone:10m levels=1:2 inactive=7d max_size=1g;
+
+server {
+        server_name map.bit101.flwfdd.xyz;
+
+        location /tile/ {
+                proxy_pass https://tile.openstreetmap.org/;
+                proxy_cache map_zone;
+        }
+}
+```
+
+配置完成后，使用[Certbot](https://certbot.eff.org/)自动进行`HTTPS`配置。
+
 
 ## 性能测试
 
