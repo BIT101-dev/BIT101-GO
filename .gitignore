@@ -1,9 +1,10 @@
 .DS_Store
 data
 product
+production
 config.yml
 meilisearch.exe
 data.ms
 dumps
-Gorse/bin
+gorse/bin
 gorse.zip

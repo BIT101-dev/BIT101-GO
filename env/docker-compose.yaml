@@ -1,0 +1,44 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:14
+    container_name: bit101_postgres
+    restart: unless-stopped
+    ports:
+      - 54320:5432
+    environment: #与config.yml中对应
+      POSTGRES_DB: bit101
+      POSTGRES_USER: bit101
+      POSTGRES_PASSWORD: BIT101
+  
+  meilisearch:
+    image: getmeili/meilisearch:v1.4
+    container_name: bit101_meilisearch
+    restart: unless-stopped
+    ports:
+      - 7700:7700
+    environment:
+      - MEILI_MASTER_KEY=BIT101 #与config.yml中对应
+      - MEILI_ENV=development #生产环境改为production
+
+  gorse:
+    image: zhenghaoz/gorse-in-one
+    container_name: bit101_gorse
+    restart: unless-stopped
+    ports:
+      - 8086:8086   # gRPC port
+      - 8088:8088   # HTTP port
+    environment: #与config.yml中对应
+      GORSE_CACHE_STORE: postgres://bit101:BIT101@postgres:5432/bit101?sslmode=disable
+      GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/bit101?sslmode=disable
+    command: >
+      -c /etc/gorse/config.toml
+      --log-path /var/log/gorse/master.log
+      --cache-path /var/lib/gorse/master_cache.data
+    volumes:
+      # Mount the configuration file.
+      - ./gorse_config.toml:/etc/gorse/config.toml
+    depends_on:
+      - postgres
+      # - redis
+      # - mysql

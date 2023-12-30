@@ -3,26 +3,22 @@
 # The database for caching, support Redis, MySQL, Postgres and MongoDB:
 #   redis://<user>:<password>@<host>:<port>/<db_number>
 #   rediss://<user>:<password>@<host>:<port>/<db_number>
-#   redis+cluster://<user>:<password>@<host1>:<port1>,<host2>:<port2>,...,<hostN>:<portN>
 #   postgres://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
 #   postgresql://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
 #   mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
 #   mongodb+srv://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
-cache_store = "postgres://bit101:BIT101@127.0.0.1:5432/gorse_cache_store?sslmode=disable"
+cache_store = "postgres://bit101:%23INCLUDE%3Cbit101%3E@127.0.0.1:5432/bit101?sslmode=disable"
 
-# The database for persist data, support MySQL, Postgres, ClickHouse and MongoDB:
+# The database for persist data, support MySQL, Postgres and MongoDB:
 #   mysql://[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
 #   postgres://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
 #   postgresql://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
-#   clickhouse://user:password@host[:port]/database?param1=value1&...&paramN=valueN
-#   chhttp://user:password@host[:port]/database?param1=value1&...&paramN=valueN
-#   chhttps://user:password@host[:port]/database?param1=value1&...&paramN=valueN
 #   mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
 #   mongodb+srv://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
-data_store = "postgres://bit101:BIT101@127.0.0.1:5432/gorse_data_store?sslmode=disable"
+data_store = "postgres://bit101:%23INCLUDE%3Cbit101%3E@127.0.0.1:5432/bit101?sslmode=disable"
 
 # The naming prefix for tables (collections, keys) in databases. The default value is empty.
-table_prefix = ""
+table_prefix = "gorse_"
 
 # The naming prefix for tables (collections, keys) in cache storage databases. The default value is `table_prefix`.
 cache_table_prefix = ""
@@ -59,10 +55,10 @@ n_jobs = 4
 meta_timeout = "10s"
 
 # Username for the master node dashboard.
-dashboard_user_name = ""
+dashboard_user_name = "BIT101"
 
 # Password for the master node dashboard.
-dashboard_password = ""
+dashboard_password = "esroG101TIB"
 
 # Secret key for admin APIs (SSL required).
 admin_api_key = "BIT101"
@@ -90,10 +86,13 @@ cache_expire = "10s"
 [recommend]
 
 # The cache size for recommended/popular/latest items. The default value is 10.
-cache_size = 100
+cache_size = 42
 
 # Recommended cache expire time. The default value is 72h.
 cache_expire = "72h"
+
+# The time-to-live (days) of active users, 0 means disabled. Recommendation won't be cached for inactive users. The default value is 0.
+active_user_ttl = 24
 
 [recommend.data_source]
 
@@ -112,7 +111,7 @@ item_ttl = 0
 [recommend.popular]
 
 # The time window of popular items. The default values is 4320h.
-popular_window = "168h"
+popular_window = "336h"
 
 [recommend.user_neighbors]
 
@@ -192,7 +191,7 @@ read_replacement_decay = 0.6
 [recommend.offline]
 
 # The time period to check recommendation for users. The default values is 1m.
-check_recommend_period = "1m"
+check_recommend_period = "10m"
 
 # The time period to refresh recommendation for inactive users. The default values is 120h.
 refresh_recommend_period = "72h"
@@ -220,7 +219,7 @@ enable_click_through_prediction = true
 #   popular: Recommend popular items to cold-start users.
 #   latest: Recommend latest items to cold-start users.
 # The default values is { popular = 0.0, latest = 0.0 }.
-explore_recommend = { popular = 0.2, latest = 0.3 }
+explore_recommend = { popular = 0.1, latest = 0.2 }
 
 [recommend.online]
 
@@ -250,3 +249,11 @@ sampler = "always"
 
 # The ratio of ratio based sampler. The default value is 1.
 ratio = 1
+
+[experimental]
+
+# Enable deep learning recommenders. The default value is false.
+enable_deep_learning = false
+
+# Batch size for deep learning recommenders. The default value is 128.
+deep_learning_batch_size = 128

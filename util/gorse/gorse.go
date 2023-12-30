@@ -10,10 +10,11 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"context"
-	"github.com/zhenghaoz/gorse/client"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/zhenghaoz/gorse/client"
 )
 
 var gorse *client.GorseClient
@@ -80,14 +81,14 @@ func InitUserAndItem() {
 // Sync 同步
 func Sync(time_after time.Time) {
 	users := []database.User{}
-	q := database.DB.Model(database.User{}).Where("updated_at > ?", time_after)
+	q := database.DB.Model(database.User{})
 	if err := q.Find(&users).Error; err != nil {
 		println("获取users失败:", err.Error())
 	}
 	SyncUsers(users)
 
 	posters := []database.Poster{}
-	q = database.DB.Model(database.Poster{}).Unscoped().Where("updated_at > ?", time_after).Or("deleted_at > ?", time_after)
+	q = database.DB.Model(database.Poster{})
 	if err := q.Find(&posters).Error; err != nil {
 		println("获取items失败:", err.Error())
 	}
