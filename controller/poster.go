@@ -271,13 +271,13 @@ func PostList(c *gin.Context) {
 		postersMap := getPostersMap(recommend)
 		// 按照推荐顺序获取帖子
 		for _, item := range recommend {
-			if _, ok := postersMap[item]; ok {
+			if _, ok := postersMap[item]; ok && postersMap[item].Public {
 				posters = append(posters, postersMap[item])
 			}
 		}
 		if len(posters) < int(config.Config.RecommendPageSize) {
 			var posters2 []database.Poster
-			database.DB.Order("RANDOM()").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
+			database.DB.Order("RANDOM()").Where("public = true").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
 			posters = append(posters, posters2...)
 		}
 		c.JSON(200, buildPostListResponse(posters))
@@ -292,7 +292,7 @@ func PostList(c *gin.Context) {
 		postersMap := getPostersMap(popular)
 		// 按照推荐顺序获取帖子
 		for _, item := range popular {
-			if _, ok := postersMap[item]; ok {
+			if _, ok := postersMap[item]; ok && postersMap[item].Public {
 				posters = append(posters, postersMap[item])
 			}
 		}
