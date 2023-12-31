@@ -10,6 +10,8 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/gorse"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/zhenghaoz/gorse/client"
@@ -148,16 +150,25 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool) [
 	page_size := config.Config.CommentPageSize
 	q = q.Offset(int(page * page_size)).Limit(int(page_size))
 	q.Find(&db_list)
-	return CleanCommentList(db_list, uid, admin)
+	return CleanCommentList(db_list, uid, admin, obj)
+}
+
+// GetAnonymousName 根据obj和id，hash出独特的匿名序号
+func GetAnonymousName(obj string, id uint) string {
+	// 使用hash算法生成匿名序号
+	hasher := sha256.New()
+	hasher.Write([]byte(obj + fmt.Sprint(id)))
+	hashBytes := hasher.Sum(nil)
+	return "匿名者@" + hex.EncodeToString(hashBytes)[:6]
 }
 
 // 将数据库格式评论转化为返回格式
-func CleanComment(old_comment database.Comment, uid uint, admin bool) ReactionCommentAPI {
-	return CleanCommentList([]database.Comment{old_comment}, uid, admin)[0]
+func CleanComment(old_comment database.Comment, uid uint, admin bool, superObj string) ReactionCommentAPI {
+	return CleanCommentList([]database.Comment{old_comment}, uid, admin, superObj)[0]
 }
 
 // 批量将数据库格式评论转化为返回格式
-func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []ReactionCommentAPI {
+func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, superObj string) []ReactionCommentAPI {
 	comments := make([]ReactionCommentAPI, 0)
 
 	// 查询用户和点赞情况
@@ -201,6 +212,8 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 		var user UserAPI
 		if sub_comment.Anonymous {
 			user = users[-1]
+			user.Nickname = GetAnonymousName(superObj, sub_comment.Uid)
+			sub_comment.Uid = 0
 		} else {
 			user = users[int(sub_comment.Uid)]
 		}
@@ -221,6 +234,8 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 		var user UserAPI
 		if old_comment.Anonymous {
 			user = users[-1]
+			user.Nickname = GetAnonymousName(superObj, old_comment.Uid)
+			old_comment.Uid = 0
 		} else {
 			user = users[int(old_comment.Uid)]
 		}
@@ -310,7 +325,7 @@ func ReactionComment(c *gin.Context) {
 	}
 	database.DB.Create(&comment)
 
-	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin")))
+	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin"), query.Obj))
 }
 
 // 获取评论列表请求结构
