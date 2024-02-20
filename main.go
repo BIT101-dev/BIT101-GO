@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2023-10-10 14:28:07
+ * @LastEditTime: 2024-02-21 00:39:46
  * @Description: _(:з」∠)_
  */
 package main
@@ -22,6 +22,8 @@ import (
 	limits "github.com/gin-contrib/size"
 	"github.com/gin-gonic/gin"
 )
+
+var VERSION = "v1.0.2"
 
 var LOGO = `
                                                               
@@ -87,7 +89,9 @@ func main() {
 		fmt.Println(LOGO)
 		fmt.Printf("Usage: %s [mode]\n", os.Args[0])
 		fmt.Println("mode:")
-		fmt.Println("\tserver\t\tRun server")
+		fmt.Println("\tserver\t\tRun server (default)")
+		fmt.Println("\tversion\t\tShow version")
+		fmt.Println("\tbackup\t\tBackup database")
 		fmt.Println("\timport_course [path]\t\tImport course data from path/*.csv (default path: ./data/course/)")
 		fmt.Println("\thistory_score [start_year] [end_year] [webvpn_cookie]\t\tGet history score from term start_year-start_year+1 to end_year-1-end_year")
 	}
@@ -101,6 +105,10 @@ func main() {
 	switch args[0] {
 	case "server": // 启动服务
 		runServer()
+	case "version": // 显示版本
+		fmt.Println("BIT101-GO " + VERSION)
+	case "backup": // 备份数据库
+		other.Backup()
 	case "import_course": // 导入课程
 		if len(args) <= 1 {
 			args = append(args, "./data/course/")

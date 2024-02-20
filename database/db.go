@@ -72,10 +72,10 @@ type Tag struct {
 	Hot  uint   `gorm:"default:0" json:"hot"`        //热度
 }
 
-// 申明
+// 声明
 type Claim struct {
 	Base
-	Text string `gorm:"not null;unique" json:"text"` //申明内容
+	Text string `gorm:"not null;unique" json:"text"` //声明内容
 }
 
 // 帖子
@@ -90,7 +90,7 @@ type Poster struct {
 	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
 	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
 	Tags       string    `json:"tags"`                            //标签，以" "拼接
-	ClaimID    uint      `json:"claim_id"`                        //申明id
+	ClaimID    uint      `json:"claim_id"`                        //声明id
 	Plugins    string    `json:"plugins"`                         //插件
 	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
 }
