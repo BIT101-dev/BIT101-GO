@@ -10,6 +10,8 @@ services:
       POSTGRES_DB: bit101
       POSTGRES_USER: bit101
       POSTGRES_PASSWORD: BIT101
+    volumes:
+      - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/create_gorse_db.sh
   
   meilisearch:
     image: getmeili/meilisearch:v1.4
@@ -22,15 +24,15 @@ services:
       - MEILI_ENV=development #生产环境改为production
 
   gorse:
-    image: zhenghaoz/gorse-in-one
+    image: zhenghaoz/gorse-in-one:0.4.15
     container_name: bit101_gorse
     restart: unless-stopped
     ports:
       - 8086:8086   # gRPC port
       - 8088:8088   # HTTP port
     environment: #与config.yml中对应
-      GORSE_CACHE_STORE: postgres://bit101:BIT101@postgres:5432/bit101?sslmode=disable
-      GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/bit101?sslmode=disable
+      GORSE_CACHE_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
+      GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
     command: >
       -c /etc/gorse/config.toml
       --log-path /var/log/gorse/master.log

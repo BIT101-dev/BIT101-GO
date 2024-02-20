@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2023-05-17 16:59:19
+ * @LastEditTime: 2024-02-21 02:08:02
  * @Description: _(:з」∠)_
  */
 package controller
@@ -10,11 +10,14 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/gorse"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/zhenghaoz/gorse/client"
 	"strings"
 	"time"
+
+	"github.com/zhenghaoz/gorse/client"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -131,7 +134,7 @@ type ReactionCommentAPI struct {
 }
 
 // 获取评论列表
-func GetCommentList(obj string, order string, page uint, uid uint, admin bool) []ReactionCommentAPI {
+func GetCommentList(obj string, order string, page uint, uid uint, admin bool, super_obj string) []ReactionCommentAPI {
 	var db_list []database.Comment
 	q := database.DB.Model(&database.Comment{}).Where("obj = ?", obj)
 	// 排序
@@ -148,16 +151,25 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool) [
 	page_size := config.Config.CommentPageSize
 	q = q.Offset(int(page * page_size)).Limit(int(page_size))
 	q.Find(&db_list)
-	return CleanCommentList(db_list, uid, admin)
+	return CleanCommentList(db_list, uid, admin, super_obj)
+}
+
+// GetAnonymousName 根据obj和id，hash出独特的匿名序号
+func GetAnonymousName(obj string, id uint) string {
+	// 使用hash算法生成匿名序号
+	hasher := md5.New()
+	hasher.Write([]byte(obj + fmt.Sprint(id)))
+	hashBytes := hasher.Sum(nil)
+	return "匿名者·" + hex.EncodeToString(hashBytes)[:6]
 }
 
 // 将数据库格式评论转化为返回格式
-func CleanComment(old_comment database.Comment, uid uint, admin bool) ReactionCommentAPI {
-	return CleanCommentList([]database.Comment{old_comment}, uid, admin)[0]
+func CleanComment(old_comment database.Comment, uid uint, admin bool, super_obj string) ReactionCommentAPI {
+	return CleanCommentList([]database.Comment{old_comment}, uid, admin, super_obj)[0]
 }
 
 // 批量将数据库格式评论转化为返回格式
-func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []ReactionCommentAPI {
+func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, super_obj string) []ReactionCommentAPI {
 	comments := make([]ReactionCommentAPI, 0)
 
 	// 查询用户和点赞情况
@@ -166,12 +178,19 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 	comment_obj_list := make([]string, 0)
 	sub_comment_map := make(map[string][]ReactionCommentAPI)
 	for _, old_comment := range old_comments {
+		// 匿名用户
 		if old_comment.Anonymous {
 			uid_map[-1] = true
 		} else {
 			uid_map[int(old_comment.Uid)] = true
 		}
-		uid_map[int(old_comment.ReplyUid)] = true
+		// 回复用户
+		if int(old_comment.ReplyUid) < 0 {
+			uid_map[-1] = true
+			uid_map[-int(old_comment.ReplyUid)] = true
+		} else {
+			uid_map[int(old_comment.ReplyUid)] = true
+		}
 		like_map["comment"+fmt.Sprint(old_comment.ID)] = true
 		if old_comment.CommentNum > 0 {
 			comment_obj_list = append(comment_obj_list, "comment"+fmt.Sprint(old_comment.ID))
@@ -183,12 +202,19 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 	var sub_comment_list []database.Comment
 	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE "deleted_at" IS NULL AND obj IN ?) t WHERE rn<=?`, comment_obj_list, config.Config.CommentPreviewSize).Scan(&sub_comment_list)
 	for _, sub_comment := range sub_comment_list {
+		// 匿名用户
 		if sub_comment.Anonymous {
 			uid_map[-1] = true
 		} else {
 			uid_map[int(sub_comment.Uid)] = true
 		}
-		uid_map[int(sub_comment.ReplyUid)] = true
+		// 回复用户
+		if int(sub_comment.ReplyUid) < 0 {
+			uid_map[-1] = true
+			uid_map[-int(sub_comment.ReplyUid)] = true
+		} else {
+			uid_map[int(sub_comment.ReplyUid)] = true
+		}
 		like_map["comment"+fmt.Sprint(sub_comment.ID)] = true
 	}
 
@@ -201,14 +227,24 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 		var user UserAPI
 		if sub_comment.Anonymous {
 			user = users[-1]
+			user.Nickname = GetAnonymousName(super_obj, sub_comment.Uid)
+			sub_comment.Uid = 0
 		} else {
 			user = users[int(sub_comment.Uid)]
+		}
+		var reply_user UserAPI
+		if int(sub_comment.ReplyUid) < 0 {
+			reply_user = users[-1]
+			reply_user.Nickname = GetAnonymousName(super_obj, uint(-int(sub_comment.ReplyUid)))
+			sub_comment.ReplyUid = -1
+		} else if int(sub_comment.ReplyUid) > 0 {
+			reply_user = users[int(sub_comment.ReplyUid)]
 		}
 		sub_comment_map[sub_comment.Obj] = append(sub_comment_map[sub_comment.Obj], ReactionCommentAPI{
 			Comment:   sub_comment,
 			Like:      likes["comment"+fmt.Sprint(sub_comment.ID)],
 			Own:       sub_comment.Uid == uid || admin,
-			ReplyUser: users[int(sub_comment.ReplyUid)],
+			ReplyUser: reply_user,
 			User:      user,
 			Sub:       make([]ReactionCommentAPI, 0),
 			Images:    GetImageAPIArr(spilt(sub_comment.Images)),
@@ -221,14 +257,24 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool) []R
 		var user UserAPI
 		if old_comment.Anonymous {
 			user = users[-1]
+			user.Nickname = GetAnonymousName(super_obj, old_comment.Uid)
+			old_comment.Uid = 0
 		} else {
 			user = users[int(old_comment.Uid)]
+		}
+		var reply_user UserAPI
+		if int(old_comment.ReplyUid) < 0 {
+			reply_user = users[-1]
+			reply_user.Nickname = GetAnonymousName(super_obj, uint(-int(old_comment.ReplyUid)))
+			old_comment.ReplyUid = -1
+		} else if int(old_comment.ReplyUid) > 0 {
+			reply_user = users[int(old_comment.ReplyUid)]
 		}
 		comment := ReactionCommentAPI{
 			Comment:   old_comment,
 			Like:      likes[comment_obj],
 			Own:       old_comment.Uid == uid || admin,
-			ReplyUser: users[int(old_comment.ReplyUid)],
+			ReplyUser: reply_user,
 			User:      user,
 			Images:    GetImageAPIArr(spilt(old_comment.Images)),
 		}
@@ -297,12 +343,25 @@ func ReactionComment(c *gin.Context) {
 		return
 	}
 
+	// 回复匿名用户
+	reply_uid := query.ReplyUid
+	if reply_uid == -1 {
+		var reply_comment database.Comment
+		database.DB.Limit(1).Find(&reply_comment, "id = ?", strings.TrimPrefix(query.ReplyObj, "comment"))
+		if reply_comment.ID != 0 {
+			reply_uid = -int(reply_comment.Uid)
+		} else {
+			c.JSON(500, gin.H{"msg": "获取回复用户失败Orz"})
+			return
+		}
+	}
+
 	// 评论
 	comment = database.Comment{
 		Obj:       query.Obj,
 		Text:      query.Text,
 		Anonymous: query.Anonymous,
-		ReplyUid:  query.ReplyUid,
+		ReplyUid:  reply_uid,
 		ReplyObj:  query.ReplyObj,
 		Rate:      query.Rate,
 		Uid:       c.GetUint("uid_uint"),
@@ -310,7 +369,7 @@ func ReactionComment(c *gin.Context) {
 	}
 	database.DB.Create(&comment)
 
-	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin")))
+	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin"), query.Obj))
 }
 
 // 获取评论列表请求结构
@@ -328,7 +387,18 @@ func ReactionCommentList(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin") || c.GetBool("super")))
+	// super_obj用于匿名用户名哈希
+	super_obj := query.Obj
+	if strings.HasPrefix(query.Obj, "comment") {
+		var comment database.Comment
+		database.DB.Limit(1).Find(&comment, "id = ?", strings.TrimPrefix(query.Obj, "comment"))
+		if comment.ID == 0 {
+			c.JSON(500, gin.H{"msg": "评论不存在Orz"})
+			return
+		}
+		super_obj = comment.Obj
+	}
+	c.JSON(200, GetCommentList(query.Obj, query.Order, query.Page, c.GetUint("uid_uint"), c.GetBool("admin") || c.GetBool("super"), super_obj))
 }
 
 // 点赞评论

@@ -7,7 +7,7 @@
 #   postgresql://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
 #   mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
 #   mongodb+srv://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
-cache_store = "postgres://bit101:%23INCLUDE%3Cbit101%3E@127.0.0.1:5432/bit101?sslmode=disable"
+cache_store = "postgres://bit101:BIT101@127.0.0.1:5432/gorse?sslmode=disable"
 
 # The database for persist data, support MySQL, Postgres and MongoDB:
 #   mysql://[username[:password]@][protocol[(address)]]/dbname[?param1=value1&...&paramN=valueN]
@@ -15,10 +15,10 @@ cache_store = "postgres://bit101:%23INCLUDE%3Cbit101%3E@127.0.0.1:5432/bit101?ss
 #   postgresql://bob:secret@1.2.3.4:5432/mydb?sslmode=verify-full
 #   mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
 #   mongodb+srv://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
-data_store = "postgres://bit101:%23INCLUDE%3Cbit101%3E@127.0.0.1:5432/bit101?sslmode=disable"
+data_store = "postgres://bit101:BIT101@127.0.0.1:5432/gorse?sslmode=disable"
 
 # The naming prefix for tables (collections, keys) in databases. The default value is empty.
-table_prefix = "gorse_"
+table_prefix = ""
 
 # The naming prefix for tables (collections, keys) in cache storage databases. The default value is `table_prefix`.
 cache_table_prefix = ""

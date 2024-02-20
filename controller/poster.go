@@ -13,12 +13,13 @@ import (
 	"BIT101-GO/util/search"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/zhenghaoz/gorse/client"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/zhenghaoz/gorse/client"
 )
 
 // PosterGetResponse 获取帖子返回结构
@@ -98,7 +99,7 @@ func PosterPost(c *gin.Context) {
 		return
 	}
 	if _, ok := database.ClaimMap[query.ClaimID]; !ok {
-		c.JSON(500, gin.H{"msg": "申明不存在Orz"})
+		c.JSON(500, gin.H{"msg": "声明不存在Orz"})
 		return
 	}
 	if !CheckTags(query.Tags) {
@@ -160,7 +161,7 @@ func PosterPut(c *gin.Context) {
 		return
 	}
 	if _, ok := database.ClaimMap[query.ClaimID]; !ok {
-		c.JSON(500, gin.H{"msg": "申明不存在Orz"})
+		c.JSON(500, gin.H{"msg": "声明不存在Orz"})
 		return
 	}
 	if !CheckTags(query.Tags) {
@@ -368,7 +369,7 @@ func PosterDelete(c *gin.Context) {
 	c.JSON(200, gin.H{"msg": "删除成功OvO"})
 }
 
-// ClaimList 获取申明列表
+// ClaimList 获取声明列表
 func ClaimList(c *gin.Context) {
 	keys := make([]uint, 0, len(database.ClaimMap))
 	for key := range database.ClaimMap {
