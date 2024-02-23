@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2024-02-23 15:15:18
+ * @LastEditTime: 2024-02-24 01:07:08
  * @Description: _(:з」∠)_
  */
 package controller
@@ -155,10 +155,10 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool, s
 }
 
 // GetAnonymousName 根据obj和id，hash出独特的匿名序号
-func GetAnonymousName(obj string, id uint) string {
+func GetAnonymousName(obj string, uid uint) string {
 	// 使用hash算法生成匿名序号
 	hasher := md5.New()
-	hasher.Write([]byte(obj + fmt.Sprint(id)))
+	hasher.Write([]byte(obj + config.Config.Key + fmt.Sprint(uid)))
 	hashBytes := hasher.Sum(nil)
 	return "匿名者·" + hex.EncodeToString(hashBytes)[:6]
 }
@@ -228,7 +228,6 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		if sub_comment.Anonymous {
 			user = users[-1]
 			user.Nickname = GetAnonymousName(super_obj, sub_comment.Uid)
-			sub_comment.Uid = 0
 		} else {
 			user = users[int(sub_comment.Uid)]
 		}
@@ -243,7 +242,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		sub_comment_map[sub_comment.Obj] = append(sub_comment_map[sub_comment.Obj], ReactionCommentAPI{
 			Comment:   sub_comment,
 			Like:      likes["comment"+fmt.Sprint(sub_comment.ID)],
-			Own:       uid != 0 && (sub_comment.Uid == uid || admin),
+			Own:       sub_comment.Uid == uid || admin,
 			ReplyUser: reply_user,
 			User:      user,
 			Sub:       make([]ReactionCommentAPI, 0),
@@ -258,7 +257,6 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		if old_comment.Anonymous {
 			user = users[-1]
 			user.Nickname = GetAnonymousName(super_obj, old_comment.Uid)
-			old_comment.Uid = 0
 		} else {
 			user = users[int(old_comment.Uid)]
 		}
@@ -273,7 +271,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		comment := ReactionCommentAPI{
 			Comment:   old_comment,
 			Like:      likes[comment_obj],
-			Own:       uid != 0 && (old_comment.Uid == uid || admin),
+			Own:       old_comment.Uid == uid || admin,
 			ReplyUser: reply_user,
 			User:      user,
 			Images:    GetImageAPIArr(spilt(old_comment.Images)),
