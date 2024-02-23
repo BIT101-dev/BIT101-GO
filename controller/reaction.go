@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2024-02-21 02:08:02
+ * @LastEditTime: 2024-02-23 15:15:18
  * @Description: _(:з」∠)_
  */
 package controller
@@ -243,7 +243,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		sub_comment_map[sub_comment.Obj] = append(sub_comment_map[sub_comment.Obj], ReactionCommentAPI{
 			Comment:   sub_comment,
 			Like:      likes["comment"+fmt.Sprint(sub_comment.ID)],
-			Own:       sub_comment.Uid == uid || admin,
+			Own:       uid != 0 && (sub_comment.Uid == uid || admin),
 			ReplyUser: reply_user,
 			User:      user,
 			Sub:       make([]ReactionCommentAPI, 0),
@@ -273,7 +273,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 		comment := ReactionCommentAPI{
 			Comment:   old_comment,
 			Like:      likes[comment_obj],
-			Own:       old_comment.Uid == uid || admin,
+			Own:       uid != 0 && (old_comment.Uid == uid || admin),
 			ReplyUser: reply_user,
 			User:      user,
 			Images:    GetImageAPIArr(spilt(old_comment.Images)),
