@@ -249,7 +249,7 @@ func CourseUploadLog(c *gin.Context) {
 var readme_template = `
 # BIT101 %v 课程共享资料
 > 课程编号：%v
-本页面由[BIT101](%v)维护，[点击查找 %v 课程及评价](%v/#/course/?search=%v)
+本页面由[BIT101](%v)维护，[点击查找 %v 课程及评价](%v/course/?search=%v)
 ## 类别说明
 * 书籍(book)：教科书、课程相关电子书等
 * 课件(ppt)：PPT什么的
