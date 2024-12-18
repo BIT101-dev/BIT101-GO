@@ -27,6 +27,7 @@ var Config = struct {
 		Host     string
 		User     string
 		Password string
+		Port     string // 推荐为字符串形式，例如 "25" 或 "587"
 	}
 	Dsn   string
 	Saver struct {

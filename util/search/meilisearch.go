@@ -5,13 +5,13 @@ import (
 	"BIT101-GO/util/config"
 	"encoding/json"
 	"fmt"
-	"github.com/meilisearch/meilisearch-go"
 	"strconv"
 	"time"
+
+	"github.com/meilisearch/meilisearch-go"
 )
 
 var client *meilisearch.Client
-
 
 // createAndConfigureIndex 创建并配置索引
 func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
@@ -64,7 +64,6 @@ func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	return nil
 }
 
-
 // deleteDocumentFromMeiliSearch 将数据从MeiliSearch中删除
 func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 	index, err := client.GetIndex(indexName)
@@ -82,26 +81,36 @@ func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
 }
 
 // Search 搜索
-func Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter []string) error {
-	response, err := client.Index(indexName).Search(query, &meilisearch.SearchRequest{
+func Search(result interface{}, indexName, query string, page, limit uint, sort, filter []string) error {
+	// 构造搜索请求
+	searchRequest := &meilisearch.SearchRequest{
 		Limit:  int64(limit),
 		Offset: int64(page * limit),
 		Sort:   sort,
 		Filter: filter,
-	})
-	if err != nil {
-		return err
 	}
-	hits := response.Hits
-	if len(hits) == 0 {
+
+	// 执行搜索
+	response, err := client.Index(indexName).Search(query, searchRequest)
+	if err != nil {
+		return fmt.Errorf("[Search] 搜索失败: %w", err)
+	}
+
+	// 检查结果是否为空
+	if len(response.Hits) == 0 {
 		return nil
 	}
 
-	resultJSON, _ := json.Marshal(hits)
-	if err := json.Unmarshal(resultJSON, result); err != nil {
-		fmt.Println("[Search] 解码JSON失败:", err)
-		return err
+	// 处理搜索结果
+	hitsJSON, err := json.Marshal(response.Hits)
+	if err != nil {
+		return fmt.Errorf("[Search] 编码搜索结果为JSON失败: %w", err)
 	}
+
+	if err := json.Unmarshal(hitsJSON, result); err != nil {
+		return fmt.Errorf("[Search] 解码搜索结果为目标结构失败: %w", err)
+	}
+
 	return nil
 }
 

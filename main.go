@@ -21,6 +21,7 @@ import (
 	"github.com/gin-contrib/cors"
 	limits "github.com/gin-contrib/size"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 var VERSION = "v1.0.2"
@@ -44,8 +45,16 @@ var LOGO = `
                                                               
 `
 
+/*
+日志记录改进
+问题: 当前的日志直接使用 fmt.Println，难以追踪和管理。
+改进: 使用标准的日志包zap支持日志级别和输出格式化。
+*/
+var logger, _ = zap.NewProduction()
+
 // 服务，启动！
 func runServer() {
+	logger.Info("Initializing server...")
 	config.Init()
 	database.Init()
 	search.Init()
@@ -69,18 +78,23 @@ func runServer() {
 		MaxAge: 12 * time.Hour,
 	}))
 	router.SetRouter(app)
-	fmt.Println("BIT101-GO will run on port " + config.Config.Port)
+	logger.Info("Server started", zap.String("port", config.Config.Port))
 	app.Run(":" + config.Config.Port)
 }
 
+/*
+问题: 当前的 sync 使用了无限循环和 time.Sleep，可能导致 Goroutine 堆积或服务资源浪费。
+改进建议: 使用 time.Ticker 替代 time.Sleep，并确保任务完成后再开始下一轮。
+*/
 func sync() {
-	// 每隔SyncTime s同步一次
-	for {
-		time_after := time.Now()
-		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
-		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
-		go gorse.Sync(time_after)
-		go search.Sync(time_after)
+	ticker := time.NewTicker(time.Duration(config.Config.SyncInterval) * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		timeAfter := time.Now()
+		fmt.Println("Syncing... ", timeAfter.Format("2006-01-02 15:04:05"))
+		go gorse.Sync(timeAfter)
+		go search.Sync(timeAfter)
 	}
 }
 

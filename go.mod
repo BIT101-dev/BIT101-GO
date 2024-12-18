@@ -12,6 +12,7 @@ require (
 	github.com/jinzhu/configor v1.2.1
 	github.com/meilisearch/meilisearch-go v0.25.1
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
+	github.com/zhenghaoz/gorse v0.5.0-alpha.0.20231007034212-78c016bc0103
 	gorm.io/driver/postgres v1.5.0
 	gorm.io/gorm v1.24.7-0.20230306060331-85eaf9eeda11
 )
@@ -38,11 +39,12 @@ require (
 	github.com/mozillazg/go-httpheader v0.3.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.50.0 // indirect
-	github.com/zhenghaoz/gorse v0.5.0-alpha.0.20231007034212-78c016bc0103 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.4 // indirect
 	go.opentelemetry.io/otel v1.11.1 // indirect
 	go.opentelemetry.io/otel/metric v0.33.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
+	go.uber.org/zap v1.27.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
