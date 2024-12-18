@@ -7,22 +7,37 @@
 package mail
 
 import (
-	"BIT101-GO/util/config"
+	"fmt"
 	"net/smtp"
+	"strings"
+
+	"BIT101-GO/util/config"
 )
 
-func Send(to string, title string, text string) error {
-	mail_host := config.Config.Mail.Host
-	mail_user := config.Config.Mail.User
-	mail_pass := config.Config.Mail.Password
-	auth := smtp.PlainAuth("", mail_user, mail_pass, mail_host)
+// Send 发送邮件
+func Send(to, subject, body string) error {
+	// 从配置加载邮件服务器信息
+	mailHost := config.Config.Mail.Host
+	mailUser := config.Config.Mail.User
+	mailPass := config.Config.Mail.Password
+	mailPort := config.Config.Mail.Port // 使用配置中的端口
 
-	// 编写发送的消息
-	msg := []byte("To: " + to +
-		"\r\nFrom: " + mail_user +
-		"\r\nSubject: " + title +
-		"\r\n\r\n" + text)
+	// 验证配置信息是否完整
+	if mailHost == "" || mailUser == "" || mailPass == "" || mailPort == "" {
+		return fmt.Errorf("邮件配置不完整")
+	}
 
-	// 调用函数发送邮件
-	return smtp.SendMail(mail_host+":25", auth, mail_user, []string{to}, msg)
+	// 构建SMTP认证信息
+	auth := smtp.PlainAuth("", mailUser, mailPass, mailHost)
+
+	// 构建邮件内容
+	msg := fmt.Sprintf(
+		"To: %s\r\nFrom: %s\r\nSubject: %s\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		to, mailUser, subject, body,
+	)
+
+	// 发送邮件
+	serverAddr := fmt.Sprintf("%s:%s", mailHost, mailPort)
+	recipients := strings.Split(to, ",") // 支持多个收件人
+	return smtp.SendMail(serverAddr, auth, mailUser, recipients, []byte(msg))
 }
