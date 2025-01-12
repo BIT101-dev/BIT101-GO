@@ -71,6 +71,10 @@ var Config = struct {
 		Url       string
 		MasterKey string `yaml:"master_key"`
 	}
+	WebPushKeys struct {
+		Public  string `yaml:"vapid_public"`
+		Private string `yaml:"vapid_private"`
+	} `yaml:"web_push_keys"`
 }{}
 
 func Init() {

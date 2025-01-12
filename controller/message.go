@@ -9,9 +9,13 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"BIT101-GO/util/push"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"time"
 
+	"github.com/SherClockHolmes/webpush-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,6 +58,11 @@ func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj stri
 	if err := database.DB.Save(&summary).Error; err != nil {
 		return err
 	}
+	ser, err := json.Marshal(summary)
+	if err != nil {
+		return err
+	}
+	PushMessageSend(to_uid, ser)
 	return nil
 }
 
@@ -193,4 +202,85 @@ func MessageGetUnreadNum(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"unread_num": count.Int64})
+}
+
+// PushMessageRequestKey 获取推送服务请求公钥
+// Web Push 1/4    获取服务端 VAPID 公钥
+func PushMessageRequestKey(c *gin.Context) {
+	public_key, err := push.GetRequestPubkey()
+	if err != nil {
+		c.JSON(500, gin.H{"msg": "推送服务错误Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"publicKey": public_key, "about": "https://bit101.cn/message"})
+}
+
+// PushMessageSubscribe 订阅推送服务
+// Web Push 2/4    客户端生成订阅 服务端保存订阅端点与公钥以便推送
+func PushMessageSubscribe(c *gin.Context) {
+	var query webpush.Subscription
+	if err := c.ShouldBindJSON(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误Orz"})
+		return
+	}
+	uid := c.GetUint("uid_uint")
+	if err := push.HandleRegister(query, uid); err != nil {
+		c.JSON(500, gin.H{"msg": "订阅失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "订阅成功OvO"})
+}
+
+type PushMessage struct {
+	Data      []byte `json:"data"`
+	Badge     string `json:"badge"`
+	Icon      string `json:"icon"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// Web Push 3/4    服务端推送消息
+func PushMessageSend(uid uint, content []byte) error {
+	subscriptions := []database.WebPushSubscription{}
+	if err := database.DB.Where("uid = ?", uid).Find(&subscriptions).Error; err != nil {
+		return errors.New("数据库错误Orz")
+	}
+	if len(subscriptions) == 0 {
+		return nil
+	}
+
+	msg := PushMessage{
+		Data:      content,
+		Badge:     "https://bit101.cn/favicon.ico",
+		Icon:      "https://bit101.cn/pwa-512x512.png",
+		Timestamp: time.Now().UTC().Unix(),
+	}
+
+	ctx, err := json.Marshal(msg)
+
+	if err != nil {
+		return errors.New("消息错误Orz")
+	}
+
+	for _, subscription := range subscriptions {
+		if err := push.Send(subscription, ctx); err != nil {
+			return errors.New("推送错误Orz")
+		}
+	}
+	return nil
+}
+
+// PushMessageUnsubscribe 取消订阅推送服务
+// Web Push 4/4    客户端取消订阅 服务端删除订阅端点
+func PushMessageUnsubscribe(c *gin.Context) {
+	var query webpush.Subscription
+	if err := c.ShouldBindJSON(&query); err != nil {
+		c.JSON(400, gin.H{"msg": "参数错误Orz"})
+		return
+	}
+	uid := c.GetUint("uid_uint")
+	if err := push.HandleUnregister(query, uid); err != nil {
+		c.JSON(500, gin.H{"msg": "取消订阅失败Orz"})
+		return
+	}
+	c.JSON(200, gin.H{"msg": "取消订阅成功OvO"})
 }

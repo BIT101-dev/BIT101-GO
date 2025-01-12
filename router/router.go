@@ -97,6 +97,9 @@ func SetRouter(router *gin.Engine) {
 		message.GET("/unread_num", middleware.CheckLogin(true), controller.MessageGetUnreadNum)
 		message.GET("/unread_nums", middleware.CheckLogin(true), controller.MessageGetUnreadNums)
 		message.POST("/system", middleware.CheckLogin(true), middleware.CheckAdmin(), controller.SystemMessagePost)
+		message.GET("/push", middleware.CheckLogin(true), controller.PushMessageRequestKey)
+		message.POST("/push", middleware.CheckLogin(true), controller.PushMessageSubscribe)
+		message.DELETE("/push", middleware.CheckLogin(true), controller.PushMessageUnsubscribe)
 	}
 	// 治理模块
 	manage := router.Group("/manage")
