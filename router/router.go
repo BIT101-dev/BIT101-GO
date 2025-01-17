@@ -77,8 +77,8 @@ func SetRouter(router *gin.Engine) {
 	// 课程模块
 	course := router.Group("/courses")
 	{
-		course.GET("", controller.CourseList)
-		course.GET("/:id", middleware.CheckLogin(false), controller.CourseInfo)
+		course.GET("", middleware.CheckLogin(true), controller.CourseList)
+		course.GET("/:id", middleware.CheckLogin(true), controller.CourseInfo)
 		course.GET("/upload/url", middleware.CheckLogin(true), controller.CourseUploadUrl)
 		course.POST("/upload/log", middleware.CheckLogin(true), controller.CourseUploadLog)
 		course.GET("/schedule", controller.CourseSchedule)
