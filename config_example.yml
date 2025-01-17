@@ -48,3 +48,6 @@ release_mode: true #是否为部署模式 开启后不显示DEBUG信息
 meilisearch:
   url: http://localhost:7700
   master_key: BIT101
+web_push_keys:
+  vapid_public: "<YOUR_VAPID_PUBLIC_KEY>"
+  vapid_private: "<YOUR_VAPID_PRIVATE_KEY>"

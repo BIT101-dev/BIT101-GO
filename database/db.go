@@ -251,6 +251,15 @@ type Ban struct {
 	Time string `gorm:"not null" json:"time"`       //解封时间
 }
 
+type WebPushSubscription struct {
+	Base
+	Uid            uint   `gorm:"not null;index" json:"uid"`             //用户id, 每个用户可能有多个订阅
+	Endpoint       string `gorm:"not null" json:"endpoint"`              //推送端点地址
+	ExpirationTime string `gorm:"not null;default:'null'" json:"expire"` //过期时间
+	Auth           string `gorm:"not null" json:"auth"`                  //推送认证
+	P256dh         string `gorm:"not null" json:"p256dh"`                //推送公钥
+}
+
 // InitMaps 初始化Map(针对常用且稳定的数据)
 func InitMaps() {
 	//初始化 ClaimMap
@@ -295,6 +304,7 @@ func Init() {
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
 		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
+		&WebPushSubscription{},
 	)
 	InitMaps()
 }
