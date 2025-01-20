@@ -53,6 +53,8 @@ func Send(sub database.WebPushSubscription, message []byte) error {
 		},
 	}
 
+	fmt.Printf("[Push] Trying sending notification to uid: %d, endpoint: %s..\n", sub.Uid, sub.Endpoint[:30])
+
 	resp, err := webpush.SendNotification(message, &subscription, &webpush.Options{
 		VAPIDPublicKey:  config.Config.WebPushKeys.Public,
 		VAPIDPrivateKey: config.Config.WebPushKeys.Private,
@@ -60,7 +62,7 @@ func Send(sub database.WebPushSubscription, message []byte) error {
 	})
 
 	if err != nil {
-		fmt.Printf("[Push] Send notification failed: %s\n", err)
+		fmt.Printf("[Push] Send notification to uid: %d failed: %s\n", sub.Uid, err)
 		fmt.Printf("[Push] With endpoint: %s.., auth: %s, p256dh: %s\n", sub.Endpoint[:30], sub.Auth, sub.P256dh)
 		return errors.New("推送错误Orz")
 	}
