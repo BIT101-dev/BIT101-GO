@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-30 08:55:28
- * @LastEditTime: 2023-05-17 16:51:49
+ * @LastEditTime: 2025-01-26 00:50:33
  * @Description: _(:з」∠)_
  */
 package controller
@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
@@ -261,9 +262,10 @@ func PushMessageSend(uid uint, content []byte) error {
 		return errors.New("消息错误Orz")
 	}
 
+	fmt.Printf("[Push] Send notification to %d endpoints of uid: %d\n", len(subscriptions), uid)
 	for _, subscription := range subscriptions {
 		if err := push.Send(subscription, ctx); err != nil {
-			return errors.New("推送错误Orz")
+			continue
 		}
 	}
 	return nil
