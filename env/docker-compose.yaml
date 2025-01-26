@@ -1,4 +1,3 @@
-version: "3"
 services:
   postgres:
     image: postgres:14
@@ -6,10 +5,10 @@ services:
     restart: unless-stopped
     ports:
       - 54320:5432
-    environment: #与config.yml中对应
+    environment:
       POSTGRES_DB: bit101
       POSTGRES_USER: bit101
-      POSTGRES_PASSWORD: BIT101
+      POSTGRES_PASSWORD: BIT101  # 修改与config.yml对应
     volumes:
       - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/create_gorse_db.sh
   
@@ -20,17 +19,17 @@ services:
     ports:
       - 7700:7700
     environment:
-      - MEILI_MASTER_KEY=BIT101 #与config.yml中对应
-      - MEILI_ENV=development #生产环境改为production
+      - MEILI_MASTER_KEY=BIT101  # 修改与config.yml对应
+      - MEILI_ENV=development  # 生产环境修改为production
 
   gorse:
     image: zhenghaoz/gorse-in-one:0.4.15
     container_name: bit101_gorse
     restart: unless-stopped
     ports:
-      - 8086:8086   # gRPC port
-      - 8088:8088   # HTTP port
-    environment: #与config.yml中对应
+      - 8086:8086   # gRPC
+      - 8088:8088   # HTTP
+    environment:  # 修改与config.yml对应
       GORSE_CACHE_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
       GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
     command: >
@@ -38,9 +37,10 @@ services:
       --log-path /var/log/gorse/master.log
       --cache-path /var/lib/gorse/master_cache.data
     volumes:
-      # Mount the configuration file.
-      - ./gorse_config.toml:/etc/gorse/config.toml
+      - ./gorse_config.toml:/etc/gorse/config.toml  # 挂载配置文件
     depends_on:
       - postgres
-      # - redis
-      # - mysql
+    deploy: # 限制CPU资源
+      resources:
+        limits:
+          cpus: '0.75'

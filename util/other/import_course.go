@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // 原始课程数据 教师名和教师号未对应
@@ -93,6 +94,7 @@ func importToDatabase(ori_courses []OriCourse, number2name map[string]string) {
 				TeachersNumber: strings.Join(ori_course.teacher_number_list, ","),
 				Teachers:       []database.Teacher{},
 			}
+			db_course.UpdatedAt = time.Date(2022, 8, 1, 5, 0, 0, 0, time.UTC)
 			database.DB.Create(&db_course)
 
 			var readme database.CourseUploadReadme
@@ -117,7 +119,6 @@ func importToDatabase(ori_courses []OriCourse, number2name map[string]string) {
 		}
 		db_course.TeachersName = strings.Join(teacher_name_list, ",")
 		teachers := getTeachers(teacher_number_list, number2name)
-		// database.DB.Model(&db_course).Association("Teachers").Replace(teachers)
 		db_course.Teachers = teachers
 		database.DB.UpdateColumns(&db_course)
 	}
