@@ -1,14 +1,18 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2023-10-10 20:40:43
+ * @LastEditTime: 2025-01-26 15:55:11
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
 
-`BIT101`的新后端，基于`GO`。
+<div align="center">
 
-[API文档](https://bit101-api.apifox.cn)
+[BIT101主仓库](https://github.com/BIT101-dev/BIT101) · [API文档](https://bit101-api.apifox.cn) · [运维手册](https://bit101-project.feishu.cn/wiki/ID4owkKQKi3E0OkNV1gcfzqynHd)
+
+</div>
+
+`BIT101`的服务端，基于`Go`语言。
 
 如果其他同学有需要用到该项目，可以直接使用，但需要注明使用了该项目，另外还请注意开源协议。文档中的说明已经比较详尽了，如有问题欢迎提`issue`。
 
@@ -19,9 +23,11 @@
 
 ## 部署指南
 
+一些更详细的说明可参考[运维手册](https://bit101-project.feishu.cn/wiki/ID4owkKQKi3E0OkNV1gcfzqynHd)。
+
 ### 配置依赖服务
 
-`BIT101-GO`主要使用了`PostgreSQL`数据库、`Meilisearch`推荐系统和`Gorse`推荐系统三大依赖服务，你可以选择使用`docker`或手动安装的方式，推荐使用`docker`方式，只需要进入到`env`目录并运行`docker-compose up`即可一键运行所有依赖服务。关于更多`docker`和`docker-compose`的相关操作可自行查询。
+`BIT101-GO`主要使用了`PostgreSQL`数据库、`Meilisearch`推荐系统和`Gorse`推荐系统三大依赖服务，你可以选择使用`docker`或手动安装的方式，推荐使用`docker`方式，只需要进入到`env`目录并运行`docker compose up`即可一键运行所有依赖服务，关于更多`docker`的相关操作可自行查询。
 
 注意需要同步`docker-compose.yaml`和`config.yml`中的配置。
 
@@ -29,6 +35,7 @@
 * `7700`：`meilisearch`的端口，除了提供`API`外，浏览器访问还有交互式搜索测试网页
 * `8086`：`gorse`的`gRPC`端口
 * `8088`：`gorse`的`HTTP`端口，浏览器访问显示后台网页
+* `54320`：`PostgreSQL`数据库端口
 
 ### 启动主程序
 
@@ -36,7 +43,7 @@
 
 * 克隆并进入代码仓库
 * 安装`GO`并配置
-* 复制`config_example.yaml`为`config.yaml`并配置
+* 复制`config_example.yml`为`config.yml`并配置
 * 执行`go run .`以启动调试
 * 执行`go build -o main main.go`以编译为可执行文件`main`
 
@@ -110,51 +117,7 @@ meilisearch --env production --master-key BIT101 --db-path ./data/meilisearch
 
 首先按照之前的说明跑起依赖服务并编译好`main`程序，然后创建`production`文件夹，将`config_example.yml`复制为`production/config.yml`并进行配置，同时将`main`也复制到`production`文件夹下。
 
-使用`screen -S bit101-go`创建一个后台运行控制台，并使用`screen -r bit101-go`进入，然后`cd`到`production`文件夹下，使用`./main`启动。
-
-#### Nginx配置
-
-创建`/etc/nginx/conf.d/bit101_go.conf`文件进行反向代理：
-```nginx
-server{
-
-  listen 80;
-  server_name  bit101.flwfdd.xyz;
-  index  index.html index.htm;
-
-  client_max_body_size 124m;
-
-  location / {
-    proxy_pass  http://127.0.0.1:8080;
-    proxy_set_header Host $proxy_host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  }
-
-  gzip on;
-  gzip_disable "MSIE [1-6]";
-  gzip_buffers 32 4K;
-  gzip_comp_level 6;
-  gzip_min_length 1024;
-  gzip_types text/plain text/css application/javascript application/xml application/json;
-}
-```
-
-以及反向代理的地图服务，需要在`/etc/hosts`中添加`151.101.1.91 tile.openstreetmap.org`防止`DNS`污染，然后创建文件`/etc/nginx/conf.d/openstreetmap.conf`：
-```nginx
-proxy_cache_path /data/nginx/cache keys_zone=map_zone:10m levels=1:2 inactive=7d max_size=1g;
-
-server {
-        server_name map.bit101.flwfdd.xyz;
-
-        location /tile/ {
-                proxy_pass https://tile.openstreetmap.org/;
-                proxy_cache map_zone;
-        }
-}
-```
-
-配置完成后，使用[Certbot](https://certbot.eff.org/)自动进行`HTTPS`配置。
+使用`screen -S bit101-go`创建一个后台运行控制台，并使用`screen -r bit101-go`进入，然后`cd`到`production`文件夹下，使用`bash run.sh`运行程序。
 
 
 ## 性能测试
