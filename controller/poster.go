@@ -59,6 +59,7 @@ func PosterGet(c *gin.Context) {
 	var userAPI UserAPI
 	if poster.Anonymous {
 		userAPI = GetUserAPI(-1)
+		userAPI.Nickname = GetAnonymousName(fmt.Sprintf("poster%v", poster.ID), poster.Uid)
 		poster.Uid = 0
 	} else {
 		userAPI = GetUserAPI(int(poster.Uid))

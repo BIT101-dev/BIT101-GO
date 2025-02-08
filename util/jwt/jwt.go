@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-19 23:29:07
- * @LastEditTime: 2023-03-23 22:23:21
+ * @LastEditTime: 2025-02-04 16:15:49
  * @Description: _(:з」∠)_
  */
 package jwt
@@ -44,7 +44,6 @@ func VeirifyUserToken(tokenString string, key string) (string, bool, bool, bool)
 		return []byte(key), nil
 	})
 	if err != nil {
-		println(err.Error())
 		return "", false, false, false
 	}
 

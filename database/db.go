@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2023-10-10 19:53:47
+ * @LastEditTime: 2025-02-08 02:17:39
  * @Description: _(:з」∠)_
  */
 package database
@@ -12,6 +12,7 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -34,8 +35,8 @@ const (
 // 基本模型
 type Base struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"create_time"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"update_time"`
+	CreatedAt time.Time      `gorm:"autoCreateTime;index" json:"create_time"`
+	UpdatedAt time.Time      `gorm:"autoUpdateTime;index" json:"update_time"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"delete_time"`
 }
 
@@ -251,6 +252,7 @@ type Ban struct {
 	Time string `gorm:"not null" json:"time"`       //解封时间
 }
 
+// WebPush订阅
 type WebPushSubscription struct {
 	Base
 	Uid            uint   `gorm:"not null;index" json:"uid"`             //用户id, 每个用户可能有多个订阅
@@ -294,7 +296,15 @@ func InitMaps() {
 
 func Init() {
 	dsn := config.Config.Dsn
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn),
+		func() *gorm.Config {
+			if config.Config.ReleaseMode {
+				return &gorm.Config{}
+			}
+			return &gorm.Config{
+				Logger: logger.Default.LogMode(logger.Info),
+			}
+		}())
 	if err != nil {
 		panic(err)
 	}
