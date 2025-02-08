@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2023-10-10 19:53:39
+ * @LastEditTime: 2025-02-08 17:08:00
  * @Description: _(:з」∠)_
  */
 package controller
@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PaperGetResponse struct {
@@ -246,16 +248,16 @@ func PaperDelete(c *gin.Context) {
 }
 
 // 点赞
-func PaperOnLike(id string, delta int) (uint, error) {
+func PaperOnLike(tx *gorm.DB, id string, delta int) (uint, error) {
 	var paper database.Paper
-	if err := database.DB.Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if paper.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}
 	paper.LikeNum = uint(int(paper.LikeNum) + delta)
-	if err := database.DB.Save(&paper).Error; err != nil {
+	if err := tx.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
@@ -265,16 +267,16 @@ func PaperOnLike(id string, delta int) (uint, error) {
 }
 
 // 评论
-func PaperOnComment(id string, delta int) (uint, error) {
+func PaperOnComment(tx *gorm.DB, id string, delta int) (uint, error) {
 	var paper database.Paper
-	if err := database.DB.Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&paper, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if paper.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}
 	paper.CommentNum = uint(int(paper.CommentNum) + delta)
-	if err := database.DB.Save(&paper).Error; err != nil {
+	if err := tx.Save(&paper).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {

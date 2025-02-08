@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2023-10-10 20:21:35
+ * @LastEditTime: 2025-02-08 15:42:02
  * @Description: _(:з」∠)_
  */
 package config
@@ -29,6 +29,9 @@ var Config = struct {
 		Password string
 	}
 	Dsn   string
+	Redis struct {
+		Addr string
+	}
 	Saver struct {
 		MaxSize        int64 `yaml:"max_size"`
 		Url            string

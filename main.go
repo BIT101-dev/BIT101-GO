@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2024-02-21 00:39:46
+ * @LastEditTime: 2025-02-08 15:46:40
  * @Description: _(:з」∠)_
  */
 package main
@@ -9,6 +9,7 @@ package main
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/router"
+	"BIT101-GO/util/cache"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/gorse"
 	"BIT101-GO/util/other"
@@ -48,6 +49,7 @@ var LOGO = `
 func runServer() {
 	config.Init()
 	database.Init()
+	cache.Init()
 	search.Init()
 	gorse.Init()
 	go sync()

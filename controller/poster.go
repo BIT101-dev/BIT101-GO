@@ -20,6 +20,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/zhenghaoz/gorse/client"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // PosterGetResponse 获取帖子返回结构
@@ -407,16 +409,16 @@ func updateTagHot(oldTags []string, newTags []string) {
 }
 
 // PosterOnLike 点赞
-func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
+func PosterOnLike(tx *gorm.DB, id string, delta int, from_uid uint) (uint, error) {
 	var poster database.Poster
-	if err := database.DB.Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if poster.ID == 0 {
 		return 0, errors.New("帖子不存在Orz")
 	}
 	poster.LikeNum = uint(int(poster.LikeNum) + delta)
-	if err := database.DB.Save(&poster).Error; err != nil {
+	if err := tx.Save(&poster).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
@@ -440,16 +442,16 @@ func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
 }
 
 // PosterOnComment 评论
-func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, content string) (uint, error) {
+func PosterOnComment(tx *gorm.DB, id string, delta int, from_uid uint, from_anonymous bool, content string) (uint, error) {
 	var poster database.Poster
-	if err := database.DB.Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&poster, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if poster.ID == 0 {
 		return 0, errors.New("帖子不存在Orz")
 	}
 	poster.CommentNum = uint(int(poster.CommentNum) + delta)
-	if err := database.DB.Save(&poster).Error; err != nil {
+	if err := tx.Save(&poster).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 

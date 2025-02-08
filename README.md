@@ -1,7 +1,7 @@
 <!--
  * @Author: flwfdd
  * @Date: 2023-03-15 15:19:46
- * @LastEditTime: 2025-01-26 15:55:11
+ * @LastEditTime: 2025-02-08 18:17:25
  * @Description: _(:з」∠)_
 -->
 # BIT101-GO
@@ -27,11 +27,12 @@
 
 ### 配置依赖服务
 
-`BIT101-GO`主要使用了`PostgreSQL`数据库、`Meilisearch`推荐系统和`Gorse`推荐系统三大依赖服务，你可以选择使用`docker`或手动安装的方式，推荐使用`docker`方式，只需要进入到`env`目录并运行`docker compose up`即可一键运行所有依赖服务，关于更多`docker`的相关操作可自行查询。
+`BIT101-GO`主要使用了`PostgreSQL`数据库、`Redis`缓存、`Meilisearch`推荐系统和`Gorse`推荐系统三大依赖服务，你可以选择使用`docker`或手动安装的方式，推荐使用`docker`方式，只需要进入到`env`目录并运行`docker compose up`即可一键运行所有依赖服务，关于更多`docker`的相关操作可自行查询。
 
 注意需要同步`docker-compose.yaml`和`config.yml`中的配置。
 
 默认情况况下，将在几个端口上提供服务：
+* `6379`：`Redis`缓存端口
 * `7700`：`meilisearch`的端口，除了提供`API`外，浏览器访问还有交互式搜索测试网页
 * `8086`：`gorse`的`gRPC`端口
 * `8088`：`gorse`的`HTTP`端口，浏览器访问显示后台网页

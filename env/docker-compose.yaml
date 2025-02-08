@@ -12,6 +12,13 @@ services:
     volumes:
       - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/create_gorse_db.sh
   
+  redis:
+    image: redis:latest
+    container_name: bit101_redis
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+  
   meilisearch:
     image: getmeili/meilisearch:v1.4
     container_name: bit101_meilisearch
@@ -44,3 +51,4 @@ services:
       resources:
         limits:
           cpus: '0.75'
+    

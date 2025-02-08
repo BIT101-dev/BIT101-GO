@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2023-10-10 14:38:13
+ * @LastEditTime: 2025-02-08 17:06:43
  * @Description: _(:з」∠)_
  */
 package controller
@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -83,16 +84,16 @@ func CourseInfo(c *gin.Context) {
 }
 
 // CourseOnLike 点赞
-func CourseOnLike(id string, delta int) (uint, error) {
+func CourseOnLike(tx *gorm.DB, id string, delta int) (uint, error) {
 	var course database.Course
-	if err := database.DB.Limit(1).Find(&course, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&course, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if course.ID == 0 {
 		return 0, errors.New("课程不存在Orz")
 	}
 	course.LikeNum = uint(int(course.LikeNum) + delta)
-	if err := database.DB.Save(&course).Error; err != nil {
+	if err := tx.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
@@ -102,9 +103,9 @@ func CourseOnLike(id string, delta int) (uint, error) {
 }
 
 // CourseOnComment 评论
-func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
+func CourseOnComment(tx *gorm.DB, id string, delta_num int, delta_rate int) (uint, error) {
 	var course database.Course
-	if err := database.DB.Limit(1).Find(&course, "id = ?", id).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&course, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	if course.ID == 0 {
@@ -120,7 +121,7 @@ func CourseOnComment(id string, delta_num int, delta_rate int) (uint, error) {
 	} else {
 		course.Rate = float64(course.RateSum) / float64(course.CommentNum)
 	}
-	if err := database.DB.Save(&course).Error; err != nil {
+	if err := tx.Save(&course).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {

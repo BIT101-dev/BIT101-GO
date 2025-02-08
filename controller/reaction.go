@@ -1,13 +1,14 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 23:16:18
- * @LastEditTime: 2024-02-24 01:07:08
+ * @LastEditTime: 2025-02-08 17:53:37
  * @Description: _(:з」∠)_
  */
 package controller
 
 import (
 	"BIT101-GO/database"
+	"BIT101-GO/util/cache"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/gorse"
 	"crypto/md5"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 获取对象的类型和对象的ID
@@ -59,45 +61,53 @@ func ReactionLike(c *gin.Context) {
 		return
 	}
 
-	delta := 0
-	var like database.Like
-	var commit func()
-	database.DB.Unscoped().Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Limit(1).Find(&like)
-	if like.ID == 0 { //新建
-		like = database.Like{
-			Obj: query.Obj,
-			Uid: c.GetUint("uid_uint"),
-		}
-		commit = func() { database.DB.Create(&like) }
-		delta = 1
-	} else if like.DeletedAt.Valid { //删除过 取消删除
-		like.DeletedAt = gorm.DeletedAt{}
-		commit = func() { database.DB.Unscoped().Save(like) }
-		delta = 1
-
-	} else { //取消点赞
-		commit = func() { database.DB.Delete(&like) }
-		delta = -1
-	}
-
-	var like_num uint
-	var err error
-	switch obj_type {
-	case "paper":
-		like_num, err = PaperOnLike(obj_id, delta)
-	case "comment":
-		like_num, err = CommentOnLike(obj_id, delta, c.GetUint("uid_uint"))
-	case "course":
-		like_num, err = CourseOnLike(obj_id, delta)
-	case "poster":
-		like_num, err = PosterOnLike(obj_id, delta, c.GetUint("uid_uint"))
-	}
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "无效对象Orz"})
+	// 限流
+	set, err := cache.RDB.SetNX(cache.Context, "like_uid:"+c.GetString("uid")+"_"+query.Obj, "1", time.Second).Result()
+	if err != nil || !set {
+		c.JSON(500, gin.H{"msg": "操作过于频繁Orz"})
 		return
 	}
-	commit()
-	c.JSON(200, gin.H{"like": !like.DeletedAt.Valid, "like_num": like_num})
+
+	database.DB.Transaction(func(tx *gorm.DB) error {
+		delta := 0
+		var like database.Like
+		tx.Unscoped().Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Limit(1).Find(&like)
+		if like.ID == 0 { //新建
+			like = database.Like{
+				Obj: query.Obj,
+				Uid: c.GetUint("uid_uint"),
+			}
+			tx.Create(&like)
+			delta = 1
+		} else if like.DeletedAt.Valid { //删除过 取消删除
+			like.DeletedAt = gorm.DeletedAt{}
+			tx.Unscoped().Save(like)
+			delta = 1
+
+		} else { //取消点赞
+			tx.Delete(&like)
+			delta = -1
+		}
+
+		var like_num uint
+		switch obj_type {
+		case "paper":
+			like_num, err = PaperOnLike(tx, obj_id, delta)
+		case "comment":
+			like_num, err = CommentOnLike(tx, obj_id, delta, c.GetUint("uid_uint"))
+		case "course":
+			like_num, err = CourseOnLike(tx, obj_id, delta)
+		case "poster":
+			like_num, err = PosterOnLike(tx, obj_id, delta, c.GetUint("uid_uint"))
+		}
+		if err != nil {
+			c.JSON(500, gin.H{"msg": "无效对象Orz"})
+			return err
+		}
+
+		c.JSON(200, gin.H{"like": !like.DeletedAt.Valid, "like_num": like_num})
+		return nil
+	})
 }
 
 // 检查是否点赞
@@ -297,6 +307,14 @@ type ReactionCommentQuery struct {
 
 // 评论
 func ReactionComment(c *gin.Context) {
+	// 限流
+	set, err := cache.RDB.SetNX(cache.Context, "comment_uid:"+c.GetString("uid"), "1", time.Second).Result()
+	if err != nil || !set {
+		c.JSON(500, gin.H{"msg": "操作过于频繁Orz"})
+		return
+	}
+
+	// 参数检查
 	var query ReactionCommentQuery
 	if err := c.ShouldBind(&query); err != nil {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
@@ -315,59 +333,65 @@ func ReactionComment(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return
 	}
-	var comment database.Comment
-	if query.Rate != 0 {
-		database.DB.Limit(1).Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Find(&comment)
-		if comment.ID != 0 {
-			c.JSON(500, gin.H{"msg": "不能重复评价Orz"})
-			return
+
+	database.DB.Transaction(func(tx *gorm.DB) error {
+		// 评价最多一次
+		var comment database.Comment
+		if query.Rate != 0 {
+			tx.Limit(1).Where("uid = ?", c.GetString("uid")).Where("obj = ?", query.Obj).Find(&comment)
+			if comment.ID != 0 {
+				c.JSON(500, gin.H{"msg": "不能重复评价Orz"})
+				return errors.New("不能重复评价Orz")
+			}
+			time.Sleep(time.Second)
 		}
-	}
 
-	// 评论数+1
-	var err error
-	switch obj_type {
-	case "paper":
-		_, err = PaperOnComment(obj_id, 1)
-	case "comment":
-		_, err = CommentOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
-	case "course":
-		_, err = CourseOnComment(obj_id, 1, int(query.Rate))
-	case "poster":
-		_, err = PosterOnComment(obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.Text)
-	}
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "无效对象Orz"})
-		return
-	}
-
-	// 回复匿名用户
-	reply_uid := query.ReplyUid
-	if reply_uid == -1 {
-		var reply_comment database.Comment
-		database.DB.Limit(1).Find(&reply_comment, "id = ?", strings.TrimPrefix(query.ReplyObj, "comment"))
-		if reply_comment.ID != 0 {
-			reply_uid = -int(reply_comment.Uid)
-		} else {
-			c.JSON(500, gin.H{"msg": "获取回复用户失败Orz"})
-			return
+		// 回复匿名用户
+		reply_uid := query.ReplyUid
+		if reply_uid == -1 {
+			var reply_comment database.Comment
+			tx.Limit(1).Find(&reply_comment, "id = ?", strings.TrimPrefix(query.ReplyObj, "comment"))
+			if reply_comment.ID != 0 {
+				reply_uid = -int(reply_comment.Uid)
+			} else {
+				c.JSON(500, gin.H{"msg": "获取回复用户失败Orz"})
+				return errors.New("获取回复用户失败Orz")
+			}
 		}
-	}
 
-	// 评论
-	comment = database.Comment{
-		Obj:       query.Obj,
-		Text:      query.Text,
-		Anonymous: query.Anonymous,
-		ReplyUid:  reply_uid,
-		ReplyObj:  query.ReplyObj,
-		Rate:      query.Rate,
-		Uid:       c.GetUint("uid_uint"),
-		Images:    strings.Join(query.ImageMids, " "),
-	}
-	database.DB.Create(&comment)
+		// 评论
+		comment = database.Comment{
+			Obj:       query.Obj,
+			Text:      query.Text,
+			Anonymous: query.Anonymous,
+			ReplyUid:  reply_uid,
+			ReplyObj:  query.ReplyObj,
+			Rate:      query.Rate,
+			Uid:       c.GetUint("uid_uint"),
+			Images:    strings.Join(query.ImageMids, " "),
+		}
+		tx.Create(&comment)
 
-	c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin"), query.Obj))
+		// 评论数+1
+		var err error
+		switch obj_type {
+		case "paper":
+			_, err = PaperOnComment(tx, obj_id, 1)
+		case "comment":
+			_, err = CommentOnComment(tx, obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.ReplyObj, query.Text)
+		case "course":
+			_, err = CourseOnComment(tx, obj_id, 1, int(query.Rate))
+		case "poster":
+			_, err = PosterOnComment(tx, obj_id, 1, c.GetUint("uid_uint"), query.Anonymous, query.Text)
+		}
+		if err != nil {
+			c.JSON(500, gin.H{"msg": "无效对象Orz"})
+			return err
+		}
+
+		c.JSON(200, CleanComment(comment, comment.Uid, c.GetBool("admin"), query.Obj))
+		return nil
+	})
 }
 
 // 获取评论列表请求结构
@@ -400,14 +424,14 @@ func ReactionCommentList(c *gin.Context) {
 }
 
 // 点赞评论
-func CommentOnLike(id string, delta int, from_uid uint) (uint, error) {
+func CommentOnLike(tx *gorm.DB, id string, delta int, from_uid uint) (uint, error) {
 	var comment database.Comment
-	database.DB.Limit(1).Find(&comment, "id = ?", id)
+	tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&comment, "id = ?", id)
 	if comment.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}
 	comment.LikeNum = uint(int(comment.LikeNum) + delta)
-	if err := database.DB.Save(&comment).Error; err != nil {
+	if err := tx.Save(&comment).Error; err != nil {
 		return 0, err
 	}
 
@@ -432,14 +456,14 @@ func CommentOnLike(id string, delta int, from_uid uint) (uint, error) {
 }
 
 // 评论评论
-func CommentOnComment(id string, delta int, from_uid uint, from_anonymous bool, reply_obj string, content string) (uint, error) {
+func CommentOnComment(tx *gorm.DB, id string, delta int, from_uid uint, from_anonymous bool, reply_obj string, content string) (uint, error) {
 	var comment database.Comment
-	database.DB.Limit(1).Find(&comment, "id = ?", id)
+	tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&comment, "id = ?", id)
 	if comment.ID == 0 {
 		return 0, errors.New("文章不存在Orz")
 	}
 	comment.CommentNum = uint(int(comment.CommentNum) + delta)
-	if err := database.DB.Save(&comment).Error; err != nil {
+	if err := tx.Save(&comment).Error; err != nil {
 		return 0, err
 	}
 
@@ -484,41 +508,44 @@ func CommentOnComment(id string, delta int, from_uid uint, from_anonymous bool, 
 func ReactionCommentDelete(c *gin.Context) {
 	id := c.Param("id")
 
-	var comment database.Comment
-	database.DB.Limit(1).Find(&comment, "id = ?", id)
-	if comment.ID == 0 {
-		c.JSON(500, gin.H{"msg": "评论不存在Orz"})
-		return
-	}
+	database.DB.Transaction(func(tx *gorm.DB) error {
+		var comment database.Comment
+		tx.Limit(1).Find(&comment, "id = ?", id)
+		if comment.ID == 0 {
+			c.JSON(500, gin.H{"msg": "评论不存在Orz"})
+			return errors.New("评论不存在Orz")
+		}
 
-	if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
-		c.JSON(500, gin.H{"msg": "无权删除Orz"})
-		return
-	}
+		if comment.Uid != c.GetUint("uid_uint") && !c.GetBool("admin") && !c.GetBool("super") {
+			c.JSON(500, gin.H{"msg": "无权删除Orz"})
+			return errors.New("无权删除Orz")
+		}
 
-	// 评论数-1
-	var err error
-	obj_type, obj_id := getTypeID(comment.Obj)
-	switch obj_type {
-	case "paper":
-		_, err = PaperOnComment(obj_id, -1)
-	case "comment":
-		_, err = CommentOnComment(obj_id, -1, 0, true, "", "")
-	case "course":
-		_, err = CourseOnComment(obj_id, -1, -int(comment.Rate))
-	case "poster":
-		_, err = PosterOnComment(obj_id, -1, c.GetUint("uid_uint"), true, "")
-	}
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "无效对象Orz"})
-		return
-	}
+		// 评论数-1
+		var err error
+		obj_type, obj_id := getTypeID(comment.Obj)
+		switch obj_type {
+		case "paper":
+			_, err = PaperOnComment(tx, obj_id, -1)
+		case "comment":
+			_, err = CommentOnComment(tx, obj_id, -1, 0, true, "", "")
+		case "course":
+			_, err = CourseOnComment(tx, obj_id, -1, -int(comment.Rate))
+		case "poster":
+			_, err = PosterOnComment(tx, obj_id, -1, c.GetUint("uid_uint"), true, "")
+		}
+		if err != nil {
+			c.JSON(500, gin.H{"msg": "无效对象Orz"})
+			return err
+		}
 
-	if err := database.DB.Delete(&comment).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "删除失败Orz"})
-		return
-	}
-	c.JSON(200, gin.H{"msg": "删除成功OvO"})
+		if err := tx.Delete(&comment).Error; err != nil {
+			c.JSON(500, gin.H{"msg": "删除失败Orz"})
+			return err
+		}
+		c.JSON(200, gin.H{"msg": "删除成功OvO"})
+		return nil
+	})
 }
 
 // ReactionStayQuery 停留请求结构

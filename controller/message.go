@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-30 08:55:28
- * @LastEditTime: 2025-01-26 00:50:33
+ * @LastEditTime: 2025-02-08 16:23:45
  * @Description: _(:з」∠)_
  */
 package controller
@@ -18,53 +18,57 @@ import (
 
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // MessageSend 推送消息
 func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj string, content string) error {
-	// 创建消息
-	short_msg := []rune(content)
-	if len(short_msg) > 233 {
-		short_msg = short_msg[:233]
-	}
-	message := database.Message{
-		Obj:     obj,
-		FromUid: from_uid,
-		ToUid:   to_uid,
-		Type:    tp,
-		LinkObj: link_obj,
-		Content: string(short_msg),
-	}
-	if err := database.DB.Create(&message).Error; err != nil {
-		return err
-	}
-
-	// 更新消息摘要
-	var summary database.MessageSummary
-	if err := database.DB.Where("uid = ? AND type = ?", to_uid, tp).Limit(1).Find(&summary).Error; err != nil {
-		return err
-	}
-	if summary.ID == 0 {
-		summary = database.MessageSummary{
-			Uid:  to_uid,
-			Type: tp,
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		// 创建消息
+		short_msg := []rune(content)
+		if len(short_msg) > 233 {
+			short_msg = short_msg[:233]
 		}
-		if err := database.DB.Create(&summary).Error; err != nil {
+		message := database.Message{
+			Obj:     obj,
+			FromUid: from_uid,
+			ToUid:   to_uid,
+			Type:    tp,
+			LinkObj: link_obj,
+			Content: string(short_msg),
+		}
+		if err := tx.Create(&message).Error; err != nil {
 			return err
 		}
-	}
-	summary.UnreadNum++
-	summary.LastTime = time.Now()
-	summary.Content = content
-	if err := database.DB.Save(&summary).Error; err != nil {
-		return err
-	}
-	ser, err := json.Marshal(summary)
-	if err != nil {
-		return err
-	}
-	PushMessageSend(to_uid, ser)
-	return nil
+
+		// 更新消息摘要
+		var summary database.MessageSummary
+		if err := tx.Where("uid = ? AND type = ?", to_uid, tp).Limit(1).Find(&summary).Error; err != nil {
+			return err
+		}
+		if summary.ID == 0 {
+			summary = database.MessageSummary{
+				Uid:  to_uid,
+				Type: tp,
+			}
+			if err := tx.Create(&summary).Error; err != nil {
+				return err
+			}
+		}
+		summary.UnreadNum++
+		summary.LastTime = time.Now()
+		summary.Content = content
+		if err := tx.Save(&summary).Error; err != nil {
+			return err
+		}
+		ser, err := json.Marshal(summary)
+		if err != nil {
+			return err
+		}
+		PushMessageSend(to_uid, ser)
+		return nil
+	})
+	return err
 }
 
 // SystemMessagePostQuery 发送系统消息请求结构
