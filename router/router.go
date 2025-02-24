@@ -74,6 +74,13 @@ func SetRouter(router *gin.Engine) {
 		reaction.DELETE("/comments/:id", middleware.CheckLogin(true), controller.ReactionCommentDelete)
 		reaction.POST("/stay", middleware.CheckLogin(true), controller.ReactionStay)
 	}
+	// 收藏模块
+	bookmark := router.Group("/bookmarks")
+	{
+		bookmark.GET("", middleware.CheckLogin(true), controller.GetUserBookmarks)
+		bookmark.PUT("", middleware.CheckLogin(true), controller.SetUserBookmark)
+		bookmark.DELETE("", middleware.CheckLogin(true), controller.DeleteUserBookmark)
+	}
 	// 课程模块
 	course := router.Group("/courses")
 	{

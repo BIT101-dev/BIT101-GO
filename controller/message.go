@@ -20,6 +20,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func BookmarkMessageSend(from_uid int, obj string, tp string, link_ibj string, content string) error {
+	var uid_list []uint
+	var bookmarks []database.Bookmark
+	var err error
+
+	// 获取消息接收者
+	bookmarks, err = GetRelatedBookmarks(obj)
+	if err != nil {
+		return err
+	}
+
+	// 设置通知阈值
+	var minBookmark int
+	switch tp {
+	case "comment":
+		minBookmark = 1
+	case "like":
+		minBookmark = 2
+	default:
+		minBookmark = 9
+	}
+
+	for _, bookmark := range bookmarks {
+		// 跳过未达到阈值的
+		if bookmark.Type < minBookmark {
+			continue
+		}
+		uid_list = append(uid_list, bookmark.Uid)
+	}
+
+	for _, to_uid := range uid_list {
+		if err := MessageSend(from_uid, to_uid, obj, tp, link_ibj, content); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // MessageSend 推送消息
 func MessageSend(from_uid int, to_uid uint, obj string, tp string, link_obj string, content string) error {
 	// 创建消息

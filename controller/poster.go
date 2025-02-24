@@ -25,12 +25,13 @@ import (
 // PosterGetResponse 获取帖子返回结构
 type PosterGetResponse struct {
 	database.Poster
-	UserAPI `json:"user"`
-	Images  []ImageAPI     `json:"images"`
-	Tags    []string       `json:"tags"`
-	Claim   database.Claim `json:"claim"`
-	Like    bool           `json:"like"`
-	Own     bool           `json:"own"`
+	UserAPI  `json:"user"`
+	Images   []ImageAPI     `json:"images"`
+	Tags     []string       `json:"tags"`
+	Claim    database.Claim `json:"claim"`
+	Like     bool           `json:"like"`
+	Own      bool           `json:"own"`
+	Bookmark int            `json:"bookmark"`
 }
 
 // CheckTags 检查tags
@@ -64,13 +65,14 @@ func PosterGet(c *gin.Context) {
 		userAPI = GetUserAPI(int(poster.Uid))
 	}
 	var res = PosterGetResponse{
-		Poster:  poster,
-		UserAPI: userAPI,
-		Images:  GetImageAPIArr(spilt(poster.Images)),
-		Tags:    spilt(poster.Tags),
-		Claim:   database.ClaimMap[poster.ClaimID],
-		Like:    CheckLike(fmt.Sprintf("poster%v", poster.ID), c.GetUint("uid_uint")),
-		Own:     own,
+		Poster:   poster,
+		UserAPI:  userAPI,
+		Images:   GetImageAPIArr(spilt(poster.Images)),
+		Tags:     spilt(poster.Tags),
+		Claim:    database.ClaimMap[poster.ClaimID],
+		Like:     CheckLike(fmt.Sprintf("poster%v", poster.ID), c.GetUint("uid_uint")),
+		Own:      own,
+		Bookmark: GetBookmark(fmt.Sprintf("poster%v", poster.ID), c.GetUint("uid_uint")),
 	}
 	c.JSON(200, res)
 }
@@ -112,23 +114,29 @@ func PosterPost(c *gin.Context) {
 	}
 
 	var poster = database.Poster{
-		Title:      query.Title,
-		Text:       query.Text,
-		Images:     strings.Join(query.ImageMids, " "),
-		Uid:        c.GetUint("uid_uint"),
-		Anonymous:  query.Anonymous,
-		Public:     query.Public,
-		LikeNum:    0,
-		CommentNum: 0,
-		Tags:       strings.Join(query.Tags, " "),
-		ClaimID:    query.ClaimID,
-		Plugins:    query.Plugins,
+		Title:       query.Title,
+		Text:        query.Text,
+		Images:      strings.Join(query.ImageMids, " "),
+		Uid:         c.GetUint("uid_uint"),
+		Anonymous:   query.Anonymous,
+		Public:      query.Public,
+		LikeNum:     0,
+		CommentNum:  0,
+		BookmarkNum: 0,
+		Tags:        strings.Join(query.Tags, " "),
+		ClaimID:     query.ClaimID,
+		Plugins:     query.Plugins,
 	}
 	if err := database.DB.Create(&poster).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
 	updateTagHot([]string{}, query.Tags)
+	// 设置作者书签
+	if err := SetBookmark(fmt.Sprintf("poster%v", poster.ID), c.GetUint("uid_uint"), 9, poster.Title); err != nil {
+		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
+		return
+	}
 	go func() {
 		search.Update("poster", poster)
 		gorse.InsertPoster(poster)
@@ -428,7 +436,7 @@ func PosterOnLike(id string, delta int, from_uid uint) (uint, error) {
 			})
 			if from_uid != poster.Uid {
 				post_obj := fmt.Sprintf("poster%v", poster.ID)
-				MessageSend(int(from_uid), poster.Uid, post_obj, "like", post_obj, poster.Title)
+				BookmarkMessageSend(int(from_uid), post_obj, "like", post_obj, poster.Title)
 			}
 		} else {
 			gorse.DeleteFeedback("like", strconv.Itoa(int(from_uid)), id)
@@ -466,7 +474,7 @@ func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, c
 					from_uid_ = -1
 				}
 				post_obj := fmt.Sprintf("poster%v", poster.ID)
-				MessageSend(from_uid_, poster.Uid, post_obj, "comment", post_obj, content)
+				BookmarkMessageSend(from_uid_, post_obj, "comment", post_obj, content)
 			}
 		} else {
 			gorse.DeleteFeedback("comment", strconv.Itoa(int(from_uid)), id)
@@ -474,4 +482,25 @@ func PosterOnComment(id string, delta int, from_uid uint, from_anonymous bool, c
 		search.Update("poster", poster)
 	}()
 	return poster.CommentNum, nil
+}
+
+func PosterOnBookmark(id string, delta int) error {
+	var poster database.Poster
+	database.DB.Where("id = ?", id).Limit(1).Find(&poster)
+	if poster.ID == 0 {
+		return errors.New("帖子不存在Orz")
+	} else {
+		var newValue = int(poster.BookmarkNum) + delta
+		if newValue < 0 {
+			newValue = 0
+		}
+		poster.BookmarkNum = uint(newValue)
+		if err := database.DB.Save(&poster).Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+		go func() {
+			search.Update("poster", poster)
+		}()
+	}
+	return nil
 }
