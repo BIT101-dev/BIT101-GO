@@ -9,9 +9,10 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"strconv"
 )
 
 // ReportTypeListGet 获取举报类型列表
@@ -41,7 +42,7 @@ func ReportPost(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "举报类型不存在Orz"})
 		return
 	}
-	obj_type, obj_id := getTypeID(query.Obj)
+	obj_type, obj_id := GetTypeID(query.Obj)
 	var isExist bool
 	var isSelf bool
 	switch obj_type {

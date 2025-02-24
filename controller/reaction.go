@@ -26,7 +26,7 @@ import (
 )
 
 // 获取对象的类型和对象的ID
-func getTypeID(obj string) (string, string) {
+func GetTypeID(obj string) (string, string) {
 	if obj[:5] == "paper" {
 		return "paper", obj[5:]
 	}
@@ -55,7 +55,7 @@ func ReactionLike(c *gin.Context) {
 		return
 	}
 
-	obj_type, obj_id := getTypeID(query.Obj)
+	obj_type, obj_id := GetTypeID(query.Obj)
 	if obj_type == "" {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return
@@ -328,7 +328,7 @@ func ReactionComment(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "存在未上传成功的图片Orz"})
 		return
 	}
-	obj_type, obj_id := getTypeID(query.Obj)
+	obj_type, obj_id := GetTypeID(query.Obj)
 	if obj_type == "" {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return
@@ -523,7 +523,7 @@ func ReactionCommentDelete(c *gin.Context) {
 
 		// 评论数-1
 		var err error
-		obj_type, obj_id := getTypeID(comment.Obj)
+		obj_type, obj_id := GetTypeID(comment.Obj)
 		switch obj_type {
 		case "paper":
 			_, err = PaperOnComment(tx, obj_id, -1)
@@ -561,7 +561,7 @@ func ReactionStay(c *gin.Context) {
 		c.JSON(400, gin.H{"msg": "参数错误awa"})
 		return
 	}
-	obj_type, obj_id := getTypeID(query.Obj)
+	obj_type, obj_id := GetTypeID(query.Obj)
 	if obj_type == "" {
 		c.JSON(500, gin.H{"msg": "无效对象Orz"})
 		return

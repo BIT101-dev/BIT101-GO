@@ -8,6 +8,7 @@ package database
 
 import (
 	"BIT101-GO/util/config"
+	"fmt"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -82,18 +83,19 @@ type Claim struct {
 // 帖子
 type Poster struct {
 	Base
-	Title      string    `gorm:"not null" json:"title"`           //标题
-	Text       string    `gorm:"not null" json:"text"`            //内容
-	Images     string    `json:"images"`                          //图片mids，以" "拼接
-	Uid        uint      `gorm:"not null;index" json:"uid"`       //用户id
-	Anonymous  bool      `json:"anonymous"`                       //是否匿名
-	Public     bool      `json:"public"`                          //是否可见
-	LikeNum    uint      `gorm:"default:0" json:"like_num"`       //点赞数
-	CommentNum uint      `gorm:"default:0" json:"comment_num"`    //评论数
-	Tags       string    `json:"tags"`                            //标签，以" "拼接
-	ClaimID    uint      `json:"claim_id"`                        //声明id
-	Plugins    string    `json:"plugins"`                         //插件
-	EditAt     time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
+	Title       string    `gorm:"not null" json:"title"`           //标题
+	Text        string    `gorm:"not null" json:"text"`            //内容
+	Images      string    `json:"images"`                          //图片mids，以" "拼接
+	Uid         uint      `gorm:"not null;index" json:"uid"`       //用户id
+	Anonymous   bool      `json:"anonymous"`                       //是否匿名
+	Public      bool      `json:"public"`                          //是否可见
+	LikeNum     uint      `gorm:"default:0" json:"like_num"`       //点赞数
+	CommentNum  uint      `gorm:"default:0" json:"comment_num"`    //评论数
+	BookmarkNum uint      `gorm:"default:0" json:"bookmark_num"`   //收藏数, 默认作者收藏
+	Tags        string    `json:"tags"`                            //标签，以" "拼接
+	ClaimID     uint      `json:"claim_id"`                        //声明id
+	Plugins     string    `json:"plugins"`                         //插件
+	EditAt      time.Time `gorm:"autoCreateTime" json:"edit_time"` //最后编辑时间
 }
 
 // 文章
@@ -262,6 +264,15 @@ type WebPushSubscription struct {
 	P256dh         string `gorm:"not null" json:"p256dh"`                //推送公钥
 }
 
+type Bookmark struct {
+	Base
+	Uid         uint      `gorm:"not null;index" json:"uid"`          // 用户id
+	Obj         string    `gorm:"not null;" json:"obj"`               // 插眼对象
+	Type        int       `gorm:"default:1" json:"type"`              // 关注类型: 1为接受评论通知, 9为作者全部通知
+	Content     string    `json:"content"`                            // 内容
+	ActivatedAt time.Time `gorm:"autoCreateTime" json:"activated_at"` // 最后激活时间
+}
+
 // InitMaps 初始化Map(针对常用且稳定的数据)
 func InitMaps() {
 	//初始化 ClaimMap
@@ -314,7 +325,35 @@ func Init() {
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
 		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
-		&WebPushSubscription{},
+		&WebPushSubscription{}, &Bookmark{},
 	)
+
+	Migrate()
 	InitMaps()
+}
+
+func Migrate() {
+	// 2025-02-25 更新Bookmark时迁移
+	var testBookmark Bookmark
+	if DB.Unscoped().Where("obj = ?", "poster1").Find(&testBookmark).Error == nil {
+		if testBookmark.ID == 0 {
+			// 不存在, 生成作者Bookmark
+			var posters []Poster
+			DB.Find(&posters)
+			for _, poster := range posters {
+				var bookmark = Bookmark{
+					Base: Base{
+						CreatedAt: poster.CreatedAt,
+						UpdatedAt: poster.UpdatedAt,
+					},
+					Obj:         fmt.Sprintf("poster%v", poster.ID),
+					Uid:         poster.Uid,
+					Type:        9,
+					Content:     poster.Title,
+					ActivatedAt: poster.UpdatedAt,
+				}
+				DB.Save(&bookmark)
+			}
+		}
+	}
 }
