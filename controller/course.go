@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2025-02-08 17:06:43
+ * @LastEditTime: 2025-03-02 20:28:04
  * @Description: _(:з」∠)_
  */
 package controller
@@ -252,7 +252,7 @@ func CourseUploadLog(c *gin.Context) {
 var readme_template = `
 # BIT101 %v 课程共享资料
 > 课程编号：%v
-本页面由[BIT101](%v)维护，[点击查找 %v 课程及评价](%v/#/course/?search=%v)
+本页面由[BIT101](%v)维护，[点击查找 %v 课程及评价](%v/course/?search=%v)
 ## 类别说明
 * 书籍(book)：教科书、课程相关电子书等
 * 课件(ppt)：PPT什么的
@@ -332,10 +332,10 @@ func CourseSchedule(c *gin.Context) {
 				calendar += fmt.Sprintf("DESCRIPTION:%v | %v\n", course.SKJS, course.YPSJDD)
 				start_time_table := time_table[course.KSJC-1][0]
 				start_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*start_time_table[0]+start_time_table[1])).Format("20060102T150405")
-				calendar += fmt.Sprintf("DTSTART:%v\n", start_time)
+				calendar += fmt.Sprintf("DTSTART;TZID=Asia/Shanghai:%v\n", start_time)
 				end_time_table := time_table[course.JSJC-1][1]
 				end_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*end_time_table[0]+end_time_table[1])).Format("20060102T150405")
-				calendar += fmt.Sprintf("DTEND:%v\n", end_time)
+				calendar += fmt.Sprintf("DTEND;TZID=Asia/Shanghai:%v\n", end_time)
 				calendar += fmt.Sprintf("UID:%v\n", uuid.New())
 				calendar += "END:VEVENT\n"
 
