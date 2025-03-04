@@ -13,10 +13,11 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"path/filepath"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ImageAPI struct {
@@ -30,7 +31,7 @@ func GetImageAPI(mid string) ImageAPI {
 	return ImageAPI{
 		Mid:    mid,
 		Url:    GetImageUrl(mid),
-		LowURL: GetImageUrl(mid) + config.Config.Saver.ImageUrlSuffix,
+		LowURL: GetImageUrl(mid) + config.GetConfig().Saver.ImageUrlSuffix,
 	}
 }
 
@@ -46,7 +47,7 @@ func GetImageAPIArr(mids []string) []ImageAPI {
 // GetImageUrl 将图片mid转换为url
 func GetImageUrl(mid string) string {
 	if mid == "" {
-		return saver.GetUrl(filepath.Join("img", config.Config.DefaultAvatar))
+		return saver.GetUrl(filepath.Join("img", config.GetConfig().DefaultAvatar))
 	}
 	return saver.GetUrl(filepath.Join("img", mid))
 }
@@ -166,7 +167,7 @@ func ImageUploadByUrl(c *gin.Context) {
 		return
 	}
 	defer resp.Body.Close()
-	reader := http.MaxBytesReader(nil, resp.Body, config.Config.Saver.MaxSize<<20) //限制请求大小
+	reader := http.MaxBytesReader(nil, resp.Body, config.GetConfig().Saver.MaxSize<<20) //限制请求大小
 	body, err := io.ReadAll(reader)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "图片过大Orz"})

@@ -47,18 +47,17 @@ var LOGO = `
 
 // 服务，启动！
 func runServer() {
-	config.Init()
 	database.Init()
 	cache.Init()
 	search.Init()
 	gorse.Init()
 	go sync()
 
-	if config.Config.ReleaseMode {
+	if config.GetConfig().ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	app := gin.Default()
-	app.Use(limits.RequestSizeLimiter(config.Config.Saver.MaxSize << 20))
+	app.Use(limits.RequestSizeLimiter(config.GetConfig().Saver.MaxSize << 20))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
 		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
@@ -71,15 +70,15 @@ func runServer() {
 		MaxAge: 12 * time.Hour,
 	}))
 	router.SetRouter(app)
-	fmt.Println("BIT101-GO will run on port " + config.Config.Port)
-	app.Run(":" + config.Config.Port)
+	fmt.Println("BIT101-GO will run on port " + config.GetConfig().Port)
+	app.Run(":" + config.GetConfig().Port)
 }
 
 func sync() {
 	// 每隔SyncTime s同步一次
 	for {
 		time_after := time.Now()
-		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
+		time.Sleep(time.Duration(config.GetConfig().SyncInterval) * time.Second)
 		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
 		go gorse.Sync(time_after)
 		go search.Sync(time_after)

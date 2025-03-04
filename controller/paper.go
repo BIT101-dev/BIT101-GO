@@ -203,7 +203,7 @@ func PaperList(c *gin.Context) {
 	}
 
 	var papers []database.Paper
-	err := search.Search(&papers, "paper", query.Search, query.Page, config.Config.PaperPageSize, order, nil)
+	err := search.Search(&papers, "paper", query.Search, query.Page, config.GetConfig().PaperPageSize, order, nil)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return

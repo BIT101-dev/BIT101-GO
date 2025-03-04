@@ -9,9 +9,10 @@ package controller
 import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"strconv"
 )
 
 // ReportTypeListGet 获取举报类型列表
@@ -161,7 +162,7 @@ func ReportList(c *gin.Context) {
 		q = q.Where("status = ?", query.Status)
 	}
 	var reports []database.Report
-	if err := q.Order("created_at DESC").Offset(int(query.Page * config.Config.ReportPageSize)).Limit(int(config.Config.ReportPageSize)).Find(&reports).Error; err != nil {
+	if err := q.Order("created_at DESC").Offset(int(query.Page * config.GetConfig().ReportPageSize)).Limit(int(config.GetConfig().ReportPageSize)).Find(&reports).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}
@@ -265,7 +266,7 @@ func BanList(c *gin.Context) {
 		q = q.Where("uid = ?", query.Uid)
 	}
 	bans := make([]database.Ban, 0)
-	if err := q.Order("created_at DESC").Offset(int(query.Page * config.Config.BanPageSize)).Limit(int(config.Config.BanPageSize)).Find(&bans).Error; err != nil {
+	if err := q.Order("created_at DESC").Offset(int(query.Page * config.GetConfig().BanPageSize)).Limit(int(config.GetConfig().BanPageSize)).Find(&bans).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
 		return
 	}

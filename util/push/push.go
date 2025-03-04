@@ -11,14 +11,14 @@ import (
 )
 
 func GetRequestPubkey() (string, error) {
-	if config.Config.WebPushKeys.Public == "" || config.Config.WebPushKeys.Private == "" {
+	if config.GetConfig().WebPushKeys.Public == "" || config.GetConfig().WebPushKeys.Private == "" {
 		return "", errors.New("配置错误Orz")
 	}
-	return config.Config.WebPushKeys.Public, nil
+	return config.GetConfig().WebPushKeys.Public, nil
 }
 
 func HandleRegister(sub webpush.Subscription, uid uint) error {
-	if config.Config.WebPushKeys.Public == "" || config.Config.WebPushKeys.Private == "" {
+	if config.GetConfig().WebPushKeys.Public == "" || config.GetConfig().WebPushKeys.Private == "" {
 		return errors.New("配置错误Orz")
 	}
 
@@ -38,7 +38,7 @@ func HandleRegister(sub webpush.Subscription, uid uint) error {
 }
 
 func Send(sub database.WebPushSubscription, message []byte) error {
-	if config.Config.WebPushKeys.Public == "" || config.Config.WebPushKeys.Private == "" {
+	if config.GetConfig().WebPushKeys.Public == "" || config.GetConfig().WebPushKeys.Private == "" {
 		return errors.New("配置错误Orz")
 	}
 	if sub.Endpoint == "" || sub.Auth == "" || sub.P256dh == "" {
@@ -56,8 +56,8 @@ func Send(sub database.WebPushSubscription, message []byte) error {
 	fmt.Printf("[Push] Trying sending notification to uid: %d, endpoint: %s..\n", sub.Uid, sub.Endpoint[:30])
 
 	resp, err := webpush.SendNotification(message, &subscription, &webpush.Options{
-		VAPIDPublicKey:  config.Config.WebPushKeys.Public,
-		VAPIDPrivateKey: config.Config.WebPushKeys.Private,
+		VAPIDPublicKey:  config.GetConfig().WebPushKeys.Public,
+		VAPIDPrivateKey: config.GetConfig().WebPushKeys.Private,
 		TTL:             30,
 	})
 
@@ -73,7 +73,7 @@ func Send(sub database.WebPushSubscription, message []byte) error {
 }
 
 func HandleUnregister(sub webpush.Subscription, uid uint) error {
-	if config.Config.WebPushKeys.Public == "" || config.Config.WebPushKeys.Private == "" {
+	if config.GetConfig().WebPushKeys.Public == "" || config.GetConfig().WebPushKeys.Private == "" {
 		return errors.New("配置错误Orz")
 	}
 

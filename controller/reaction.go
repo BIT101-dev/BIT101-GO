@@ -158,7 +158,7 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool, s
 		q = q.Order("updated_at DESC")
 	}
 	// 分页
-	page_size := config.Config.CommentPageSize
+	page_size := config.GetConfig().CommentPageSize
 	q = q.Offset(int(page * page_size)).Limit(int(page_size))
 	q.Find(&db_list)
 	return CleanCommentList(db_list, uid, admin, super_obj)
@@ -168,7 +168,7 @@ func GetCommentList(obj string, order string, page uint, uid uint, admin bool, s
 func GetAnonymousName(obj string, uid uint) string {
 	// 使用hash算法生成匿名序号
 	hasher := md5.New()
-	hasher.Write([]byte(obj + config.Config.Key + fmt.Sprint(uid)))
+	hasher.Write([]byte(obj + config.GetConfig().Key + fmt.Sprint(uid)))
 	hashBytes := hasher.Sum(nil)
 	return "匿名者·" + hex.EncodeToString(hashBytes)[:6]
 }
@@ -210,7 +210,7 @@ func CleanCommentList(old_comments []database.Comment, uid uint, admin bool, sup
 
 	// 查询子评论
 	var sub_comment_list []database.Comment
-	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE "deleted_at" IS NULL AND obj IN ?) t WHERE rn<=?`, comment_obj_list, config.Config.CommentPreviewSize).Scan(&sub_comment_list)
+	database.DB.Raw(`SELECT * FROM (SELECT *,ROW_NUMBER() OVER (PARTITION BY "obj" ORDER BY "like_num" DESC) AS rn FROM comments WHERE "deleted_at" IS NULL AND obj IN ?) t WHERE rn<=?`, comment_obj_list, config.GetConfig().CommentPreviewSize).Scan(&sub_comment_list)
 	for _, sub_comment := range sub_comment_list {
 		// 匿名用户
 		if sub_comment.Anonymous {

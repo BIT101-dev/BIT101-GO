@@ -13,7 +13,7 @@ import (
 	"github.com/jinzhu/configor"
 )
 
-var Config = struct {
+type Config struct {
 	Port  string
 	Proxy struct {
 		Enable bool
@@ -78,15 +78,20 @@ var Config = struct {
 		Public  string `yaml:"vapid_public"`
 		Private string `yaml:"vapid_private"`
 	} `yaml:"web_push_keys"`
-}{}
+}
 
-func Init() {
+var config Config
+
+func GetConfig() Config {
+	return config
+}
+
+func init() {
 	path := "config.yml"
 	_, err := os.Stat(path)
 	if err != nil {
 		fmt.Println("config.yml not found, please copy config_example.yml to config.yml and edit it")
 		os.Exit(1)
 	}
-	configor.Load(&Config, path)
-	// fmt.Printf("config: %#v", Config)
+	configor.Load(&config, path)
 }
