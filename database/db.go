@@ -7,7 +7,7 @@
 package database
 
 import (
-	"BIT101-GO/util/config"
+	"BIT101-GO/config"
 	"time"
 
 	"gorm.io/driver/postgres"
