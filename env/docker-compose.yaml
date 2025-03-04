@@ -4,13 +4,15 @@ services:
     container_name: bit101_postgres
     restart: unless-stopped
     ports:
-      - 54320:5432
+      - 5432:5432
     environment:
       POSTGRES_DB: bit101
       POSTGRES_USER: bit101
       POSTGRES_PASSWORD: BIT101  # 修改与config.yml对应
     volumes:
-      - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/create_gorse_db.sh
+      - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/01-create_gorse_db.sh # 创建gorse数据库
+      - ./init.sql:/docker-entrypoint-initdb.d/02-init.sql # 初始化数据库
+      - ../data/postgres:/var/lib/postgresql/data
   
   redis:
     image: redis:latest
@@ -36,8 +38,8 @@ services:
     ports:
       - 8086:8086   # gRPC
       - 8088:8088   # HTTP
-    environment:  # 修改与config.yml对应
-      GORSE_CACHE_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
+    environment:  # 修改与上面配置对应
+      GORSE_CACHE_STORE: redis://redis:6379
       GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
     command: >
       -c /etc/gorse/config.toml
@@ -47,8 +49,8 @@ services:
       - ./gorse_config.toml:/etc/gorse/config.toml  # 挂载配置文件
     depends_on:
       - postgres
+      - redis
     deploy: # 限制CPU资源
       resources:
         limits:
           cpus: '0.75'
-    

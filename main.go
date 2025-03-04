@@ -7,20 +7,19 @@
 package main
 
 import (
+	"BIT101-GO/api"
+	"BIT101-GO/config"
 	"BIT101-GO/database"
-	"BIT101-GO/router"
-	"BIT101-GO/util/cache"
-	"BIT101-GO/util/config"
-	"BIT101-GO/util/gorse"
-	"BIT101-GO/util/other"
-	"BIT101-GO/util/search"
+	"BIT101-GO/pkg/cache"
+	"BIT101-GO/pkg/gorse"
+	"BIT101-GO/pkg/other"
+	"BIT101-GO/pkg/search"
+	"BIT101-GO/service"
 	"flag"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/gin-contrib/cors"
-	limits "github.com/gin-contrib/size"
 	"github.com/gin-gonic/gin"
 )
 
@@ -47,39 +46,33 @@ var LOGO = `
 
 // 服务，启动！
 func runServer() {
-	config.Init()
 	database.Init()
 	cache.Init()
 	search.Init()
 	gorse.Init()
 	go sync()
 
-	if config.Config.ReleaseMode {
+	// 获取配置
+	cfg := config.GetConfig()
+
+	// 初始化Gin
+	if cfg.ReleaseMode {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	app := gin.Default()
-	app.Use(limits.RequestSizeLimiter(config.Config.Saver.MaxSize << 20))
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
-		// ExposeHeaders:    []string{"Content-Length"},
-		// AllowCredentials: true,
-		// AllowOriginFunc: func(origin string) bool {
-		// 	return true
-		// },
-		MaxAge: 12 * time.Hour,
-	}))
-	router.SetRouter(app)
-	fmt.Println("BIT101-GO will run on port " + config.Config.Port)
-	app.Run(":" + config.Config.Port)
+
+	// 注册路由
+	api.RegisterRouter(app, cfg)
+
+	// 启动服务
+	service.NewService(app, cfg).Run()
 }
 
 func sync() {
 	// 每隔SyncTime s同步一次
 	for {
 		time_after := time.Now()
-		time.Sleep(time.Duration(config.Config.SyncInterval) * time.Second)
+		time.Sleep(time.Duration(config.GetConfig().SyncInterval) * time.Second)
 		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
 		go gorse.Sync(time_after)
 		go search.Sync(time_after)

@@ -2,8 +2,3 @@
 data
 production
 config.yml
-meilisearch.exe
-data.ms
-dumps
-gorse/bin
-gorse.zip

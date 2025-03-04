@@ -7,7 +7,7 @@
 package database
 
 import (
-	"BIT101-GO/util/config"
+	"BIT101-GO/config"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -295,10 +295,10 @@ func InitMaps() {
 }
 
 func Init() {
-	dsn := config.Config.Dsn
+	dsn := config.GetConfig().Dsn
 	db, err := gorm.Open(postgres.Open(dsn),
 		func() *gorm.Config {
-			if config.Config.ReleaseMode {
+			if config.GetConfig().ReleaseMode {
 				return &gorm.Config{}
 			}
 			return &gorm.Config{
