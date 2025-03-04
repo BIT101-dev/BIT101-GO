@@ -14,10 +14,11 @@ import (
 	"BIT101-GO/util/mail"
 	"encoding/base64"
 	"fmt"
-	"gorm.io/gorm"
 	"math/rand"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -116,7 +117,7 @@ func UserLogin(c *gin.Context) {
 		c.JSON(500, gin.H{"msg": "登录失败Orz"})
 		return
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, int(user.Identity))
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.GetConfig().LoginExpire, config.GetConfig().Key, int(user.Identity))
 	c.JSON(200, gin.H{"msg": "登录成功OvO", "fake_cookie": token})
 }
 
@@ -183,7 +184,7 @@ func UserWebvpnVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, -1)
+	token := jwt.GetUserToken(query.Sid, config.GetConfig().VerifyCodeExpire, config.GetConfig().Key+code, -1)
 	c.JSON(200, gin.H{"msg": "统一身份认证成功OvO", "token": token, "code": code})
 }
 
@@ -202,7 +203,7 @@ func UserMailVerify(c *gin.Context) {
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token := jwt.GetUserToken(query.Sid, config.Config.VerifyCodeExpire, config.Config.Key+code, -1)
+	token := jwt.GetUserToken(query.Sid, config.GetConfig().VerifyCodeExpire, config.GetConfig().Key+code, -1)
 	//发送邮件
 	err := mail.Send(query.Sid+"@bit.edu.cn", "[BIT101]验证码", fmt.Sprintf("【%v】 是你的验证码ヾ(^▽^*)))", code))
 	if err != nil {
@@ -229,7 +230,7 @@ func UserRegister(c *gin.Context) {
 	}
 
 	// 验证token
-	sid, ok, _, _ := jwt.VeirifyUserToken(query.Token, config.Config.Key+query.Code)
+	sid, ok, _, _ := jwt.VeirifyUserToken(query.Token, config.GetConfig().Key+query.Code)
 	if !ok {
 		c.JSON(500, gin.H{"msg": "验证码无效Orz"})
 		return
@@ -274,7 +275,7 @@ func UserRegister(c *gin.Context) {
 			}
 		}
 	}
-	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.Config.LoginExpire, config.Config.Key, int(user.Identity))
+	token := jwt.GetUserToken(fmt.Sprint(user.ID), config.GetConfig().LoginExpire, config.GetConfig().Key, int(user.Identity))
 	c.JSON(200, gin.H{"msg": "注册成功OvO", "fake_cookie": token})
 }
 
@@ -530,7 +531,7 @@ func FollowListGet(c *gin.Context) {
 		return
 	}
 	var follow_list []database.Follow
-	database.DB.Where("uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
+	database.DB.Where("uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.GetConfig().FollowPageSize)).Limit(int(config.GetConfig().FollowPageSize)).Find(&follow_list)
 	users_ids := make([]int, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users_ids = append(users_ids, int(follow.FollowUid))
@@ -547,7 +548,7 @@ func FansListGet(c *gin.Context) {
 		return
 	}
 	var follow_list []database.Follow
-	database.DB.Where("follow_uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.Config.FollowPageSize)).Limit(int(config.Config.FollowPageSize)).Find(&follow_list)
+	database.DB.Where("follow_uid = ?", c.GetString("uid")).Order("updated_at DESC").Offset(int(query.Page * config.GetConfig().FollowPageSize)).Limit(int(config.GetConfig().FollowPageSize)).Find(&follow_list)
 	users_ids := make([]int, 0, len(follow_list))
 	for _, follow := range follow_list {
 		users_ids = append(users_ids, int(follow.Uid))

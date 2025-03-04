@@ -15,12 +15,12 @@ import (
 // 保存文件到本地 path为子路径
 func SaveLocal(path string, content []byte) error {
 	// 检查配置开关
-	if !config.Config.Saver.Local.Enable {
+	if !config.GetConfig().Saver.Local.Enable {
 		return nil
 	}
 
 	// 创建路径
-	dst := filepath.Join(config.Config.Saver.Local.Path, path)
+	dst := filepath.Join(config.GetConfig().Saver.Local.Path, path)
 	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
 		return err
 	}

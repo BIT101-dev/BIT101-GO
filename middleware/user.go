@@ -11,15 +11,16 @@ import (
 	"BIT101-GO/database"
 	"BIT101-GO/util/config"
 	"BIT101-GO/util/jwt"
-	"github.com/gin-gonic/gin"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 验证用户是否登录
 func CheckLogin(strict bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("fake-cookie")
-		uid, ok, super, admin := jwt.VeirifyUserToken(token, config.Config.Key)
+		uid, ok, super, admin := jwt.VeirifyUserToken(token, config.GetConfig().Key)
 		if ok {
 			uid_uint, err := strconv.ParseUint(uid, 10, 32)
 			if err != nil {

@@ -54,7 +54,7 @@ func CourseList(c *gin.Context) {
 	}
 
 	courses := make([]database.Course, 0)
-	err := search.Search(&courses, "course", query.Search, query.Page, config.Config.CoursePageSize, order, nil)
+	err := search.Search(&courses, "course", query.Search, query.Page, config.GetConfig().CoursePageSize, order, nil)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		return
@@ -235,7 +235,7 @@ func CourseUploadLog(c *gin.Context) {
 		}
 	}
 	if readme.Text == "" {
-		readme.Text = fmt.Sprintf(readme_template, log.CourseName, log.CourseNumber, config.Config.MainUrl, log.CourseName, config.Config.MainUrl, log.CourseNumber)
+		readme.Text = fmt.Sprintf(readme_template, log.CourseName, log.CourseNumber, config.GetConfig().MainUrl, log.CourseName, config.GetConfig().MainUrl, log.CourseNumber)
 	}
 	readme.Text += fmt.Sprintf(log_template, log.Type, log.Name, time.Now().Format("2006-01-02 15:04:05"), log.Msg)
 	if err := tx.Save(&readme).Error; err != nil {

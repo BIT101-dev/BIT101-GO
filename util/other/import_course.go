@@ -8,7 +8,6 @@ package other
 
 import (
 	"BIT101-GO/database"
-	"BIT101-GO/util/config"
 	"encoding/csv"
 	"fmt"
 	"os"
@@ -48,7 +47,6 @@ func ImportCourse(path string) {
 	fmt.Println()
 
 	// 导入课程数据
-	config.Init()
 	database.Init()
 	ori_courses := []OriCourse{}
 	for _, csv_path := range csv_paths {

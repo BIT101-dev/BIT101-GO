@@ -124,7 +124,7 @@ func MessageGetList(c *gin.Context) {
 	if query.LastID != 0 {
 		q = q.Where("id < ?", query.LastID)
 	}
-	q.Order("id DESC").Limit(int(config.Config.MessagePageSize))
+	q.Order("id DESC").Limit(int(config.GetConfig().MessagePageSize))
 	if err := q.Find(&messages).Error; err != nil {
 		c.JSON(500, gin.H{"msg": "获取消息列表失败Orz"})
 		return

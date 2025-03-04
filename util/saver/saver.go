@@ -27,5 +27,5 @@ func Save(path string, content []byte) (string, error) {
 
 // 通过文件路径获取url
 func GetUrl(path string) string {
-	return config.Config.Saver.Url + filepath.Join("/", path)
+	return config.GetConfig().Saver.Url + filepath.Join("/", path)
 }

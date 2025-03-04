@@ -279,9 +279,9 @@ func PostList(c *gin.Context) {
 				posters = append(posters, postersMap[item])
 			}
 		}
-		if len(posters) < int(config.Config.RecommendPageSize) {
+		if len(posters) < int(config.GetConfig().RecommendPageSize) {
 			var posters2 []database.Poster
-			database.DB.Order("RANDOM()").Where("public = true").Limit(int(config.Config.RecommendPageSize) - len(posters)).Find(&posters2)
+			database.DB.Order("RANDOM()").Where("public = true").Limit(int(config.GetConfig().RecommendPageSize) - len(posters)).Find(&posters2)
 			posters = append(posters, posters2...)
 		}
 		c.JSON(200, buildPostListResponse(posters))
@@ -336,7 +336,7 @@ func PostList(c *gin.Context) {
 		}
 	}
 	var posters []database.Poster
-	err := search.Search(&posters, "poster", query.Search, query.Page, config.Config.PostPageSize, order, filter)
+	err := search.Search(&posters, "poster", query.Search, query.Page, config.GetConfig().PostPageSize, order, filter)
 	if err != nil {
 		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
 		println(err.Error())

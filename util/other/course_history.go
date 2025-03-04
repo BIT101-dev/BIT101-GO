@@ -9,7 +9,6 @@ package other
 import (
 	"BIT101-GO/controller/webvpn"
 	"BIT101-GO/database"
-	"BIT101-GO/util/config"
 	"errors"
 	"fmt"
 	"regexp"
@@ -26,7 +25,6 @@ func GetCourseHistory(start_year_s string, end_year_s string, webvpn_cookie stri
 	}
 
 	// 获取所有课程编号
-	config.Init()
 	database.Init()
 	course_numbers := []string{}
 	database.DB.Model(&database.Course{}).Distinct("number").Find(&course_numbers)

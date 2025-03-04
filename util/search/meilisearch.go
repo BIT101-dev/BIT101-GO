@@ -5,13 +5,13 @@ import (
 	"BIT101-GO/util/config"
 	"encoding/json"
 	"fmt"
-	"github.com/meilisearch/meilisearch-go"
 	"strconv"
 	"time"
+
+	"github.com/meilisearch/meilisearch-go"
 )
 
 var client *meilisearch.Client
-
 
 // createAndConfigureIndex 创建并配置索引
 func createAndConfigureIndex(uid, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
@@ -63,7 +63,6 @@ func addDocumentToMeiliSearch(indexName string, documents interface{}) error {
 	}
 	return nil
 }
-
 
 // deleteDocumentFromMeiliSearch 将数据从MeiliSearch中删除
 func deleteDocumentFromMeiliSearch(indexName string, ids []string) error {
@@ -184,8 +183,8 @@ func Sync(time_after time.Time) {
 // Init 初始化
 func Init() {
 	client = meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   config.Config.Meilisearch.Url,
-		APIKey: config.Config.Meilisearch.MasterKey,
+		Host:   config.GetConfig().Meilisearch.Url,
+		APIKey: config.GetConfig().Meilisearch.MasterKey,
 	})
 	// 可排序参数
 	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}
