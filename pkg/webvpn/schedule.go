@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-29 16:24:34
- * @LastEditTime: 2023-08-19 11:59:47
+ * @LastEditTime: 2025-03-11 11:00:58
  * @Description: _(:з」∠)_
  */
 package webvpn
@@ -42,7 +42,7 @@ func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
 	base_url := "https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421faef5b842238695c720999bcd6572a216b231105adc27d"
 	res, err := request.Get(base_url+"/jwapp/sys/funauthapp/api/getAppConfig/wdkbby-5959167891382285.do", map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
-		return GetScheduleResponse{}, errors.New("get schedule init error")
+		return GetScheduleResponse{}, errors.New("初始化课程表失败Orz")
 	}
 	if strings.Contains(res.Text, "帐号登录或动态码登录") {
 		return GetScheduleResponse{}, ErrCookieInvalid
@@ -51,14 +51,14 @@ func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
 	// 设置语言
 	res, err = request.Get(base_url+"/jwapp/i18n.do?appName=wdkbby&EMAP_LANG=zh", map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
-		return GetScheduleResponse{}, errors.New("get schedule lang error")
+		return GetScheduleResponse{}, errors.New("设置语言失败Orz")
 	}
 
 	// 获取当前学期
 	if term == "" {
 		res, err = request.Get(base_url+"/jwapp/sys/wdkbby/modules/jshkcb/dqxnxq.do", map[string]string{"Cookie": cookie})
 		if err != nil || res.Code != 200 {
-			return GetScheduleResponse{}, errors.New("get schedule term error")
+			return GetScheduleResponse{}, errors.New("获取当前学期失败Orz")
 		}
 
 		var now_term_json struct {
@@ -72,7 +72,7 @@ func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
 		}
 		err = json.Unmarshal([]byte(res.Text), &now_term_json)
 		if err != nil || len(now_term_json.Datas.DQXNXQ.Rows) == 0 {
-			return GetScheduleResponse{}, err
+			return GetScheduleResponse{}, errors.New("获取当前学期失败Orz")
 		}
 		term = now_term_json.Datas.DQXNXQ.Rows[0].DM
 	}
@@ -81,7 +81,7 @@ func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
 	first_day := ""
 	res, err = request.PostForm(base_url+"/jwapp/sys/wdkbby/wdkbByController/cxzkbrq.do", map[string]string{"requestParamStr": fmt.Sprintf(`{"XNXQDM":"%v","ZC":"1"}`, term)}, map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
-		return GetScheduleResponse{}, errors.New("get schedule first day error")
+		return GetScheduleResponse{}, errors.New("获取学期第一天日期失败Orz")
 	}
 	var first_day_json struct {
 		Data []struct {
@@ -103,7 +103,7 @@ func GetSchedule(cookie string, term string) (GetScheduleResponse, error) {
 	// 获取课表
 	res, err = request.PostForm(base_url+"/jwapp/sys/wdkbby/modules/xskcb/cxxszhxqkb.do", map[string]string{"XNXQDM": term}, map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
-		return GetScheduleResponse{}, errors.New("get schedule error")
+		return GetScheduleResponse{}, errors.New("获取课表失败Orz")
 	}
 	var schedule_json struct {
 		Datas struct {

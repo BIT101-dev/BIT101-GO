@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2025-02-08 02:17:39
+ * @LastEditTime: 2025-03-11 18:45:51
  * @Description: _(:з」∠)_
  */
 package database
@@ -17,20 +17,28 @@ import (
 
 var DB *gorm.DB
 var ClaimMap map[uint]Claim
-var IdentityMap map[uint]Identity
+var identityMap map[IdentityType]Identity
 var ReportTypeMap map[uint]ReportType
 var BanMap map[uint]Ban
 
 // 枚举用户类型(需要与数据库中定义一致)
+type IdentityType uint
+
+// 用户身份类型常量
 const (
-	Identity_Normal = iota
-	Identity_Admin
-	Identity_Super
-	Identity_Organization
-	Identity_Club
-	Identity_NGO
-	Identity_Robot
+	IdentityNormal IdentityType = iota
+	IdentityAdmin
+	IdentitySuper
+	IdentityOrganization
+	IdentityClub
+	IdentityNGO
+	IdentityRobot
+	IdentityBig
 )
+
+func (identityType IdentityType) ToIdentity() Identity {
+	return identityMap[identityType]
+}
 
 // 基本模型
 type Base struct {
@@ -64,13 +72,6 @@ type Image struct {
 	Mid  string `gorm:"not null;uniqueIndex" json:"mid"`
 	Size uint   `gorm:"not null" json:"size"`
 	Uid  uint   `gorm:"not null" json:"uid"`
-}
-
-// 标签
-type Tag struct {
-	Base
-	Name string `gorm:"not null;unique" json:"name"` //标签名
-	Hot  uint   `gorm:"default:0" json:"hot"`        //热度
 }
 
 // 声明
@@ -248,8 +249,8 @@ type ReportType struct {
 // 小黑屋
 type Ban struct {
 	Base
-	Uid  uint   `gorm:"not null;unique" json:"uid"` //封禁id
-	Time string `gorm:"not null" json:"time"`       //解封时间
+	Uid  uint      `gorm:"not null;unique" json:"uid"` //封禁id
+	Time time.Time `gorm:"not null" json:"time"`       //解封时间
 }
 
 // WebPush订阅
@@ -272,11 +273,11 @@ func InitMaps() {
 		ClaimMap[claim.ID] = claim
 	}
 	//初始化 IdentityMap
-	IdentityMap = make(map[uint]Identity)
+	identityMap = make(map[IdentityType]Identity)
 	var identities []Identity
 	DB.Find(&identities)
 	for _, identity := range identities {
-		IdentityMap[identity.ID] = identity
+		identityMap[IdentityType(identity.ID)] = identity
 	}
 	//初始化 ReportTypeMap
 	ReportTypeMap = make(map[uint]ReportType)
@@ -295,25 +296,27 @@ func InitMaps() {
 }
 
 func Init() {
-	dsn := config.GetConfig().Dsn
-	db, err := gorm.Open(postgres.Open(dsn),
-		func() *gorm.Config {
-			if config.GetConfig().ReleaseMode {
-				return &gorm.Config{}
-			}
-			return &gorm.Config{
-				Logger: logger.Default.LogMode(logger.Info),
-			}
-		}())
-	if err != nil {
-		panic(err)
+	if DB == nil {
+		dsn := config.Get().Dsn
+		db, err := gorm.Open(postgres.Open(dsn),
+			func() *gorm.Config {
+				if config.Get().ReleaseMode {
+					return &gorm.Config{}
+				}
+				return &gorm.Config{
+					Logger: logger.Default.LogMode(logger.Info),
+				}
+			}())
+		if err != nil {
+			panic(err)
+		}
+		DB = db
 	}
-	DB = db
 
-	db.AutoMigrate(
+	DB.AutoMigrate(
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
-		&Tag{}, &Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
+		&Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
 		&WebPushSubscription{},
 	)
 	InitMaps()

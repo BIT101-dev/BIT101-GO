@@ -1,32 +1,42 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-16 09:10:10
- * @LastEditTime: 2023-03-29 15:41:51
+ * @LastEditTime: 2025-03-11 10:56:12
  * @Description: 成绩模块业务响应
  */
-package service
+package handler
 
 import (
+	"BIT101-GO/api/common"
 	"BIT101-GO/pkg/webvpn"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 成绩查询请求结构
-type ScoreQuery struct {
-	Detail bool `form:"detail"` // 学号
+// ScoreHandler 成绩模块响应
+type ScoreHandler struct{}
+
+// NewScoreHandler 创建成绩模块响应
+func NewScoreHandler() *ScoreHandler {
+	return &ScoreHandler{}
 }
 
-// 成绩查询
-func Score(c *gin.Context) {
-	var query ScoreQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
+// GetScoreHandler 成绩查询
+func (h *ScoreHandler) GetScoreHandler(c *gin.Context) {
+	type Request struct {
+		Detail bool `form:"detail"` // 学号
+	}
+	type Response struct {
+		Msg  string     `json:"msg"`
+		Data [][]string `json:"data"`
+	}
+	var query Request
+	if common.HandleErrorWithCode(c, c.ShouldBind(&query), 400) {
 		return
 	}
 	cookie := c.Request.Header.Get("webvpn-cookie")
 	if cookie == "" {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		common.HandleErrorWithCode(c, webvpn.ErrCookieInvalid, 400)
 		return
 	}
 	table, err := webvpn.GetScore(cookie, query.Detail)
@@ -38,14 +48,14 @@ func Score(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(200, gin.H{"msg": "查询成功OvO", "data": table})
+	c.JSON(200, Response{"查询成功OvO", table})
 }
 
-// 获取可信成绩单
-func Report(c *gin.Context) {
+// GetReportHandler 获取可信成绩单
+func (h *ScoreHandler) GetReportHandler(c *gin.Context) {
 	cookie := c.Request.Header.Get("webvpn-cookie")
 	if cookie == "" {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		common.HandleErrorWithCode(c, webvpn.ErrCookieInvalid, 400)
 		return
 	}
 	imgs, err := webvpn.GetReport(cookie)

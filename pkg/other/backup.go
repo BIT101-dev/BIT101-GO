@@ -18,7 +18,7 @@ import (
 func BackupDatabase() error {
 	// 解析DSN
 	// 使用空格分割字符串
-	pairs := strings.Fields(config.GetConfig().Dsn)
+	pairs := strings.Fields(config.Get().Dsn)
 
 	// 创建一个映射用于存储键值对
 	params := make(map[string]string)

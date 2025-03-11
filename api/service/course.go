@@ -1,12 +1,13 @@
 /*
  * @Author: flwfdd
- * @Date: 2023-03-23 16:07:43
- * @LastEditTime: 2025-03-02 20:28:04
+ * @Date: 2025-03-09 23:38:54
+ * @LastEditTime: 2025-03-11 11:03:17
  * @Description: _(:з」∠)_
  */
 package service
 
 import (
+	"BIT101-GO/api/types"
 	"BIT101-GO/config"
 	"BIT101-GO/database"
 	"BIT101-GO/pkg/saver"
@@ -18,75 +19,46 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-// CourseListQuery 获取课程列表请求结构
-type CourseListQuery struct {
-	Search string `form:"search"`
-	Order  string `form:"order"` //like | comment | rate | new
-	Page   uint   `form:"page"`
+// 检查接口是否实现
+var _ types.CourseService = (*CourseService)(nil)
+
+// CourseService 课程服务
+type CourseService struct {
+	ReactionSvc types.ReactionService
 }
 
-// CourseList 获取课程列表
-func CourseList(c *gin.Context) {
-	var query CourseListQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-
-	// 排序
-	var order []string
-	if query.Order != "search" {
-		if query.Order == "comment" {
-			order = append(order, "comment_num:desc")
-		} else if query.Order == "like" {
-			order = append(order, "like_num:desc")
-		} else if query.Order == "rate" {
-			order = append(order, "rate:desc")
-		} else { //默认new
-			order = append(order, "update_time:desc")
-		}
-	}
-
-	courses := make([]database.Course, 0)
-	err := search.Search(&courses, "course", query.Search, query.Page, config.GetConfig().CoursePageSize, order, nil)
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "搜索失败Orz"})
-		return
-	}
-	c.JSON(200, courses)
+// NewCourseService 创建课程服务
+func NewCourseService(reactionSvc types.ReactionService) *CourseService {
+	s := CourseService{ReactionSvc: reactionSvc}
+	types.RegisterObjHandler(&s)
+	return &s
 }
 
-// CourseInfoResponse 获取课程详情返回结构
-type CourseInfoResponse struct {
-	database.Course
-	Like bool `json:"like"`
+/* ObjHandler */
+
+// IsExist 判断课程是否存在
+func (s *CourseService) IsExist(id uint) bool {
+	_, err := s.getCourse(id)
+	return err == nil
 }
 
-// CourseInfo 获取课程详情
-func CourseInfo(c *gin.Context) {
-	var course database.Course
-	if err := database.DB.Where("id = ?", c.Param("id")).Limit(1).Find(&course).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
-	}
-	if course.ID == 0 {
-		c.JSON(500, gin.H{"msg": "课程不存在Orz"})
-		return
-	}
-	c.JSON(200, CourseInfoResponse{
-		Course: course,
-		Like:   CheckLike(fmt.Sprintf("course%v", course.ID), c.GetUint("uid_uint")),
-	})
+// GetObjType 获取对象类型
+func (s *CourseService) GetObjType() string {
+	return "course"
 }
 
-// CourseOnLike 点赞
-func CourseOnLike(tx *gorm.DB, id string, delta int) (uint, error) {
+// GetUid 获取课程作者
+func (s *CourseService) GetUid(id uint) (uint, error) {
+	return 0, errors.New("课程没有作者Orz")
+}
+
+// LikeHandler 点赞
+func (s *CourseService) LikeHandler(tx *gorm.DB, id uint, delta int, uid uint) (likeNum uint, err error) {
 	var course database.Course
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&course, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
@@ -99,13 +71,13 @@ func CourseOnLike(tx *gorm.DB, id string, delta int) (uint, error) {
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update("course", course)
+		search.Update(s.GetObjType(), course)
 	}()
 	return course.LikeNum, nil
 }
 
-// CourseOnComment 评论
-func CourseOnComment(tx *gorm.DB, id string, delta_num int, delta_rate int) (uint, error) {
+// CommentHandler 评论
+func (s *CourseService) CommentHandler(tx *gorm.DB, id uint, comment database.Comment, delta int, uid uint) (commentNum uint, err error) {
 	var course database.Course
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Limit(1).Find(&course, "id = ?", id).Error; err != nil {
 		return 0, errors.New("数据库错误Orz")
@@ -113,11 +85,12 @@ func CourseOnComment(tx *gorm.DB, id string, delta_num int, delta_rate int) (uin
 	if course.ID == 0 {
 		return 0, errors.New("课程不存在Orz")
 	}
-	if delta_rate == 0 || delta_rate < -10 || delta_rate > 10 {
+	deltaRate := int(comment.Rate) * delta
+	if deltaRate == 0 || deltaRate < -10 || deltaRate > 10 {
 		return 0, errors.New("评分错误Orz")
 	}
-	course.CommentNum = uint(int(course.CommentNum) + delta_num)
-	course.RateSum = uint(int(course.RateSum) + delta_rate)
+	course.CommentNum = uint(int(course.CommentNum) + delta)
+	course.RateSum = uint(int(course.RateSum) + deltaRate)
 	if course.RateSum == 0 {
 		course.Rate = 0
 	} else {
@@ -127,129 +100,100 @@ func CourseOnComment(tx *gorm.DB, id string, delta_num int, delta_rate int) (uin
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update("course", course)
+		search.Update(s.GetObjType(), course)
 	}()
 	return course.CommentNum, nil
 }
 
-// CourseUploadUrlQuery 获取课程资料上传链接请求结构
-type CourseUploadUrlQuery struct {
-	Number string `form:"number" binding:"required"` //课程编号
-	Name   string `form:"name" binding:"required"`   //文件名
-	Type   string `form:"type"`                      //资料类型 默认other
-}
-
-// CourseUploadUrl 获取课程资料上传链接
-func CourseUploadUrl(c *gin.Context) {
-	var query CourseUploadUrlQuery
-	query.Type = "other"
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
+// getCourse 获取课程
+func (s *CourseService) getCourse(id uint) (database.Course, error) {
 	var course database.Course
-	if err := database.DB.Where("number = ?", query.Number).Limit(1).Find(&course).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
+	if err := database.DB.Where("id = ?", id).Limit(1).Find(&course).Error; err != nil {
+		return database.Course{}, errors.New("数据库错误Orz")
 	}
 	if course.ID == 0 {
-		c.JSON(500, gin.H{"msg": "课程不存在Orz"})
-		return
+		return database.Course{}, errors.New("课程不存在Orz")
 	}
-	tp := query.Type
-	if tp != "book" && tp != "ppt" && tp != "exam" {
-		tp = "other"
+	return course, nil
+}
+
+// GetCourses 获取课程列表
+func (s *CourseService) GetCourses(keyword string, order string, page uint) ([]database.Course, error) {
+	// 排序
+	var orders []string
+	switch order {
+	case "comment":
+		orders = append(orders, "comment_num:desc")
+	case "like":
+		orders = append(orders, "like_num:desc")
+	case "rate":
+		orders = append(orders, "rate:desc")
+	default:
+		orders = append(orders, "update_time:desc")
 	}
-	url, err := saver.OneDriveGetUploadUrl(fmt.Sprintf("course/%v-%v/%v/%v", course.Name, course.Number, tp, query.Name))
+
+	courses := make([]database.Course, 0)
+	err := search.Search(&courses, s.GetObjType(), keyword, page, config.Get().CoursePageSize, orders, nil)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "获取上传链接失败Orz"})
-		return
+		return nil, err
+	}
+	return courses, nil
+}
+
+// GetCourseAPI 获取课程详情
+func (s *CourseService) GetCourseAPI(id uint, uid uint) (types.CourseAPI, error) {
+	var course database.Course
+	if err := database.DB.Where("id = ?", id).Limit(1).Find(&course).Error; err != nil {
+		return types.CourseAPI{}, errors.New("数据库错误Orz")
+	}
+	if course.ID == 0 {
+		return types.CourseAPI{}, errors.New("课程不存在Orz")
+	}
+
+	return types.CourseAPI{
+		Course: course,
+		Like:   s.ReactionSvc.CheckLike(fmt.Sprintf("course%d", course.ID), uid),
+	}, nil
+}
+
+// GetUploadUrl 获取课程资料上传链接
+func (s *CourseService) GetUploadUrl(courseNumber, fileName, typ string, uid uint) (url string, id uint, err error) {
+	var course database.Course
+	if err = database.DB.Where("number = ?", courseNumber).Limit(1).Find(&course).Error; err != nil {
+		return "", 0, errors.New("数据库错误Orz")
+	}
+	if course.ID == 0 {
+		return "", 0, errors.New("课程不存在Orz")
+	}
+	if typ != "book" && typ != "ppt" && typ != "exam" {
+		typ = "other"
+	}
+	url, err = saver.OneDriveGetUploadUrl(fmt.Sprintf("course/%v-%v/%v/%v", course.Name, course.Number, typ, fileName))
+	if err != nil {
+		return "", 0, errors.New("获取上传链接失败Orz")
 	}
 
 	var log database.CourseUploadLog
-	if err := database.DB.Where("course_number = ? AND uid = ? AND type = ? AND name = ?", course.Number, c.GetString("uid"), tp, query.Name).Limit(1).Find(&log).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
+	if err := database.DB.Where("course_number = ? AND uid = ? AND type = ? AND name = ?", course.Number, uid, typ, fileName).Limit(1).Find(&log).Error; err != nil {
+		return "", 0, errors.New("数据库错误Orz")
 	}
 	if log.ID == 0 {
 		log = database.CourseUploadLog{
-			Uid:          c.GetUint("uid_uint"),
+			Uid:          uid,
 			CourseNumber: course.Number,
 			CourseName:   course.Name,
-			Type:         tp,
-			Name:         query.Name,
+			Type:         typ,
+			Name:         fileName,
 		}
-		database.DB.Create(&log)
-	}
-	c.JSON(200, gin.H{"url": url, "id": log.ID})
-}
-
-// CourseUploadLogQuery 上报课程资料上传记录请求结构
-type CourseUploadLogQuery struct {
-	ID  uint   `json:"id" binding:"required"` //上传记录ID
-	Msg string `json:"msg"`                   //上传备注
-}
-
-// CourseUploadLog 上报课程资料上传记录
-func CourseUploadLog(c *gin.Context) {
-	var query CourseUploadLogQuery
-	if err := c.ShouldBind(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-
-	// 启用事务以应对高并发
-	tx := database.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-			tx.Rollback()
-		}
-	}()
-	var log database.CourseUploadLog
-	if err := tx.Where("id = ?", query.ID).Limit(1).Find(&log).Error; err != nil {
-		panic(err)
-	}
-	if log.ID == 0 {
-		c.JSON(500, gin.H{"msg": "上传记录不存在Orz"})
-		return
-	}
-	if log.Uid != c.GetUint("uid_uint") {
-		c.JSON(500, gin.H{"msg": "上传记录不属于你Orz"})
-		return
-	}
-	log.Msg = query.Msg
-	log.Finish = true
-	if err := tx.Save(&log).Error; err != nil {
-		panic(err)
-	}
-
-	// 更新README
-	var readme database.CourseUploadReadme
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("course_number = ?", log.CourseNumber).Limit(1).Find(&readme).Error; err != nil {
-		panic(err)
-	}
-	if readme.ID == 0 {
-		readme = database.CourseUploadReadme{
-			CourseNumber: log.CourseNumber,
+		if err := database.DB.Create(&log).Error; err != nil {
+			return "", 0, errors.New("数据库错误Orz")
 		}
 	}
-	if readme.Text == "" {
-		readme.Text = fmt.Sprintf(readme_template, log.CourseName, log.CourseNumber, config.GetConfig().MainUrl, log.CourseName, config.GetConfig().MainUrl, log.CourseNumber)
-	}
-	readme.Text += fmt.Sprintf(log_template, log.Type, log.Name, time.Now().Format("2006-01-02 15:04:05"), log.Msg)
-	if err := tx.Save(&readme).Error; err != nil {
-		panic(err)
-	}
-	if err := tx.Commit().Error; err != nil {
-		panic(err)
-	}
-	saver.OneDriveUploadFile(fmt.Sprintf("course/%v-%v/README.md", log.CourseName, log.CourseNumber), []byte(readme.Text))
-	c.JSON(200, gin.H{"msg": "上传成功OvO"})
+	return url, log.ID, nil
 }
 
 // course_name number main_url course_name main_url number
-var readme_template = `
+var readmeTemplate = `
 # BIT101 %v 课程共享资料
 > 课程编号：%v
 本页面由[BIT101](%v)维护，[点击查找 %v 课程及评价](%v/course/?search=%v)
@@ -262,10 +206,72 @@ var readme_template = `
 `
 
 // /{type}/{name}@{time} {msg}
-var log_template = "\n* `/%v/%v`@`%v` %v"
+var logTemplate = "\n* `/%v/%v`@`%v` %v"
+
+// LogUpload 记录上传
+func (s *CourseService) LogUpload(id uint, msg string, uid uint) error {
+	return database.DB.Transaction(func(tx *gorm.DB) error {
+		var log database.CourseUploadLog
+		if err := tx.Where("id = ?", id).Limit(1).Find(&log).Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+		if log.ID == 0 {
+			return errors.New("上传记录不存在Orz")
+		}
+		if log.Uid != uid {
+			return errors.New("上传记录不属于你Orz")
+		}
+		log.Msg = msg
+		log.Finish = true
+		if err := tx.Save(&log).Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+
+		// 更新README
+		var readme database.CourseUploadReadme
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("course_number = ?", log.CourseNumber).Limit(1).Find(&readme).Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+		if readme.ID == 0 {
+			readme = database.CourseUploadReadme{
+				CourseNumber: log.CourseNumber,
+			}
+		}
+		if readme.Text == "" {
+			readme.Text = fmt.Sprintf(readmeTemplate, log.CourseName, log.CourseNumber, config.Get().MainUrl, log.CourseName, config.Get().MainUrl, log.CourseNumber)
+		}
+		readme.Text += fmt.Sprintf(logTemplate, log.Type, log.Name, time.Now().Format("2006-01-02 15:04:05"), log.Msg)
+		if err := tx.Save(&readme).Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+		if err := tx.Commit().Error; err != nil {
+			return errors.New("数据库错误Orz")
+		}
+		saver.OneDriveUploadFile(fmt.Sprintf("course/%v-%v/README.md", log.CourseName, log.CourseNumber), []byte(readme.Text))
+		return nil
+	})
+}
+
+// GetCourseHistory 获取课程历史
+func (s *CourseService) GetCourseHistory(courseNumber string) ([]types.CourseHistoryAPI, error) {
+	var histories []database.CourseHistory
+	if err := database.DB.Where("number = ?", courseNumber).Find(&histories).Error; err != nil {
+		return nil, errors.New("数据库错误Orz")
+	}
+	historyAPI := make([]types.CourseHistoryAPI, 0)
+	for _, history := range histories {
+		historyAPI = append(historyAPI, types.CourseHistoryAPI{
+			Term:       history.Term,
+			AvgScore:   history.AvgScore,
+			MaxScore:   history.MaxScore,
+			StudentNum: history.StudentNum,
+		})
+	}
+	return historyAPI, nil
+}
 
 // 上课时间表 节次 上课/下课时间 时,分
-var time_table = [][][]int{
+var timeTable = [][][]int{
 	{{8, 0}, {8, 45}},
 	{{8, 50}, {9, 35}},
 	{{9, 55}, {10, 40}},
@@ -279,107 +285,6 @@ var time_table = [][][]int{
 	{{18, 30}, {19, 15}},
 	{{19, 20}, {20, 5}},
 	{{20, 10}, {20, 55}},
-}
-
-// CourseScheduleQuery 获取课程表请求结构
-type CourseScheduleQuery struct {
-	Term string `form:"term"` // 学期
-}
-
-// CourseSchedule 获取课程表
-func CourseSchedule(c *gin.Context) {
-	var query CourseScheduleQuery
-	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-	cookie := c.Request.Header.Get("webvpn-cookie")
-	if cookie == "" {
-		c.JSON(400, gin.H{"msg": "参数错误awa"})
-		return
-	}
-
-	schedule, err := webvpn.GetSchedule(cookie, query.Term)
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "获取课程表失败Orz"})
-		return
-	}
-	first_day, err := time.Parse("2006-01-02", schedule.FirstDay)
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "解析时间失败Orz"})
-		return
-	}
-
-	class_ct := 0
-	time_ct := 0
-
-	calendar := ""
-	calendar += "BEGIN:VCALENDAR\n"
-	calendar += "VERSION:2.0\n"
-	calendar += fmt.Sprintf("PRODID:BIT101 %v\n", time.Now())
-	calendar += "TZID:Asia/Shanghai\n"
-	calendar += "X-WR-CALNAME:BIT101课程表\n"
-
-	for _, course := range schedule.Data {
-		for week, ok := range course.SKZC {
-			if ok == '1' {
-				calendar += "BEGIN:VEVENT\n"
-				calendar += fmt.Sprintf("SUMMARY:%v\n", course.KCM)
-				calendar += fmt.Sprintf("LOCATION:%v\\n北京理工大学\n", course.JASMC)
-				if lat, lng, ok := getBuildingCoord(course.JASMC); ok {
-					calendar += fmt.Sprintf("X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=\"北京理工大学\";X-TITLE=\"%v\":geo:%.6f,%.6f\n", course.JASMC, lat, lng)
-				}
-				calendar += fmt.Sprintf("DESCRIPTION:%v | %v\n", course.SKJS, course.YPSJDD)
-				start_time_table := time_table[course.KSJC-1][0]
-				start_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*start_time_table[0]+start_time_table[1])).Format("20060102T150405")
-				calendar += fmt.Sprintf("DTSTART;TZID=Asia/Shanghai:%v\n", start_time)
-				end_time_table := time_table[course.JSJC-1][1]
-				end_time := first_day.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*end_time_table[0]+end_time_table[1])).Format("20060102T150405")
-				calendar += fmt.Sprintf("DTEND;TZID=Asia/Shanghai:%v\n", end_time)
-				calendar += fmt.Sprintf("UID:%v\n", uuid.New())
-				calendar += "END:VEVENT\n"
-
-				class_ct++
-				time_ct += (course.JSJC - course.KSJC + 1) * 45
-			}
-		}
-	}
-
-	calendar += "END:VCALENDAR\n"
-
-	url, err := saver.Save(fmt.Sprintf("/tmp/%v.ics", uuid.New()), []byte(calendar))
-	if err != nil {
-		c.JSON(500, gin.H{"msg": "保存课程表失败Orz"})
-		return
-	}
-	c.JSON(200, gin.H{"url": url, "note": fmt.Sprintf("一共添加了%v学期的%v节课，合计坐牢时间%v小时（雾", schedule.Term, class_ct, float64(time_ct)/60), "msg": "获取成功OvO"})
-}
-
-// 获取课程历史返回结构
-type CourseHistoryResponseItem struct {
-	Term       string  `json:"term"`        //学期
-	AvgScore   float64 `json:"avg_score"`   //均分
-	MaxScore   float64 `json:"max_score"`   //最高分
-	StudentNum uint    `json:"student_num"` //学习人数
-}
-
-// 获取课程历史
-func CourseHistory(c *gin.Context) {
-	var histories []database.CourseHistory
-	if err := database.DB.Where("number = ?", c.Param("number")).Find(&histories).Error; err != nil {
-		c.JSON(500, gin.H{"msg": "数据库错误Orz"})
-		return
-	}
-	history_response := make([]CourseHistoryResponseItem, 0)
-	for _, history := range histories {
-		history_response = append(history_response, CourseHistoryResponseItem{
-			Term:       history.Term,
-			AvgScore:   history.AvgScore,
-			MaxScore:   history.MaxScore,
-			StudentNum: history.StudentNum,
-		})
-	}
-	c.JSON(200, history_response)
 }
 
 // 建筑名称关键字与坐标的映射表
@@ -503,4 +408,60 @@ func getBuildingCoord(jasmc string) (float64, float64, bool) {
 		}
 	}
 	return 0, 0, false
+}
+
+// GetCourseSchedule 获取课程表
+func (s *CourseService) GetCourseSchedule(cookie, term string) (url, note string, err error) {
+	schedule, err := webvpn.GetSchedule(cookie, term)
+	if err != nil {
+		return "", "", err
+	}
+	firstDay, err := time.Parse("2006-01-02", schedule.FirstDay)
+	if err != nil {
+		return "", "", errors.New("解析日期失败Orz")
+	}
+
+	classCount := 0
+	timeCount := 0
+
+	calendar := ""
+	calendar += "BEGIN:VCALENDAR\n"
+	calendar += "VERSION:2.0\n"
+	calendar += fmt.Sprintf("PRODID:BIT101 %v\n", time.Now())
+	calendar += "TZID:Asia/Shanghai\n"
+	calendar += "X-WR-CALNAME:BIT101课程表\n"
+
+	for _, course := range schedule.Data {
+		for week, ok := range course.SKZC {
+			if ok == '1' {
+				calendar += "BEGIN:VEVENT\n"
+				calendar += fmt.Sprintf("SUMMARY:%v\n", course.KCM)
+				calendar += fmt.Sprintf("LOCATION:%v\\n北京理工大学\n", course.JASMC)
+				if lat, lng, ok := getBuildingCoord(course.JASMC); ok {
+					calendar += fmt.Sprintf("X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=\"北京理工大学\";X-TITLE=\"%v\":geo:%.6f,%.6f\n", course.JASMC, lat, lng)
+				}
+				calendar += fmt.Sprintf("DESCRIPTION:%v | %v\n", course.SKJS, course.YPSJDD)
+				start_time_table := timeTable[course.KSJC-1][0]
+				start_time := firstDay.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*start_time_table[0]+start_time_table[1])).Format("20060102T150405")
+				calendar += fmt.Sprintf("DTSTART;TZID=Asia/Shanghai:%v\n", start_time)
+				end_time_table := timeTable[course.JSJC-1][1]
+				end_time := firstDay.AddDate(0, 0, week*7+course.SKXQ-1).Add(time.Minute * time.Duration(60*end_time_table[0]+end_time_table[1])).Format("20060102T150405")
+				calendar += fmt.Sprintf("DTEND;TZID=Asia/Shanghai:%v\n", end_time)
+				calendar += fmt.Sprintf("UID:%v\n", uuid.New())
+				calendar += "END:VEVENT\n"
+
+				classCount++
+				timeCount += (course.JSJC - course.KSJC + 1) * 45
+			}
+		}
+	}
+
+	calendar += "END:VCALENDAR\n"
+
+	url, err = saver.Save(fmt.Sprintf("/tmp/%v.ics", uuid.New()), []byte(calendar))
+	if err != nil {
+		return "", "", errors.New("保存课程表失败Orz")
+	}
+	note = fmt.Sprintf("一共添加了%v学期的%v节课，合计坐牢时间%v小时（雾", schedule.Term, classCount, float64(timeCount)/60)
+	return url, note, nil
 }

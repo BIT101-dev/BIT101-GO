@@ -12,9 +12,9 @@ import (
 )
 
 func Send(to string, title string, text string) error {
-	mail_host := config.GetConfig().Mail.Host
-	mail_user := config.GetConfig().Mail.User
-	mail_pass := config.GetConfig().Mail.Password
+	mail_host := config.Get().Mail.Host
+	mail_user := config.Get().Mail.User
+	mail_pass := config.Get().Mail.Password
 	auth := smtp.PlainAuth("", mail_user, mail_pass, mail_host)
 
 	// 编写发送的消息

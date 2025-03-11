@@ -18,8 +18,8 @@ import (
 // 使用代理请求
 func Proxy() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if config.GetConfig().Proxy.Enable {
-			proxyUrl, _ := url.Parse(config.GetConfig().Proxy.Url)
+		if config.Get().Proxy.Enable {
+			proxyUrl, _ := url.Parse(config.Get().Proxy.Url)
 
 			proxy := httputil.ReverseProxy{
 				Director: func(req *http.Request) {

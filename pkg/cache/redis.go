@@ -19,7 +19,7 @@ var Context = context.Background()
 func Init() {
 	// 初始化redis
 	rdb := redis.NewClient(&redis.Options{
-		Addr: config.GetConfig().Redis.Addr,
+		Addr: config.Get().Redis.Addr,
 	})
 	RDB = rdb
 }
