@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2025-02-08 15:46:40
+ * @LastEditTime: 2025-03-11 18:46:03
  * @Description: _(:з」∠)_
  */
 package main
@@ -14,7 +14,6 @@ import (
 	"BIT101-GO/pkg/gorse"
 	"BIT101-GO/pkg/other"
 	"BIT101-GO/pkg/search"
-	"BIT101-GO/service"
 	"flag"
 	"fmt"
 	"os"
@@ -23,7 +22,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var VERSION = "v1.0.2"
+var VERSION = "v1.1.0"
 
 var LOGO = `
                                                               
@@ -53,7 +52,7 @@ func runServer() {
 	go sync()
 
 	// 获取配置
-	cfg := config.GetConfig()
+	cfg := config.Get()
 
 	// 初始化Gin
 	if cfg.ReleaseMode {
@@ -61,18 +60,20 @@ func runServer() {
 	}
 	app := gin.Default()
 
-	// 注册路由
-	api.RegisterRouter(app, cfg)
+	// 进行依赖注入并注册路由
+	api.SetupContainer()
+	api.RegisterRouter(app)
 
 	// 启动服务
-	service.NewService(app, cfg).Run()
+	fmt.Println("BIT101-GO will run on port " + cfg.Port)
+	app.Run(":" + cfg.Port)
 }
 
 func sync() {
 	// 每隔SyncTime s同步一次
 	for {
 		time_after := time.Now()
-		time.Sleep(time.Duration(config.GetConfig().SyncInterval) * time.Second)
+		time.Sleep(time.Duration(config.Get().SyncInterval) * time.Second)
 		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
 		go gorse.Sync(time_after)
 		go search.Sync(time_after)

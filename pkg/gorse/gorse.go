@@ -55,7 +55,12 @@ func SyncPosters(posters []database.Poster) {
 	}
 	for _, gorseItem := range gorseItems.Items {
 		if _, ok := posterMap[gorseItem.ItemId]; !ok {
-			DeletePoster(gorseItem.ItemId)
+			id, err := strconv.Atoi(gorseItem.ItemId)
+			if err != nil {
+				println("初始化items失败:", err.Error())
+				return
+			}
+			DeletePoster(uint(id))
 		}
 	}
 	err = InsertPosters(posters)
@@ -178,8 +183,8 @@ func UpdatePoster(post database.Poster) error {
 }
 
 // DeletePoster 删除poster
-func DeletePoster(id string) error {
-	_, err := gorse.DeleteItem(context.Background(), id)
+func DeletePoster(id uint) error {
+	_, err := gorse.DeleteItem(context.Background(), strconv.Itoa(int(id)))
 	return err
 }
 
@@ -201,27 +206,39 @@ func DeleteFeedback(feedbackType, userId, itemId string) error {
 }
 
 // GetPopular 获取popular
-func GetPopular(page uint) ([]string, error) {
-	limit := int(config.GetConfig().PostPageSize)
-	score, err := gorse.GetItemPopular(context.Background(), "", limit, int(page)*limit)
+func GetPopular(page uint) ([]uint, error) {
+	limit := int(config.Get().PostPageSize)
+	posters, err := gorse.GetItemPopular(context.Background(), "", limit, int(page)*limit)
 	if err != nil {
 		return nil, err
 	}
-	var popular []string
-	for _, item := range score {
-		popular = append(popular, item.Id)
+	ids := make([]uint, 0)
+	for _, item := range posters {
+		id, err := strconv.Atoi(item.Id)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, uint(id))
 	}
-	return popular, nil
+	return ids, nil
 }
 
 // GetRecommend 获取recommend
-func GetRecommend(userid string, page uint) ([]string, error) {
-	limit := int(config.GetConfig().RecommendPageSize)
-	recommend, err := gorse.GetItemRecommend(context.Background(), userid, []string{}, "read", "", limit, int(page)*limit)
+func GetRecommend(uid uint, page uint) ([]uint, error) {
+	limit := int(config.Get().RecommendPageSize)
+	posters, err := gorse.GetItemRecommend(context.Background(), strconv.Itoa(int(uid)), []string{}, "read", "", limit, int(page)*limit)
 	if err != nil {
 		return nil, err
 	}
-	return recommend, nil
+	ids := make([]uint, 0)
+	for _, item := range posters {
+		id, err := strconv.Atoi(item)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, uint(id))
+	}
+	return ids, nil
 }
 
 // Init 初始化

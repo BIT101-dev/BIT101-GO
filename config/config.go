@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2025-02-08 15:42:02
+ * @LastEditTime: 2025-03-11 18:35:52
  * @Description: _(:з」∠)_
  */
 package config
@@ -82,12 +82,13 @@ type Config struct {
 
 var config Config
 
-func GetConfig() *Config {
+func Get() *Config {
 	return &config
 }
 
 func init() {
-	path := "config.yml"
+	// path := "config.yml"
+	path := "/Users/moonshot/code/BIT101-GO/config.yml"
 	_, err := os.Stat(path)
 	if err != nil {
 		fmt.Println("config.yml not found, please copy config_example.yml to config.yml and edit it")

@@ -183,8 +183,8 @@ func Sync(time_after time.Time) {
 // Init 初始化
 func Init() {
 	client = meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   config.GetConfig().Meilisearch.Url,
-		APIKey: config.GetConfig().Meilisearch.MasterKey,
+		Host:   config.Get().Meilisearch.Url,
+		APIKey: config.Get().Meilisearch.MasterKey,
 	})
 	// 可排序参数
 	sortAttrCourse := []string{"comment_num", "like_num", "rate", "update_time"}

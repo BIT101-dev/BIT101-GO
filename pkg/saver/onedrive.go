@@ -27,13 +27,13 @@ func OneDriveGetHead() (map[string]string, error) {
 		defer mux.Unlock()
 		if time.Now().Unix() > onedrive_refresh_time {
 			data := map[string]string{
-				"client_id":     config.GetConfig().Saver.OneDrive.ClientId,
-				"client_secret": config.GetConfig().Saver.OneDrive.ClientSecret,
+				"client_id":     config.Get().Saver.OneDrive.ClientId,
+				"client_secret": config.Get().Saver.OneDrive.ClientSecret,
 				"redirect_uri":  "http://localhost",
-				"refresh_token": config.GetConfig().Saver.OneDrive.RefreshToken,
+				"refresh_token": config.Get().Saver.OneDrive.RefreshToken,
 				"grant_type":    "refresh_token",
 			}
-			res, err := request.PostForm(config.GetConfig().Saver.OneDrive.AuthApi, data, map[string]string{})
+			res, err := request.PostForm(config.Get().Saver.OneDrive.AuthApi, data, map[string]string{})
 			if err != nil {
 				return nil, err
 			}
@@ -70,7 +70,7 @@ func OneDriveGetPath(path string, op string) string {
 	if op[0] == '/' {
 		op = op[1:]
 	}
-	return fmt.Sprintf("%v/root:/BIT101/%v:/%v", config.GetConfig().Saver.OneDrive.Api, path, op)
+	return fmt.Sprintf("%v/root:/BIT101/%v:/%v", config.Get().Saver.OneDrive.Api, path, op)
 }
 
 // 获取OneDrive上传链接

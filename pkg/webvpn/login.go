@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 14:38:28
- * @LastEditTime: 2023-03-18 10:47:35
+ * @LastEditTime: 2025-03-11 11:02:00
  * @Description: webvpn学校统一身份验证
  */
 package webvpn
@@ -15,7 +15,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-var ErrCookieInvalid = errors.New("webvpn cookie invalid")
+var ErrCookieInvalid = errors.New("未通过统一身份认证Orz")
 
 // 登录初始化返回结构
 type InitLoginReturn struct {
