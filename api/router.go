@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2025-03-17 22:34:12
+ * @LastEditTime: 2025-03-18 01:04:05
  * @Description: 路由配置
  */
 package api
@@ -108,6 +108,7 @@ func SetupContainer() {
 // 配置路由
 func RegisterRouter(router *gin.Engine) {
 	cfg := do.MustInvoke[*config.Config](nil)
+	router.Use(middleware.PrometheusMiddleware())
 	router.Use(limits.RequestSizeLimiter(cfg.Saver.MaxSize << 20))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
@@ -115,6 +116,9 @@ func RegisterRouter(router *gin.Engine) {
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		MaxAge:       12 * time.Hour,
 	}))
+
+	// 添加Prometheus指标路由
+	router.GET("/metrics", middleware.PrometheusHandler())
 
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{"msg": "Hello BIT101!"})
