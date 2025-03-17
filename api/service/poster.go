@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 12:20:22
- * @LastEditTime: 2025-03-17 22:32:09
+ * @LastEditTime: 2025-03-18 00:09:40
  * @Description: _(:з」∠)_
  */
 package service
@@ -103,6 +103,7 @@ func (s *PosterService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 	}
 
 	go func() {
+		s.meilisearchSvc.Add(s.GetObjType(), poster)
 		s.meilisearchSvc.Add(s.GetObjType(), poster)
 		if delta > 0 {
 			s.gorseSvc.InsertFeedback(types.FeedbackTypeComment, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
