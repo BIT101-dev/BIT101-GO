@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 12:20:22
- * @LastEditTime: 2025-03-11 19:14:21
+ * @LastEditTime: 2025-03-17 22:32:09
  * @Description: _(:з」∠)_
  */
 package service
@@ -11,15 +11,12 @@ import (
 	"BIT101-GO/api/types"
 	"BIT101-GO/config"
 	"BIT101-GO/database"
-	"BIT101-GO/pkg/gorse"
-	"BIT101-GO/pkg/search"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/zhenghaoz/gorse/client"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -27,14 +24,16 @@ import (
 var _ types.PosterService = (*PosterService)(nil)
 
 type PosterService struct {
-	userSvc     types.UserService
-	imageSvc    types.ImageService
-	reactionSvc types.ReactionService
-	messageSvc  types.MessageService
+	userSvc        types.UserService
+	imageSvc       types.ImageService
+	reactionSvc    types.ReactionService
+	messageSvc     types.MessageService
+	gorseSvc       types.GorseService
+	meilisearchSvc types.MeilisearchService
 }
 
-func NewPosterService(userSvc types.UserService, imageSvc types.ImageService, reactionSvc types.ReactionService, messageSvc types.MessageService) *PosterService {
-	s := PosterService{userSvc: userSvc, imageSvc: imageSvc, reactionSvc: reactionSvc, messageSvc: messageSvc}
+func NewPosterService(userSvc types.UserService, imageSvc types.ImageService, reactionSvc types.ReactionService, messageSvc types.MessageService, gorseSvc types.GorseService, meilisearchSvc types.MeilisearchService) *PosterService {
+	s := PosterService{userSvc: userSvc, imageSvc: imageSvc, reactionSvc: reactionSvc, messageSvc: messageSvc, gorseSvc: gorseSvc, meilisearchSvc: meilisearchSvc}
 	types.RegisterObjHandler(&s)
 	return &s
 }
@@ -75,20 +74,15 @@ func (s *PosterService) LikeHandler(tx *gorm.DB, id uint, delta int, fromUid uin
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), poster)
+		s.meilisearchSvc.Add(s.GetObjType(), poster)
 		if delta > 0 {
-			gorse.InsertFeedback(client.Feedback{
-				FeedbackType: "like",
-				UserId:       strconv.Itoa(int(fromUid)),
-				ItemId:       strconv.Itoa(int(id)),
-				Timestamp:    time.Now().String(),
-			})
+			s.gorseSvc.InsertFeedback(types.FeedbackTypeLike, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
 			if fromUid != poster.Uid {
 				objID := fmt.Sprintf("%s%v", s.GetObjType(), id)
 				s.messageSvc.Send(int(fromUid), poster.Uid, objID, types.MessageTypeLike, objID, poster.Title)
 			}
 		} else {
-			gorse.DeleteFeedback("like", strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
+			s.gorseSvc.DeleteFeedback(types.FeedbackTypeLike, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
 		}
 	}()
 	return poster.LikeNum, nil
@@ -109,14 +103,9 @@ func (s *PosterService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 	}
 
 	go func() {
-		search.Update(s.GetObjType(), poster)
+		s.meilisearchSvc.Add(s.GetObjType(), poster)
 		if delta > 0 {
-			gorse.InsertFeedback(client.Feedback{
-				FeedbackType: "comment",
-				UserId:       strconv.Itoa(int(fromUid)),
-				ItemId:       strconv.Itoa(int(id)),
-				Timestamp:    time.Now().String(),
-			})
+			s.gorseSvc.InsertFeedback(types.FeedbackTypeComment, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
 			if fromUid != poster.Uid {
 				from_uid_ := int(fromUid)
 				if comment.Anonymous {
@@ -126,7 +115,7 @@ func (s *PosterService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 				s.messageSvc.Send(from_uid_, poster.Uid, objID, "comment", objID, comment.Text)
 			}
 		} else {
-			gorse.DeleteFeedback("comment", strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
+			s.gorseSvc.DeleteFeedback(types.FeedbackTypeComment, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
 		}
 	}()
 	return poster.CommentNum, nil
@@ -221,8 +210,8 @@ func (s *PosterService) Create(title, text string, imageMids []string, plugins s
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), poster)
-		gorse.InsertPoster(poster)
+		s.meilisearchSvc.Add(s.GetObjType(), poster)
+		s.gorseSvc.InsertPoster(poster)
 	}()
 	return poster.ID, nil
 }
@@ -261,8 +250,8 @@ func (s *PosterService) Edit(id uint, title, text string, imageMids []string, pl
 		return errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), poster)
-		gorse.UpdatePoster(poster)
+		s.meilisearchSvc.Add(s.GetObjType(), poster)
+		s.gorseSvc.UpdatePoster(poster)
 	}()
 	return nil
 }
@@ -321,7 +310,7 @@ func (s *PosterService) posters2PosterAPIs(posters []database.Poster) []types.Po
 func (s *PosterService) GetList(mode string, page uint, keyword, order string, uid uint, noAnonymous bool, onlyPublic bool) ([]types.PosterAPI, error) {
 	// recommend/hot模式 通过推荐系统获取
 	if mode == "" || mode == "recommend" {
-		ids, err := gorse.GetRecommend(uid, page)
+		ids, err := s.gorseSvc.GetRecommend(uid, page)
 		if err != nil {
 			return nil, errors.New("获取推荐失败Orz")
 		}
@@ -338,7 +327,7 @@ func (s *PosterService) GetList(mode string, page uint, keyword, order string, u
 		}
 		return s.posters2PosterAPIs(posters), nil
 	} else if mode == "hot" {
-		popular, err := gorse.GetPopular(page)
+		popular, err := s.gorseSvc.GetPopular(page)
 		if err != nil {
 			return nil, errors.New("获取热榜失败Orz")
 		}
@@ -381,7 +370,7 @@ func (s *PosterService) GetList(mode string, page uint, keyword, order string, u
 		}
 	}
 	var posters []database.Poster
-	err := search.Search(&posters, s.GetObjType(), keyword, page, config.Get().PostPageSize, orders, filters)
+	err := s.meilisearchSvc.Search(&posters, s.GetObjType(), keyword, page, config.Get().PostPageSize, orders, filters)
 	if err != nil {
 		return nil, errors.New("搜索失败Orz")
 	}
@@ -401,8 +390,8 @@ func (s *PosterService) Delete(id, uid uint, admin bool) error {
 		return errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Delete(s.GetObjType(), []string{fmt.Sprintf("%v", poster.ID)})
-		gorse.DeletePoster(id)
+		s.meilisearchSvc.Delete(s.GetObjType(), []string{fmt.Sprintf("%v", poster.ID)})
+		s.gorseSvc.DeletePoster(id)
 	}()
 	return nil
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 11:12:41
- * @LastEditTime: 2025-03-11 12:04:19
+ * @LastEditTime: 2025-03-17 22:31:10
  * @Description: _(:з」∠)_
  */
 package service
@@ -10,7 +10,6 @@ import (
 	"BIT101-GO/api/types"
 	"BIT101-GO/config"
 	"BIT101-GO/database"
-	"BIT101-GO/pkg/search"
 	"errors"
 	"fmt"
 	"strconv"
@@ -23,12 +22,17 @@ import (
 var _ types.PaperService = (*PaperService)(nil)
 
 type PaperService struct {
-	userSvc     types.UserService
-	reactionSvc types.ReactionService
+	userSvc        types.UserService
+	reactionSvc    types.ReactionService
+	meilisearchSvc types.MeilisearchService
 }
 
-func NewPaperService(userSvc types.UserService, reactionSvc types.ReactionService) *PaperService {
-	s := PaperService{userSvc: userSvc, reactionSvc: reactionSvc}
+func NewPaperService(userSvc types.UserService, reactionSvc types.ReactionService, meilisearchSvc types.MeilisearchService) *PaperService {
+	s := PaperService{
+		userSvc:        userSvc,
+		reactionSvc:    reactionSvc,
+		meilisearchSvc: meilisearchSvc,
+	}
 	types.RegisterObjHandler(&s)
 	return &s
 }
@@ -65,7 +69,7 @@ func (s *PaperService) LikeHandler(tx *gorm.DB, id uint, delta int, uid uint) (l
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), paper)
+		s.meilisearchSvc.Add(s.GetObjType(), paper)
 	}()
 	return paper.LikeNum, nil
 }
@@ -84,7 +88,7 @@ func (s *PaperService) CommentHandler(tx *gorm.DB, id uint, comment database.Com
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), paper)
+		s.meilisearchSvc.Add(s.GetObjType(), paper)
 	}()
 	return paper.CommentNum, nil
 }
@@ -168,7 +172,7 @@ func (s *PaperService) Create(title, intro, content string, anonymous, publicEdi
 			return errors.New("编辑日志错误Orz")
 		}
 		go func() {
-			search.Update(s.GetObjType(), paper)
+			s.meilisearchSvc.Add(s.GetObjType(), paper)
 		}()
 		paperID = paper.ID
 		return nil
@@ -206,7 +210,7 @@ func (s *PaperService) Edit(id uint, title, intro, content string, anonymous, pu
 		}
 		pushHistory(tx, paper)
 		go func() {
-			search.Update(s.GetObjType(), paper)
+			s.meilisearchSvc.Add(s.GetObjType(), paper)
 		}()
 		return nil
 	})
@@ -225,7 +229,7 @@ func (s *PaperService) GetList(keyword string, order string, page uint) ([]types
 	}
 
 	var papers []database.Paper
-	err := search.Search(&papers, "paper", keyword, page, config.Get().PaperPageSize, orders, nil)
+	err := s.meilisearchSvc.Search(&papers, "paper", keyword, page, config.Get().PaperPageSize, orders, nil)
 	if err != nil {
 		return nil, errors.New("搜索失败Orz")
 	}
@@ -256,7 +260,7 @@ func (s *PaperService) Delete(id, uid uint, admin bool) error {
 		return errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Delete(s.GetObjType(), []string{strconv.Itoa(int(paper.ID))})
+		s.meilisearchSvc.Delete(s.GetObjType(), []string{strconv.Itoa(int(paper.ID))})
 	}()
 	return nil
 }

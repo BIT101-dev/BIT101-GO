@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2025-03-11 18:46:03
+ * @LastEditTime: 2025-03-17 22:29:22
  * @Description: _(:з」∠)_
  */
 package main
@@ -11,13 +11,10 @@ import (
 	"BIT101-GO/config"
 	"BIT101-GO/database"
 	"BIT101-GO/pkg/cache"
-	"BIT101-GO/pkg/gorse"
 	"BIT101-GO/pkg/other"
-	"BIT101-GO/pkg/search"
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,9 +44,6 @@ var LOGO = `
 func runServer() {
 	database.Init()
 	cache.Init()
-	search.Init()
-	gorse.Init()
-	go sync()
 
 	// 获取配置
 	cfg := config.Get()
@@ -67,17 +61,6 @@ func runServer() {
 	// 启动服务
 	fmt.Println("BIT101-GO will run on port " + cfg.Port)
 	app.Run(":" + cfg.Port)
-}
-
-func sync() {
-	// 每隔SyncTime s同步一次
-	for {
-		time_after := time.Now()
-		time.Sleep(time.Duration(config.Get().SyncInterval) * time.Second)
-		println("Syncing... ", time.Now().Format("2006-01-02 15:04:05"))
-		go gorse.Sync(time_after)
-		go search.Sync(time_after)
-	}
 }
 
 func main() {
