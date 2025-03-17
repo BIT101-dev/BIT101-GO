@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-06 12:00:39
- * @LastEditTime: 2025-03-11 15:27:02
+ * @LastEditTime: 2025-03-12 10:12:04
  * @Description: _(:з」∠)_
  */
 package common
@@ -19,6 +19,7 @@ func HandleError(c *gin.Context, err error) bool {
 	if err == nil {
 		return false
 	}
+	slog.Error("HandleError", "url", c.Request.URL.Path, "err", err.Error())
 	c.JSON(500, gin.H{"msg": err.Error()})
 	return true
 }
@@ -28,6 +29,7 @@ func HandleErrorWithMessage(c *gin.Context, err error, message string) bool {
 	if err == nil {
 		return false
 	}
+	slog.Error("HandleErrorWithMessage", "url", c.Request.URL.Path, "err", err.Error())
 	c.JSON(500, gin.H{"msg": message})
 	return true
 }
@@ -39,14 +41,13 @@ func HandleErrorWithCode(c *gin.Context, err error, code int) bool {
 	}
 	switch code {
 	case 400:
-		slog.Error("[400]", "url:", c.Request.URL.Path, "err:", err.Error())
 		c.JSON(code, gin.H{"msg": "参数错误awa"})
 	case 401:
-		slog.Error("[401]", "url:", c.Request.URL.Path, "err:", err.Error())
 		c.JSON(code, gin.H{"msg": "请先登录awa"})
 	default:
 		c.JSON(code, gin.H{"msg": err.Error()})
 	}
+	slog.Error("HandleErrorWithCode", "code", code, "url", c.Request.URL.Path, "err", err.Error())
 	return true
 }
 

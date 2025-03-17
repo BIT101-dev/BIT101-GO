@@ -300,3 +300,41 @@ type PosterService interface {
 	Delete(id, uid uint, admin bool) error                                                                                                                       // 删除帖子
 	GetClaims() []database.Claim                                                                                                                                 // 获取声明列表
 }
+
+// Gorse 推荐模块
+
+type FeedbackType string
+
+const (
+	FeedbackTypeRead    FeedbackType = "read"
+	FeedbackTypeLike    FeedbackType = "like"
+	FeedbackTypeComment FeedbackType = "comment"
+	FeedbackTypeStay    FeedbackType = "stay"
+)
+
+type GorseService interface {
+	GetRecommend(uid uint, page uint) ([]uint, error)
+	GetPopular(page uint) ([]uint, error)
+	InsertPoster(post database.Poster) error
+	InsertPosters(posts []database.Poster) error
+	UpdatePoster(post database.Poster) error
+	DeletePoster(id uint) error
+	InsertFeedback(typ FeedbackType, userId, itemId string) error
+	DeleteFeedback(typ FeedbackType, userId, itemId string) error
+	InsertUser(user database.User) error
+	InsertUsers(users []database.User) error
+	UpdateUser(user database.User) error
+}
+
+// MeiliSearch 搜索模块
+
+type MeilisearchService interface {
+	// Add 将数据添加到搜索引擎中
+	Add(indexName string, documents interface{}) error
+
+	// Delete 从搜索引擎中删除数据
+	Delete(indexName string, ids []string) error
+
+	// Search 在搜索引擎中搜索数据
+	Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter []string) error
+}

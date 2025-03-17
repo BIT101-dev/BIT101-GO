@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2025-03-11 15:21:34
+ * @LastEditTime: 2025-03-17 22:34:12
  * @Description: 路由配置
  */
 package api
@@ -59,25 +59,38 @@ func SetupContainer() {
 		return service.NewManageService(userSvc), nil
 	})
 
+	// 注册Gorse服务
+	do.Provide(nil, func(do.Injector) (*service.GorseService, error) {
+		return service.NewGorseService(), nil
+	})
+
+	// 注册Meilisearch服务
+	do.Provide(nil, func(do.Injector) (*service.MeilisearchService, error) {
+		return service.NewMeilisearchService(), nil
+	})
+
 	// 注册交互服务
 	do.Provide(nil, func(do.Injector) (*service.ReactionService, error) {
 		userSvc := do.MustInvoke[*service.UserService](nil)
 		imageSvc := do.MustInvoke[*service.ImageService](nil)
 		messageSvc := do.MustInvoke[*service.MessageService](nil)
-		return service.NewReactionService(userSvc, imageSvc, messageSvc), nil
+		gorseSvc := do.MustInvoke[*service.GorseService](nil)
+		return service.NewReactionService(userSvc, imageSvc, messageSvc, gorseSvc), nil
 	})
 
 	// 注册课程服务
 	do.Provide(nil, func(do.Injector) (*service.CourseService, error) {
 		reactionSvc := do.MustInvoke[*service.ReactionService](nil)
-		return service.NewCourseService(reactionSvc), nil
+		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
+		return service.NewCourseService(reactionSvc, meilisearchSvc), nil
 	})
 
 	// 注册文章服务
 	do.Provide(nil, func(do.Injector) (*service.PaperService, error) {
 		userSvc := do.MustInvoke[*service.UserService](nil)
 		reactionSvc := do.MustInvoke[*service.ReactionService](nil)
-		return service.NewPaperService(userSvc, reactionSvc), nil
+		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
+		return service.NewPaperService(userSvc, reactionSvc, meilisearchSvc), nil
 	})
 
 	// 注册帖子服务
@@ -86,7 +99,9 @@ func SetupContainer() {
 		imageSvc := do.MustInvoke[*service.ImageService](nil)
 		reactionSvc := do.MustInvoke[*service.ReactionService](nil)
 		messageSvc := do.MustInvoke[*service.MessageService](nil)
-		return service.NewPosterService(userSvc, imageSvc, reactionSvc, messageSvc), nil
+		gorseSvc := do.MustInvoke[*service.GorseService](nil)
+		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
+		return service.NewPosterService(userSvc, imageSvc, reactionSvc, messageSvc, gorseSvc, meilisearchSvc), nil
 	})
 }
 

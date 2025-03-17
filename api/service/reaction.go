@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:49:47
- * @LastEditTime: 2025-03-11 16:18:14
+ * @LastEditTime: 2025-03-14 17:33:06
  * @Description: _(:з」∠)_
  */
 package service
@@ -12,14 +12,12 @@ import (
 	"BIT101-GO/config"
 	"BIT101-GO/database"
 	"BIT101-GO/pkg/cache"
-	"BIT101-GO/pkg/gorse"
 	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
-	"github.com/zhenghaoz/gorse/client"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -32,14 +30,16 @@ type ReactionService struct {
 	UserSvc    types.UserService
 	ImageSvc   types.ImageService
 	MessageSvc types.MessageService
+	GorseSvc   types.GorseService
 }
 
 // NewReactionService 创建点赞服务
-func NewReactionService(userSvc types.UserService, imageSvc types.ImageService, messageSvc types.MessageService) *ReactionService {
+func NewReactionService(userSvc types.UserService, imageSvc types.ImageService, messageSvc types.MessageService, gorseSvc types.GorseService) *ReactionService {
 	s := &ReactionService{
 		UserSvc:    userSvc,
 		ImageSvc:   imageSvc,
 		MessageSvc: messageSvc,
+		GorseSvc:   gorseSvc,
 	}
 	types.RegisterObjHandler(s)
 	return s
@@ -529,12 +529,7 @@ func (s *ReactionService) DeleteComment(id uint, uid uint, admin bool) error {
 // Stay 停留
 func (s *ReactionService) Stay(obj types.Obj, uid uint) error {
 	if obj.GetObjType() == "poster" {
-		return gorse.InsertFeedback(client.Feedback{
-			FeedbackType: "stay",
-			UserId:       fmt.Sprintf("%d", uid),
-			ItemId:       fmt.Sprintf("%d", obj.GetID()),
-			Timestamp:    time.Now().String(),
-		})
+		return s.GorseSvc.InsertFeedback(types.FeedbackTypeStay, fmt.Sprintf("%d", uid), fmt.Sprintf("%d", obj.GetID()))
 	}
 	return errors.New("不能停留Orz")
 }

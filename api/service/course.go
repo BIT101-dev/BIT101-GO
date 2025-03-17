@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:38:54
- * @LastEditTime: 2025-03-11 11:03:17
+ * @LastEditTime: 2025-03-17 22:30:44
  * @Description: _(:з」∠)_
  */
 package service
@@ -11,7 +11,6 @@ import (
 	"BIT101-GO/config"
 	"BIT101-GO/database"
 	"BIT101-GO/pkg/saver"
-	"BIT101-GO/pkg/search"
 	"BIT101-GO/pkg/webvpn"
 	"errors"
 	"fmt"
@@ -29,12 +28,16 @@ var _ types.CourseService = (*CourseService)(nil)
 
 // CourseService 课程服务
 type CourseService struct {
-	ReactionSvc types.ReactionService
+	reactionSvc    types.ReactionService
+	meiliSearchSvc types.MeilisearchService
 }
 
 // NewCourseService 创建课程服务
-func NewCourseService(reactionSvc types.ReactionService) *CourseService {
-	s := CourseService{ReactionSvc: reactionSvc}
+func NewCourseService(reactionSvc types.ReactionService, meiliSearchSvc types.MeilisearchService) *CourseService {
+	s := CourseService{
+		reactionSvc:    reactionSvc,
+		meiliSearchSvc: meiliSearchSvc,
+	}
 	types.RegisterObjHandler(&s)
 	return &s
 }
@@ -71,7 +74,7 @@ func (s *CourseService) LikeHandler(tx *gorm.DB, id uint, delta int, uid uint) (
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), course)
+		s.meiliSearchSvc.Add(s.GetObjType(), course)
 	}()
 	return course.LikeNum, nil
 }
@@ -100,7 +103,7 @@ func (s *CourseService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 		return 0, errors.New("数据库错误Orz")
 	}
 	go func() {
-		search.Update(s.GetObjType(), course)
+		s.meiliSearchSvc.Add(s.GetObjType(), course)
 	}()
 	return course.CommentNum, nil
 }
@@ -133,7 +136,7 @@ func (s *CourseService) GetCourses(keyword string, order string, page uint) ([]d
 	}
 
 	courses := make([]database.Course, 0)
-	err := search.Search(&courses, s.GetObjType(), keyword, page, config.Get().CoursePageSize, orders, nil)
+	err := s.meiliSearchSvc.Search(&courses, s.GetObjType(), keyword, page, config.Get().CoursePageSize, orders, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +155,7 @@ func (s *CourseService) GetCourseAPI(id uint, uid uint) (types.CourseAPI, error)
 
 	return types.CourseAPI{
 		Course: course,
-		Like:   s.ReactionSvc.CheckLike(fmt.Sprintf("course%d", course.ID), uid),
+		Like:   s.reactionSvc.CheckLike(fmt.Sprintf("course%d", course.ID), uid),
 	}, nil
 }
 
