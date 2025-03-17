@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-04 22:51:41
- * @LastEditTime: 2025-03-17 23:06:16
+ * @LastEditTime: 2025-03-18 00:16:21
  * @Description: _(:з」∠)_
  */
 package service
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/meilisearch/meilisearch-go"
@@ -70,6 +71,12 @@ func (s *MeilisearchService) Add(indexName string, documents interface{}) error 
 		return s.handleError("get_index", indexName, err)
 	}
 
+	// 创建包含评论文本的扩展文档
+	documents, err = s.createDocumentsWithComments(indexName, documents)
+	if err != nil {
+		return s.handleError("create_extended_docs", indexName, err)
+	}
+
 	info, err := index.AddDocuments(documents)
 	if err != nil {
 		return s.handleError("add_documents", indexName, err)
@@ -114,6 +121,160 @@ func (s *MeilisearchService) Search(result interface{}, indexName string, query 
 		return err
 	}
 	return nil
+}
+
+// createDocumentsWithComments 创建包含评论文本的扩展文档
+func (s *MeilisearchService) createDocumentsWithComments(indexName string, objects interface{}) ([]map[string]interface{}, error) {
+	// 解码原始对象到map
+	data, err := json.Marshal(objects)
+	if err != nil {
+		return nil, err
+	}
+
+	var originalDocs []map[string]interface{}
+	if err := json.Unmarshal(data, &originalDocs); err != nil {
+		return nil, err
+	}
+
+	// 如果没有文档，直接返回
+	if len(originalDocs) == 0 {
+		return originalDocs, nil
+	}
+
+	// 提取所有ID
+	var ids []string
+	for _, doc := range originalDocs {
+		if id, ok := doc["id"].(float64); ok {
+			ids = append(ids, fmt.Sprintf("%s%d", indexName, int(id)))
+		}
+	}
+
+	// 查询直接评论
+	var comments []database.Comment
+	if err := database.DB.Where("obj IN ?", ids).Find(&comments).Error; err != nil {
+		return nil, err
+	}
+
+	// 按对象ID分组评论
+	commentsByObjID := make(map[string][]string)
+	for _, comment := range comments {
+		commentsByObjID[comment.Obj] = append(commentsByObjID[comment.Obj], comment.Text)
+	}
+
+	// 构建评论Obj到父Obj的映射 和 评论对象列表用于查询子评论
+	superObjMap := make(map[string]string)
+	commentObjs := make([]string, len(comments))
+	for _, comment := range comments {
+		commentObj := fmt.Sprintf("comment%d", comment.ID)
+		superObjMap[commentObj] = comment.Obj
+		commentObjs = append(commentObjs, commentObj)
+	}
+
+	// 查询子评论
+	var subComments []database.Comment
+	if err := database.DB.Where("obj IN ?", commentObjs).Find(&subComments).Error; err != nil {
+		return nil, err
+	}
+
+	// 按父评论ID分组子评论
+	for _, subComment := range subComments {
+		if superObj, ok := superObjMap[subComment.Obj]; ok {
+			commentsByObjID[superObj] = append(commentsByObjID[superObj], subComment.Text)
+		}
+	}
+
+	// 为每个文档添加评论文本字段
+	for _, doc := range originalDocs {
+		if id, ok := doc["id"].(float64); ok {
+			objID := fmt.Sprintf("%s%d", indexName, int(id))
+			if comments, ok := commentsByObjID[objID]; ok {
+				doc["comments_text"] = strings.Join(comments, " ")
+			} else {
+				doc["comments_text"] = ""
+			}
+		}
+	}
+
+	return originalDocs, nil
+}
+
+// syncDatabase 同步数据库到搜索引擎
+func (s *MeilisearchService) syncDatabase(indexName string, value interface{}) error {
+	// 从数据库获取数据
+	q := database.DB.Model(value)
+	if err := q.Find(value).Error; err != nil {
+		return s.handleError("db_query", indexName, err)
+	}
+
+	// 构建ID映射
+	var ids []uint
+	if err := database.DB.Model(value).Pluck("id", &ids).Error; err != nil {
+		return s.handleError("pluck_ids", indexName, err)
+	}
+	dbIds := make(map[string]bool)
+	for _, id := range ids {
+		dbIds[strconv.Itoa(int(id))] = true
+	}
+
+	// 获取搜索引擎中的现有数据
+	var deleteIds []string
+	request := meilisearch.DocumentsQuery{
+		Limit:  int64(s.syncBatchSize),
+		Offset: 0,
+		Fields: []string{"id"},
+	}
+
+	// 分批获取并比对ID
+	for {
+		var res meilisearch.DocumentsResult
+		err := s.client.Index(indexName).GetDocuments(&request, &res)
+		if err != nil {
+			return s.handleError("get_documents", indexName, err)
+		}
+
+		if len(res.Results) == 0 {
+			break
+		}
+
+		for _, v := range res.Results {
+			idStr := strconv.Itoa(int(v["id"].(float64)))
+			if _, ok := dbIds[idStr]; !ok {
+				deleteIds = append(deleteIds, idStr)
+			}
+		}
+
+		request.Offset += int64(s.syncBatchSize)
+	}
+
+	// 添加/更新数据
+	if err := s.Add(indexName, value); err != nil {
+		return err
+	}
+
+	// 删除不存在的数据
+	if len(deleteIds) > 0 {
+		if err := s.Delete(indexName, deleteIds); err != nil {
+			return err
+		}
+	}
+
+	slog.Info("meilisearch: sync completed", "indexName", indexName)
+	return nil
+}
+
+// sync 同步数据库到搜索引擎
+func (s *MeilisearchService) sync() {
+	defer (func() {
+		if err := recover(); err != nil {
+			slog.Error("meilisearch: sync failed", "err", err)
+		} else {
+			slog.Info("meilisearch: sync success")
+		}
+	})()
+
+	s.syncDatabase("course", &[]database.Course{})
+	s.syncDatabase("paper", &[]database.Paper{})
+	s.syncDatabase("poster", &[]database.Poster{})
 }
 
 // initIndex 创建并配置索引
@@ -174,86 +335,6 @@ func (s *MeilisearchService) initIndex(indexName, primaryKey string, sortAttr []
 	slog.Info("meilisearch: index initialized", "indexName", indexName)
 }
 
-// syncDatabase 同步数据库到搜索引擎
-func (s *MeilisearchService) syncDatabase(indexName string, value interface{}) error {
-	// 从数据库获取数据
-	q := database.DB.Model(value)
-	if err := q.Find(value).Error; err != nil {
-		return s.handleError("db_query", indexName, err)
-	}
-
-	// 构建ID映射
-	var ids []uint
-	if err := database.DB.Model(value).Pluck("id", &ids).Error; err != nil {
-		return s.handleError("pluck_ids", indexName, err)
-	}
-	dbIds := make(map[string]bool)
-	for _, id := range ids {
-		dbIds[strconv.Itoa(int(id))] = true
-	}
-
-	// 获取搜索引擎中的现有数据
-	var deleteIds []string
-	request := meilisearch.DocumentsQuery{
-		Limit:  int64(s.syncBatchSize),
-		Offset: 0,
-		Fields: []string{"id"},
-	}
-
-	// 分批获取并比对ID
-	for {
-		var res meilisearch.DocumentsResult
-		err := s.client.Index(indexName).GetDocuments(&request, &res)
-		if err != nil {
-			return s.handleError("get_documents", indexName, err)
-		}
-
-		if len(res.Results) == 0 {
-			break
-		}
-
-		for _, v := range res.Results {
-			idStr := strconv.Itoa(int(v["id"].(float64)))
-			if _, ok := dbIds[idStr]; !ok {
-				fmt.Println(indexName, v["id"].(float64))
-				deleteIds = append(deleteIds, idStr)
-			}
-		}
-
-		request.Offset += int64(s.syncBatchSize)
-	}
-
-	// 添加/更新数据
-	if err := s.Add(indexName, value); err != nil {
-		return err
-	}
-
-	// 删除不存在的数据
-	if len(deleteIds) > 0 {
-		if err := s.Delete(indexName, deleteIds); err != nil {
-			return err
-		}
-	}
-
-	slog.Info("meilisearch: sync completed", "indexName", indexName)
-	return nil
-}
-
-// sync 同步数据库到搜索引擎
-func (s *MeilisearchService) sync() {
-	defer (func() {
-		if err := recover(); err != nil {
-			slog.Error("meilisearch: sync failed", "err", err)
-		} else {
-			slog.Info("meilisearch: sync success")
-		}
-	})()
-
-	s.syncDatabase("course", &[]database.Course{})
-	s.syncDatabase("paper", &[]database.Paper{})
-	s.syncDatabase("poster", &[]database.Poster{})
-}
-
 // init 初始化
 func (s *MeilisearchService) init() {
 	s.client = meilisearch.NewClient(meilisearch.ClientConfig{
@@ -272,9 +353,9 @@ func (s *MeilisearchService) init() {
 	filterAttrPaper := []string{}
 	filterAttrPoster := []string{"uid", "public", "anonymous"}
 	// 可搜索参数
-	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers"}
-	searchAttrPaper := []string{"title", "intro", "content"}
-	searchAttrPoster := []string{"title", "text", "tags"}
+	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers", "comments_text"}
+	searchAttrPaper := []string{"title", "intro", "content", "comments_text"}
+	searchAttrPoster := []string{"title", "text", "tags", "comments_text"}
 
 	s.initIndex("course", "id", sortAttrCourse, filterAttrCourse, searchAttrCourse)
 	s.initIndex("paper", "id", sortAttrPaper, filterAttrPaper, searchAttrPaper)
