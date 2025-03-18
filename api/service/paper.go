@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 11:12:41
- * @LastEditTime: 2025-03-17 22:31:10
+ * @LastEditTime: 2025-03-18 18:55:08
  * @Description: _(:з」∠)_
  */
 package service
@@ -220,12 +220,13 @@ func (s *PaperService) Edit(id uint, title, intro, content string, anonymous, pu
 func (s *PaperService) GetList(keyword string, order string, page uint) ([]types.PaperAPI, error) {
 	// 排序
 	var orders []string
-	if order != "rand" {
-		if order == "like" {
-			orders = append(orders, "like_num:desc")
-		} else { //默认new
-			orders = append(orders, "update_time:desc")
-		}
+	switch order {
+	case "like":
+		orders = append(orders, "like_num:desc")
+	case "comment":
+		orders = append(orders, "comment_num:desc")
+	default:
+		orders = append(orders, "update_time:desc")
 	}
 
 	var papers []database.Paper

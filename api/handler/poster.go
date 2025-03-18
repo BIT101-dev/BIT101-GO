@@ -118,7 +118,7 @@ func (h *PosterHandler) GetListHandler(c *gin.Context) {
 		Mode   string `form:"mode"` //recommend | search | follow | hot 默认为recommend
 		Page   uint   `form:"page"`
 		Search string `form:"search"`
-		Order  string `form:"order"` //like | new 默认为new
+		Order  string `form:"order"` // comment | like | new 默认为new
 		Uid    int    `form:"uid"`   // 0为个人主页（显示匿名和未公开的帖子）
 	}
 	type Response []types.PosterAPI
