@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-02-08 15:39:40
- * @LastEditTime: 2025-02-08 16:02:35
+ * @LastEditTime: 2025-03-18 14:31:56
  * @Description: _(:з」∠)_
  */
 package cache
@@ -9,17 +9,22 @@ package cache
 import (
 	"BIT101-GO/config"
 	"context"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 )
 
-var RDB *redis.Client
-var Context = context.Background()
+var (
+	Context = context.Background()
+	rdb     *redis.Client
+	once    sync.Once
+)
 
-func Init() {
-	// 初始化redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr: config.Get().Redis.Addr,
+func RDB() *redis.Client {
+	once.Do(func() {
+		rdb = redis.NewClient(&redis.Options{
+			Addr: config.Get().Redis.Addr,
+		})
 	})
-	RDB = rdb
+	return rdb
 }

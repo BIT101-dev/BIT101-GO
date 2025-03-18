@@ -1,14 +1,14 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2025-03-11 18:35:52
+ * @LastEditTime: 2025-03-18 14:27:54
  * @Description: _(:з」∠)_
  */
 package config
 
 import (
-	"fmt"
 	"os"
+	"sync"
 
 	"github.com/jinzhu/configor"
 )
@@ -80,19 +80,19 @@ type Config struct {
 	} `yaml:"web_push_keys"`
 }
 
-var config Config
+var (
+	config Config
+	once   sync.Once
+)
 
 func Get() *Config {
+	once.Do(func() {
+		path := "config.yml"
+		_, err := os.Stat(path)
+		if err != nil {
+			panic("config.yml not found, please copy config_example.yml to config.yml and edit it")
+		}
+		configor.Load(&config, path)
+	})
 	return &config
-}
-
-func init() {
-	// path := "config.yml"
-	path := "/Users/moonshot/code/BIT101-GO/config.yml"
-	_, err := os.Stat(path)
-	if err != nil {
-		fmt.Println("config.yml not found, please copy config_example.yml to config.yml and edit it")
-		os.Exit(1)
-	}
-	configor.Load(&config, path)
 }

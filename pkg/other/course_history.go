@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-09-23 20:14:40
- * @LastEditTime: 2025-03-11 18:47:20
+ * @LastEditTime: 2025-03-18 14:28:46
  * @Description: 获取历史均分_(:з」∠)_
  */
 package other
@@ -25,7 +25,6 @@ func GetCourseHistory(start_year_s string, end_year_s string, webvpn_cookie stri
 	}
 
 	// 获取所有课程编号
-	database.Init()
 	course_numbers := []string{}
 	database.DB.Model(&database.Course{}).Distinct("number").Find(&course_numbers)
 	fmt.Println("共", len(course_numbers), "门课程")

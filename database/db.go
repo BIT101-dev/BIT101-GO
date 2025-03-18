@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2025-03-11 18:45:51
+ * @LastEditTime: 2025-03-18 14:28:28
  * @Description: _(:з」∠)_
  */
 package database
@@ -295,7 +295,7 @@ func InitMaps() {
 	}
 }
 
-func Init() {
+func init() {
 	if DB == nil {
 		dsn := config.Get().Dsn
 		db, err := gorm.Open(postgres.Open(dsn),
