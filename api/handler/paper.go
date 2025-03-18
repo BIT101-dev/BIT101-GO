@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-21 17:34:55
- * @LastEditTime: 2025-03-11 15:52:02
+ * @LastEditTime: 2025-03-18 18:54:22
  * @Description: _(:з」∠)_
  */
 package handler
@@ -111,7 +111,7 @@ func (h *PaperHandler) EditHandler(c *gin.Context) {
 func (h *PaperHandler) GetListHandler(c *gin.Context) {
 	type Request struct {
 		Search string `form:"search"`
-		Order  string `form:"order"` //rand | new | like
+		Order  string `form:"order"` // new | like | comment
 		Page   uint   `form:"page"`
 	}
 	// 获取文章列表返回结构
