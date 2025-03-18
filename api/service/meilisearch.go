@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-04 22:51:41
- * @LastEditTime: 2025-03-18 00:16:21
+ * @LastEditTime: 2025-03-18 18:16:53
  * @Description: _(:з」∠)_
  */
 package service
@@ -133,7 +133,12 @@ func (s *MeilisearchService) createDocumentsWithComments(indexName string, objec
 
 	var originalDocs []map[string]interface{}
 	if err := json.Unmarshal(data, &originalDocs); err != nil {
-		return nil, err
+		// 如果无法解析为文档数组，尝试解析为单个文档
+		var singleDoc map[string]interface{}
+		if err := json.Unmarshal(data, &singleDoc); err != nil {
+			return nil, err
+		}
+		originalDocs = []map[string]interface{}{singleDoc}
 	}
 
 	// 如果没有文档，直接返回

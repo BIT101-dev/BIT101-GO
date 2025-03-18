@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:49:47
- * @LastEditTime: 2025-03-18 14:30:14
+ * @LastEditTime: 2025-03-18 17:45:08
  * @Description: _(:з」∠)_
  */
 package service
@@ -343,11 +343,12 @@ func (s *ReactionService) comments2CommentAPIs(oldComments []database.Comment, u
 	// 组装子评论
 	for _, subComment := range subComments {
 		user, replyUser := s.getUserAPIInComment(subComment, users, superObjID)
+		own := subComment.Uid == uid || admin
 		subComment.Uid = 0
 		subCommentMap[subComment.Obj] = append(subCommentMap[subComment.Obj], types.CommentAPI{
 			Comment:   subComment,
 			Like:      likes[fmt.Sprintf("comment%d", subComment.ID)],
-			Own:       subComment.Uid == uid || admin,
+			Own:       own,
 			ReplyUser: replyUser,
 			User:      user,
 			Sub:       make([]types.CommentAPI, 0),
@@ -359,11 +360,12 @@ func (s *ReactionService) comments2CommentAPIs(oldComments []database.Comment, u
 	for _, oldComment := range oldComments {
 		commentObj := fmt.Sprintf("comment%d", oldComment.ID)
 		user, replyUser := s.getUserAPIInComment(oldComment, users, superObjID)
+		own := oldComment.Uid == uid || admin
 		oldComment.Uid = 0
 		comment := types.CommentAPI{
 			Comment:   oldComment,
 			Like:      likes[commentObj],
-			Own:       oldComment.Uid == uid || admin,
+			Own:       own,
 			ReplyUser: replyUser,
 			User:      user,
 			Images:    s.ImageSvc.GetImageAPIList(common.Spilt(oldComment.Images)),
