@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 11:12:41
- * @LastEditTime: 2025-03-18 18:55:08
+ * @LastEditTime: 2025-03-19 02:29:51
  * @Description: _(:з」∠)_
  */
 package service
@@ -12,6 +12,7 @@ import (
 	"BIT101-GO/database"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -22,16 +23,18 @@ import (
 var _ types.PaperService = (*PaperService)(nil)
 
 type PaperService struct {
-	userSvc        types.UserService
-	reactionSvc    types.ReactionService
-	meilisearchSvc types.MeilisearchService
+	userSvc         types.UserService
+	reactionSvc     types.ReactionService
+	meilisearchSvc  types.MeilisearchService
+	subscriptionSvc types.SubscriptionService
 }
 
-func NewPaperService(userSvc types.UserService, reactionSvc types.ReactionService, meilisearchSvc types.MeilisearchService) *PaperService {
+func NewPaperService(userSvc types.UserService, reactionSvc types.ReactionService, meilisearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *PaperService {
 	s := PaperService{
-		userSvc:        userSvc,
-		reactionSvc:    reactionSvc,
-		meilisearchSvc: meilisearchSvc,
+		userSvc:         userSvc,
+		reactionSvc:     reactionSvc,
+		meilisearchSvc:  meilisearchSvc,
+		subscriptionSvc: subscriptionSvc,
 	}
 	types.RegisterObjHandler(&s)
 	return &s
@@ -53,6 +56,15 @@ func (s *PaperService) GetObjType() string {
 // GetUid 获取文章作者
 func (s *PaperService) GetUid(id uint) (uint, error) {
 	return 0, errors.ErrUnsupported
+}
+
+// GetText 获取文章简介
+func (s *PaperService) GetText(id uint) (string, error) {
+	paper, err := s.getPaper(id)
+	if err != nil {
+		return "", err
+	}
+	return paper.Title + " " + paper.Intro, nil
 }
 
 // LikeHandler 点赞文章
@@ -89,6 +101,9 @@ func (s *PaperService) CommentHandler(tx *gorm.DB, id uint, comment database.Com
 	}
 	go func() {
 		s.meilisearchSvc.Add(s.GetObjType(), paper)
+		if delta > 0 {
+			s.subscriptionSvc.NotifySubscription(fmt.Sprintf("%s%v", s.GetObjType(), paper.ID), database.SubscriptionLevelComment, paper.Title+" 有新评论："+comment.Text)
+		}
 	}()
 	return paper.CommentNum, nil
 }
@@ -121,18 +136,23 @@ func (s *PaperService) Get(id, uid uint, admin bool) (types.PaperInfo, error) {
 	if err != nil {
 		return types.PaperInfo{}, errors.New("获取编辑用户信息失败Orz")
 	}
-	paper.CreateUid = 0
-	paper.UpdateUid = 0
 
 	like := s.reactionSvc.CheckLike(fmt.Sprintf("%s%v", s.GetObjType(), paper.ID), uid)
-
-	own := paper.CreateUid == uid || admin
 	paper.UpdatedAt = paper.EditAt
+	subscription, err := s.subscriptionSvc.GetSubscriptionLevel(uid, fmt.Sprintf("%s%v", s.GetObjType(), paper.ID))
+	if err != nil {
+		slog.Error("paper: get subscription level failed", "error", err.Error())
+		subscription = 0
+	}
+	own := paper.CreateUid == uid || admin
+	paper.CreateUid = 0
+	paper.UpdateUid = 0
 	return types.PaperInfo{
-		Paper:      paper,
-		UpdateUser: updateUser,
-		Like:       like,
-		Own:        own,
+		Paper:        paper,
+		UpdateUser:   updateUser,
+		Like:         like,
+		Subscription: subscription,
+		Own:          own,
 	}, nil
 }
 
@@ -211,6 +231,7 @@ func (s *PaperService) Edit(id uint, title, intro, content string, anonymous, pu
 		pushHistory(tx, paper)
 		go func() {
 			s.meilisearchSvc.Add(s.GetObjType(), paper)
+			s.subscriptionSvc.NotifySubscription(fmt.Sprintf("%s%v", s.GetObjType(), paper.ID), database.SubscriptionLevelUpdate, paper.Title+" 有更新："+paper.Intro)
 		}()
 		return nil
 	})

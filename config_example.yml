@@ -45,6 +45,7 @@ follow_page_size: 24 #每次加载 关注/粉丝 数量
 report_page_size: 24 #每次加载举报数量
 ban_page_size: 24 #每次加载封禁数量
 recommend_page_size: 5 #每次加载推荐数量
+subscription_page_size: 24 #每次加载订阅数量
 main_url: https://bit101.cn
 release_mode: true #是否为部署模式 开启后不显示DEBUG信息
 meilisearch:

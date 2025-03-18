@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-11 12:20:22
- * @LastEditTime: 2025-03-18 19:51:41
+ * @LastEditTime: 2025-03-19 02:29:08
  * @Description: _(:з」∠)_
  */
 package service
@@ -28,16 +28,17 @@ import (
 var _ types.PosterService = (*PosterService)(nil)
 
 type PosterService struct {
-	userSvc        types.UserService
-	imageSvc       types.ImageService
-	reactionSvc    types.ReactionService
-	messageSvc     types.MessageService
-	gorseSvc       types.GorseService
-	meilisearchSvc types.MeilisearchService
+	userSvc         types.UserService
+	imageSvc        types.ImageService
+	reactionSvc     types.ReactionService
+	messageSvc      types.MessageService
+	gorseSvc        types.GorseService
+	meilisearchSvc  types.MeilisearchService
+	subscriptionSvc types.SubscriptionService
 }
 
-func NewPosterService(userSvc types.UserService, imageSvc types.ImageService, reactionSvc types.ReactionService, messageSvc types.MessageService, gorseSvc types.GorseService, meilisearchSvc types.MeilisearchService) *PosterService {
-	s := PosterService{userSvc: userSvc, imageSvc: imageSvc, reactionSvc: reactionSvc, messageSvc: messageSvc, gorseSvc: gorseSvc, meilisearchSvc: meilisearchSvc}
+func NewPosterService(userSvc types.UserService, imageSvc types.ImageService, reactionSvc types.ReactionService, messageSvc types.MessageService, gorseSvc types.GorseService, meilisearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *PosterService {
+	s := PosterService{userSvc: userSvc, imageSvc: imageSvc, reactionSvc: reactionSvc, messageSvc: messageSvc, gorseSvc: gorseSvc, meilisearchSvc: meilisearchSvc, subscriptionSvc: subscriptionSvc}
 	types.RegisterObjHandler(&s)
 	go func() {
 		for {
@@ -68,6 +69,15 @@ func (s *PosterService) GetUid(id uint) (uint, error) {
 		return 0, err
 	}
 	return poster.Uid, nil
+}
+
+// GetText 获取帖子简介
+func (s *PosterService) GetText(id uint) (string, error) {
+	poster, err := s.getPoster(id)
+	if err != nil {
+		return "", err
+	}
+	return poster.Title, nil
 }
 
 // LikeHandler 点赞帖子
@@ -129,6 +139,9 @@ func (s *PosterService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 		} else {
 			s.gorseSvc.DeleteFeedback(types.FeedbackTypeComment, strconv.Itoa(int(fromUid)), strconv.Itoa(int(id)))
 		}
+		if delta > 0 {
+			s.subscriptionSvc.NotifySubscription(fmt.Sprintf("%s%v", s.GetObjType(), poster.ID), database.SubscriptionLevelComment, poster.Title+" 有新评论："+comment.Text)
+		}
 	}()
 	return poster.CommentNum, nil
 }
@@ -163,14 +176,20 @@ func (s *PosterService) Get(id, uid uint, admin bool) (types.PosterInfo, error) 
 			return types.PosterInfo{}, errors.New("获取用户信息失败Orz")
 		}
 	}
+	subscription, err := s.subscriptionSvc.GetSubscriptionLevel(uid, fmt.Sprintf("%s%v", s.GetObjType(), poster.ID))
+	if err != nil {
+		slog.Error("poster: get subscription level failed", "error", err.Error())
+		subscription = 0
+	}
 	var posterInfo = types.PosterInfo{
-		Poster: poster,
-		User:   userAPI,
-		Images: s.imageSvc.GetImageAPIList(common.Spilt(poster.Images)),
-		Tags:   common.Spilt(poster.Tags),
-		Claim:  database.ClaimMap[poster.ClaimID],
-		Like:   s.reactionSvc.CheckLike(fmt.Sprintf("%s%v", s.GetObjType(), poster.ID), uid),
-		Own:    own,
+		Poster:       poster,
+		User:         userAPI,
+		Images:       s.imageSvc.GetImageAPIList(common.Spilt(poster.Images)),
+		Tags:         common.Spilt(poster.Tags),
+		Claim:        database.ClaimMap[poster.ClaimID],
+		Like:         s.reactionSvc.CheckLike(fmt.Sprintf("%s%v", s.GetObjType(), poster.ID), uid),
+		Own:          own,
+		Subscription: subscription,
 	}
 	return posterInfo, nil
 }
@@ -265,6 +284,9 @@ func (s *PosterService) Edit(id uint, title, text string, imageMids []string, pl
 	go func() {
 		s.meilisearchSvc.Add(s.GetObjType(), poster)
 		s.gorseSvc.UpdatePoster(poster)
+		if poster.Public {
+			s.subscriptionSvc.NotifySubscription(fmt.Sprintf("%s%v", s.GetObjType(), poster.ID), database.SubscriptionLevelUpdate, poster.Title+" 有更新："+poster.Text)
+		}
 	}()
 	return nil
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-07 14:51:53
- * @LastEditTime: 2025-03-11 15:21:52
+ * @LastEditTime: 2025-03-19 00:48:02
  * @Description: _(:з」∠)_
  */
 package service
@@ -18,6 +18,7 @@ import (
 
 	"github.com/SherClockHolmes/webpush-go"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 检查实现了MessageService接口
@@ -63,7 +64,7 @@ func (s *MessageService) Send(from_uid int, to_uid uint, objID string, typ types
 
 		// 更新消息摘要
 		var summary database.MessageSummary
-		if err := tx.Where("uid = ? AND type = ?", to_uid, typ).Limit(1).Find(&summary).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("uid = ? AND type = ?", to_uid, typ).Limit(1).Find(&summary).Error; err != nil {
 			return err
 		}
 		if summary.ID == 0 {
@@ -120,7 +121,7 @@ func (s *MessageService) GetList(uid uint, typ types.MessageType, lastID uint) (
 	}
 
 	// 获取用户信息
-	res, err := FillUsers[database.Message, types.MessageAPI](
+	res, err := FillUsers(
 		s.UserSvc,
 		messages,
 		func(message database.Message) int {

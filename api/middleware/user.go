@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:52:43
- * @LastEditTime: 2025-03-09 23:08:59
+ * @LastEditTime: 2025-03-18 22:49:41
  * @Description: 用户模块中间件
  */
 package middleware
@@ -80,7 +80,7 @@ func GetUserContext(c *gin.Context) (UserContext, error) {
 func MustGetUserContext(c *gin.Context) UserContext {
 	userCtx, err := GetUserContext(c)
 	if err != nil {
-		c.JSON(500, gin.H{"msg": "获取用户错误Orz"})
+		return UserContext{}
 	}
 	return userCtx
 }

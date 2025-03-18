@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:39:47
- * @LastEditTime: 2025-03-18 01:04:05
+ * @LastEditTime: 2025-03-19 01:52:03
  * @Description: 路由配置
  */
 package api
@@ -78,11 +78,18 @@ func SetupContainer() {
 		return service.NewReactionService(userSvc, imageSvc, messageSvc, gorseSvc), nil
 	})
 
+	// 注册订阅服务
+	do.Provide(nil, func(do.Injector) (*service.SubscriptionService, error) {
+		messageSvc := do.MustInvoke[*service.MessageService](nil)
+		return service.NewSubscriptionService(messageSvc), nil
+	})
+
 	// 注册课程服务
 	do.Provide(nil, func(do.Injector) (*service.CourseService, error) {
 		reactionSvc := do.MustInvoke[*service.ReactionService](nil)
 		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
-		return service.NewCourseService(reactionSvc, meilisearchSvc), nil
+		subscriptionSvc := do.MustInvoke[*service.SubscriptionService](nil)
+		return service.NewCourseService(reactionSvc, meilisearchSvc, subscriptionSvc), nil
 	})
 
 	// 注册文章服务
@@ -90,7 +97,8 @@ func SetupContainer() {
 		userSvc := do.MustInvoke[*service.UserService](nil)
 		reactionSvc := do.MustInvoke[*service.ReactionService](nil)
 		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
-		return service.NewPaperService(userSvc, reactionSvc, meilisearchSvc), nil
+		subscriptionSvc := do.MustInvoke[*service.SubscriptionService](nil)
+		return service.NewPaperService(userSvc, reactionSvc, meilisearchSvc, subscriptionSvc), nil
 	})
 
 	// 注册帖子服务
@@ -101,7 +109,8 @@ func SetupContainer() {
 		messageSvc := do.MustInvoke[*service.MessageService](nil)
 		gorseSvc := do.MustInvoke[*service.GorseService](nil)
 		meilisearchSvc := do.MustInvoke[*service.MeilisearchService](nil)
-		return service.NewPosterService(userSvc, imageSvc, reactionSvc, messageSvc, gorseSvc, meilisearchSvc), nil
+		subscriptionSvc := do.MustInvoke[*service.SubscriptionService](nil)
+		return service.NewPosterService(userSvc, imageSvc, reactionSvc, messageSvc, gorseSvc, meilisearchSvc, subscriptionSvc), nil
 	})
 }
 
@@ -231,8 +240,17 @@ func RegisterRouter(router *gin.Engine) {
 		manageRouter.GET("/report_types", manageHandler.GetReportTypesHandler)
 		manageRouter.POST("/reports", middleware.CheckLogin(true), manageHandler.ReportHandler)
 		manageRouter.GET("/reports", middleware.CheckAdmin(), manageHandler.GetReportsHandler)
-		manageRouter.PUT("reports/:id", middleware.CheckAdmin(), manageHandler.UpdateReportStatusHandler)
+		manageRouter.PUT("/reports/:id", middleware.CheckAdmin(), manageHandler.UpdateReportStatusHandler)
 		manageRouter.POST("/bans", middleware.CheckAdmin(), manageHandler.BanHandler)
 		manageRouter.GET("/bans", middleware.CheckAdmin(), manageHandler.GetBansHandler)
+	}
+
+	// 订阅模块
+	subscriptionSvc := do.MustInvoke[*service.SubscriptionService](nil)
+	subscriptionHandler := handler.NewSubscriptionHandler(subscriptionSvc)
+	subscriptionRouter := router.Group("/subscriptions")
+	{
+		subscriptionRouter.POST("", middleware.CheckLogin(true), subscriptionHandler.SubscribeHandler)
+		subscriptionRouter.GET("", middleware.CheckLogin(true), subscriptionHandler.GetSubscriptionsHandler)
 	}
 }
