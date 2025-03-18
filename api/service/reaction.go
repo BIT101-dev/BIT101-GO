@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:49:47
- * @LastEditTime: 2025-03-18 17:45:08
+ * @LastEditTime: 2025-03-18 21:45:21
  * @Description: _(:з」∠)_
  */
 package service
@@ -67,6 +67,15 @@ func (s *ReactionService) GetUid(id uint) (uint, error) {
 		return 0, err
 	}
 	return comment.Uid, nil
+}
+
+// GetText 获取对象的文本
+func (s *ReactionService) GetText(id uint) (string, error) {
+	comment, err := s.getComment(id)
+	if err != nil {
+		return "", err
+	}
+	return comment.Text, nil
 }
 
 // LikeHandler 点赞处理

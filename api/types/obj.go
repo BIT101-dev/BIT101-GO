@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 17:42:45
- * @LastEditTime: 2025-03-11 00:19:45
+ * @LastEditTime: 2025-03-18 22:07:03
  * @Description: _(:з」∠)_
  */
 package types
@@ -20,6 +20,7 @@ type ObjHandler interface {
 	IsExist(id uint) bool
 	GetObjType() string
 	GetUid(id uint) (uint, error)
+	GetText(id uint) (string, error)
 	LikeHandler(tx *gorm.DB, id uint, delta int, uid uint) (likeNum uint, err error)
 	CommentHandler(tx *gorm.DB, id uint, comment database.Comment, delta int, uid uint) (commentNum uint, err error)
 }
@@ -40,7 +41,7 @@ func NewObj(obj string) (Obj, error) {
 		if strings.HasPrefix(obj, k) {
 			id, err := strconv.ParseUint(obj[len(k):], 10, 32)
 			if err != nil {
-				return Obj{}, err
+				return Obj{}, errors.New("对象ID错误Orz")
 			}
 			if !v.IsExist(uint(id)) {
 				return Obj{}, errors.New("对象不存在Orz")
@@ -71,6 +72,10 @@ func (o Obj) GetObjType() string {
 
 func (o Obj) GetUid() (uint, error) {
 	return o.handler.GetUid(o.id)
+}
+
+func (o Obj) GetText() (string, error) {
+	return o.handler.GetText(o.id)
 }
 
 func (o Obj) LikeHandler(tx *gorm.DB, delta int, uid uint) (likeNum uint, err error) {

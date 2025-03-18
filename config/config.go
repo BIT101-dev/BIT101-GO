@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-18 09:43:50
- * @LastEditTime: 2025-03-18 14:27:54
+ * @LastEditTime: 2025-03-18 21:50:25
  * @Description: _(:з」∠)_
  */
 package config
@@ -57,20 +57,21 @@ type Config struct {
 			RefreshToken string `yaml:"refresh_token"`
 		}
 	}
-	DefaultAvatar      string `yaml:"default_avatar"`
-	PaperPageSize      uint   `yaml:"paper_page_size"`
-	CommentPageSize    uint   `yaml:"comment_page_size"`
-	CommentPreviewSize uint   `yaml:"comment_preview_size"`
-	CoursePageSize     uint   `yaml:"course_page_size"`
-	MessagePageSize    uint   `yaml:"message_page_size"`
-	PostPageSize       uint   `yaml:"post_page_size"`
-	FollowPageSize     uint   `yaml:"follow_page_size"`
-	ReportPageSize     uint   `yaml:"report_page_size"`
-	BanPageSize        uint   `yaml:"ban_page_size"`
-	RecommendPageSize  uint   `yaml:"recommend_page_size"`
-	MainUrl            string `yaml:"main_url"`
-	ReleaseMode        bool   `yaml:"release_mode"`
-	Meilisearch        struct {
+	DefaultAvatar        string `yaml:"default_avatar"`
+	PaperPageSize        uint   `yaml:"paper_page_size"`
+	CommentPageSize      uint   `yaml:"comment_page_size"`
+	CommentPreviewSize   uint   `yaml:"comment_preview_size"`
+	CoursePageSize       uint   `yaml:"course_page_size"`
+	MessagePageSize      uint   `yaml:"message_page_size"`
+	PostPageSize         uint   `yaml:"post_page_size"`
+	FollowPageSize       uint   `yaml:"follow_page_size"`
+	ReportPageSize       uint   `yaml:"report_page_size"`
+	BanPageSize          uint   `yaml:"ban_page_size"`
+	RecommendPageSize    uint   `yaml:"recommend_page_size"`
+	SubscriptionPageSize uint   `yaml:"subscription_page_size"`
+	MainUrl              string `yaml:"main_url"`
+	ReleaseMode          bool   `yaml:"release_mode"`
+	Meilisearch          struct {
 		Url       string
 		MasterKey string `yaml:"master_key"`
 	}

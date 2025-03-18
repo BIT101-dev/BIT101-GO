@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2025-03-11 16:02:37
+ * @LastEditTime: 2025-03-19 00:27:15
  * @Description: 用户模块业务响应
  */
 package service
@@ -62,6 +62,16 @@ func (s *UserService) GetUid(id uint) (uint, error) {
 		return 0, err
 	}
 	return uint(userAPI.ID), nil
+}
+
+// GetText 获取用户昵称
+// 实现ObjHandler接口
+func (s *UserService) GetText(id uint) (string, error) {
+	userAPI, err := s.GetUserAPI(int(id))
+	if err != nil {
+		return "", err
+	}
+	return userAPI.Nickname, nil
 }
 
 // LikeHandler 点赞处理
@@ -190,9 +200,12 @@ func FillUsers[S, T any](
 	uids := make(map[int]bool)
 	for _, source := range sources {
 		uid := uidExtractor(source)
-		uids[uid] = true
+		if uid != 0 {
+			uids[uid] = true
+		}
 	}
 	userAPIs, err := userSvc.GetUserAPIMap(uids)
+	userAPIs[0] = types.UserAPI{}
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:38:54
- * @LastEditTime: 2025-03-17 22:30:44
+ * @LastEditTime: 2025-03-19 02:08:57
  * @Description: _(:з」∠)_
  */
 package service
@@ -14,6 +14,7 @@ import (
 	"BIT101-GO/pkg/webvpn"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -28,15 +29,17 @@ var _ types.CourseService = (*CourseService)(nil)
 
 // CourseService 课程服务
 type CourseService struct {
-	reactionSvc    types.ReactionService
-	meiliSearchSvc types.MeilisearchService
+	reactionSvc     types.ReactionService
+	meiliSearchSvc  types.MeilisearchService
+	subscriptionSvc types.SubscriptionService
 }
 
 // NewCourseService 创建课程服务
-func NewCourseService(reactionSvc types.ReactionService, meiliSearchSvc types.MeilisearchService) *CourseService {
+func NewCourseService(reactionSvc types.ReactionService, meiliSearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *CourseService {
 	s := CourseService{
-		reactionSvc:    reactionSvc,
-		meiliSearchSvc: meiliSearchSvc,
+		reactionSvc:     reactionSvc,
+		meiliSearchSvc:  meiliSearchSvc,
+		subscriptionSvc: subscriptionSvc,
 	}
 	types.RegisterObjHandler(&s)
 	return &s
@@ -58,6 +61,15 @@ func (s *CourseService) GetObjType() string {
 // GetUid 获取课程作者
 func (s *CourseService) GetUid(id uint) (uint, error) {
 	return 0, errors.New("课程没有作者Orz")
+}
+
+// GetText 获取课程简介
+func (s *CourseService) GetText(id uint) (string, error) {
+	course, err := s.getCourse(id)
+	if err != nil {
+		return "", err
+	}
+	return course.Name + " " + course.TeachersName, nil
 }
 
 // LikeHandler 点赞
@@ -104,6 +116,9 @@ func (s *CourseService) CommentHandler(tx *gorm.DB, id uint, comment database.Co
 	}
 	go func() {
 		s.meiliSearchSvc.Add(s.GetObjType(), course)
+		if delta > 0 {
+			s.subscriptionSvc.NotifySubscription(fmt.Sprintf("%s%v", s.GetObjType(), course.ID), database.SubscriptionLevelComment, course.Name+" 有新评价："+comment.Text)
+		}
 	}()
 	return course.CommentNum, nil
 }
@@ -131,6 +146,7 @@ func (s *CourseService) GetCourses(keyword string, order string, page uint) ([]d
 		orders = append(orders, "like_num:desc")
 	case "rate":
 		orders = append(orders, "rate:desc")
+		orders = append(orders, "comment_num:desc")
 	default:
 		orders = append(orders, "update_time:desc")
 	}
@@ -152,10 +168,16 @@ func (s *CourseService) GetCourseAPI(id uint, uid uint) (types.CourseAPI, error)
 	if course.ID == 0 {
 		return types.CourseAPI{}, errors.New("课程不存在Orz")
 	}
+	subscription, err := s.subscriptionSvc.GetSubscriptionLevel(uid, fmt.Sprintf("%s%v", s.GetObjType(), course.ID))
+	if err != nil {
+		slog.Error("course: get subscription level failed", "error", err.Error())
+		subscription = 0
+	}
 
 	return types.CourseAPI{
-		Course: course,
-		Like:   s.reactionSvc.CheckLike(fmt.Sprintf("course%d", course.ID), uid),
+		Course:       course,
+		Like:         s.reactionSvc.CheckLike(fmt.Sprintf("course%d", course.ID), uid),
+		Subscription: subscription,
 	}, nil
 }
 

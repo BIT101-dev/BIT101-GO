@@ -101,10 +101,11 @@ type UserService interface {
 type MessageType string
 
 const (
-	MessageTypeFollow  MessageType = "follow"
-	MessageTypeComment MessageType = "comment"
-	MessageTypeLike    MessageType = "like"
-	MessageTypeSystem  MessageType = "system"
+	MessageTypeFollow       MessageType = "follow"
+	MessageTypeComment      MessageType = "comment"
+	MessageTypeLike         MessageType = "like"
+	MessageTypeSystem       MessageType = "system"
+	MessageTypeSubscription MessageType = "subscription"
 )
 
 var MessageTypeMap = map[MessageType]*struct{}{
@@ -219,7 +220,8 @@ type ReactionService interface {
 // CourseAPI 课程信息
 type CourseAPI struct {
 	database.Course
-	Like bool `json:"like"` // 是否点赞
+	Like         bool                       `json:"like"`         // 是否点赞
+	Subscription database.SubscriptionLevel `json:"subscription"` // 订阅级别
 }
 
 // CourseHistoryAPI 课程历史信息
@@ -255,9 +257,10 @@ type PaperAPI struct {
 // PaperInfo 文章详细信息
 type PaperInfo struct {
 	database.Paper
-	UpdateUser UserAPI `json:"update_user"`
-	Like       bool    `json:"like"`
-	Own        bool    `json:"own"`
+	UpdateUser   UserAPI                    `json:"update_user"`
+	Like         bool                       `json:"like"`
+	Subscription database.SubscriptionLevel `json:"subscription"`
+	Own          bool                       `json:"own"`
 }
 
 // PaperService 文章模块服务接口
@@ -283,12 +286,13 @@ type PosterAPI struct {
 // PosterInfo 帖子详细信息
 type PosterInfo struct {
 	database.Poster
-	User   UserAPI        `json:"user"`
-	Images []ImageAPI     `json:"images"`
-	Tags   []string       `json:"tags"`
-	Claim  database.Claim `json:"claim"`
-	Like   bool           `json:"like"`
-	Own    bool           `json:"own"`
+	User         UserAPI                    `json:"user"`
+	Images       []ImageAPI                 `json:"images"`
+	Tags         []string                   `json:"tags"`
+	Claim        database.Claim             `json:"claim"`
+	Like         bool                       `json:"like"`
+	Own          bool                       `json:"own"`
+	Subscription database.SubscriptionLevel `json:"subscription"`
 }
 
 // PosterService 帖子模块服务接口
@@ -337,4 +341,23 @@ type MeilisearchService interface {
 
 	// Search 在搜索引擎中搜索数据
 	Search(result interface{}, indexName string, query string, page uint, limit uint, sort []string, filter []string) error
+}
+
+// Subscription 订阅模块
+
+// SubscriptionAPI 订阅API
+type SubscriptionAPI struct {
+	ID               uint      `json:"id"`                // 订阅编号
+	SubscriptionTime time.Time `json:"subscription_time"` // 订阅时间
+	Obj              string    `json:"obj"`               // 订阅对象
+	Level            int       `json:"level"`             // 订阅级别 0:silent | 1:update | 2:comment
+	Text             string    `json:"text"`              // 简介
+}
+
+// SubscriptionService 订阅服务接口
+type SubscriptionService interface {
+	Subscribe(uid uint, objID string, level int) error                                    // 订阅
+	GetSubscriptions(uid uint, page uint) ([]SubscriptionAPI, error)                      // 获取订阅列表
+	GetSubscriptionLevel(uid uint, objID string) (database.SubscriptionLevel, error)      // 获取订阅级别
+	NotifySubscription(objID string, level database.SubscriptionLevel, text string) error // 通知订阅者
 }

@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-20 09:51:48
- * @LastEditTime: 2025-03-18 14:28:28
+ * @LastEditTime: 2025-03-18 22:27:02
  * @Description: _(:з」∠)_
  */
 package database
@@ -263,6 +263,25 @@ type WebPushSubscription struct {
 	P256dh         string `gorm:"not null" json:"p256dh"`                //推送公钥
 }
 
+// 订阅级别
+type SubscriptionLevel int
+
+const (
+	SubscriptionLevelNone SubscriptionLevel = iota
+	SubscriptionLevelSilent
+	SubscriptionLevelUpdate
+	SubscriptionLevelComment
+)
+
+// Subscription 订阅
+type Subscription struct {
+	Base
+	Uid   uint              `gorm:"not null;index" json:"uid"` // 用户id
+	Obj   string            `gorm:"not null;index" json:"obj"` // 对象
+	Level SubscriptionLevel `gorm:"not null" json:"level"`     // 订阅级别 0:silent | 1:update | 2:comment
+	Text  string            `gorm:"not null" json:"text"`      // 简介
+}
+
 // InitMaps 初始化Map(针对常用且稳定的数据)
 func InitMaps() {
 	//初始化 ClaimMap
@@ -317,7 +336,7 @@ func init() {
 		&User{}, &Image{}, &Paper{}, &PaperHistory{}, &Like{}, &Comment{}, &Course{}, &CourseHistory{},
 		&Teacher{}, &CourseUploadLog{}, &CourseUploadReadme{}, &Variable{}, &Message{}, &MessageSummary{},
 		&Claim{}, &Poster{}, &Identity{}, &Follow{}, &Report{}, &ReportType{}, &Ban{},
-		&WebPushSubscription{},
+		&WebPushSubscription{}, &Subscription{},
 	)
 	InitMaps()
 }
