@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2025-03-09 23:49:47
- * @LastEditTime: 2025-03-14 17:33:06
+ * @LastEditTime: 2025-03-18 14:30:14
  * @Description: _(:з」∠)_
  */
 package service
@@ -158,7 +158,7 @@ func (s *ReactionService) CommentHandler(tx *gorm.DB, id uint, subComment databa
 // Like 点赞
 func (s *ReactionService) Like(obj types.Obj, uid uint) (types.LikeAPI, error) {
 	// 限流
-	set, err := cache.RDB.SetNX(cache.Context, fmt.Sprintf("like:%d_%s", uid, obj.GetObjID()), "1", time.Second).Result()
+	set, err := cache.RDB().SetNX(cache.Context, fmt.Sprintf("like:%d_%s", uid, obj.GetObjID()), "1", time.Second).Result()
 	if err != nil || !set {
 		return types.LikeAPI{}, errors.New("操作过于频繁Orz")
 	}
@@ -393,7 +393,7 @@ func (s *ReactionService) getSuperObj(obj types.Obj) (types.Obj, error) {
 // Comment 评论
 func (s *ReactionService) Comment(obj types.Obj, text string, anonymous bool, replyUid int, replyObj types.Obj, rate uint, mids []string, uid uint, admin bool) (types.CommentAPI, error) {
 	// 限流
-	set, err := cache.RDB.SetNX(cache.Context, fmt.Sprintf("comment:%d", uid), "1", time.Second).Result()
+	set, err := cache.RDB().SetNX(cache.Context, fmt.Sprintf("comment:%d", uid), "1", time.Second).Result()
 	if err != nil || !set {
 		return types.CommentAPI{}, errors.New("操作过于频繁Orz")
 	}

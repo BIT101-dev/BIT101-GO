@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 10:20:13
- * @LastEditTime: 2025-03-17 22:29:22
+ * @LastEditTime: 2025-03-18 14:28:14
  * @Description: _(:з」∠)_
  */
 package main
@@ -9,8 +9,6 @@ package main
 import (
 	"BIT101-GO/api"
 	"BIT101-GO/config"
-	"BIT101-GO/database"
-	"BIT101-GO/pkg/cache"
 	"BIT101-GO/pkg/other"
 	"flag"
 	"fmt"
@@ -42,9 +40,6 @@ var LOGO = `
 
 // 服务，启动！
 func runServer() {
-	database.Init()
-	cache.Init()
-
 	// 获取配置
 	cfg := config.Get()
 

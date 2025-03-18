@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-23 14:59:32
- * @LastEditTime: 2025-03-11 18:45:59
+ * @LastEditTime: 2025-03-18 14:28:50
  * @Description: 导入课程数据_(:з」∠)_
  */
 package other
@@ -47,7 +47,6 @@ func ImportCourse(path string) {
 	fmt.Println()
 
 	// 导入课程数据
-	database.Init()
 	ori_courses := []OriCourse{}
 	for _, csv_path := range csv_paths {
 		ori_courses = append(ori_courses, importFromCsv(csv_path)...)
