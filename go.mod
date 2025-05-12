@@ -8,7 +8,6 @@ require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.0
-	github.com/go-redis/redis/v9 v9.0.0-rc.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.3.0
 	github.com/jinzhu/configor v1.2.1

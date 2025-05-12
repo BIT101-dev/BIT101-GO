@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 14:38:28
- * @LastEditTime: 2025-03-11 11:02:00
+ * @LastEditTime: 2025-05-12 21:38:29
  * @Description: webvpn学校统一身份验证
  */
 package webvpn
@@ -26,7 +26,7 @@ type InitLoginReturn struct {
 
 // 登录初始化
 func InitLogin() (InitLoginReturn, error) {
-	res, err := request.Post("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421fcf84695297e6a596a468ca88d1b203b/authserver/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue", nil)
+	res, err := request.Post("https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b/cas/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue", nil)
 	if err != nil || res.Code != 200 {
 		return InitLoginReturn{}, errors.New("webvpn init login error")
 	}
@@ -35,26 +35,25 @@ func InitLogin() (InitLoginReturn, error) {
 	if err != nil {
 		return InitLoginReturn{}, err
 	}
-	form := goquery.NewDocumentFromNode(doc.Find("#pwdFromId").Nodes[0])
 	return InitLoginReturn{
-		Salt:      form.Find("#pwdEncryptSalt").AttrOr("value", ""),
-		Execution: form.Find("#execution").AttrOr("value", ""),
+		Salt:      doc.Find("#login-croypto").Text(),
+		Execution: doc.Find("#login-page-flowkey").Text(),
 		Cookie:    res.Header.Get("Set-Cookie"),
 	}, nil
 }
 
 // 登录
-func Login(username string, password string, execution string, cookie string, captcha string) error {
-	res, err := request.PostForm("https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421fcf84695297e6a596a468ca88d1b203b/authserver/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue", map[string]string{
-		"username":   username,
-		"password":   password,
-		"execution":  execution,
-		"captcha":    captcha,
-		"_eventId":   "submit",
-		"rememberMe": "true",
-		"cllt":       "userNameLogin",
-		"dllt":       "generalLogin",
-		"lt":         "",
+func Login(username string, salt string, password string, execution string, cookie string, captcha string) error {
+	res, err := request.PostForm("https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b/cas/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue", map[string]string{
+		"username":        username,
+		"password":        password,
+		"execution":       execution,
+		"captcha_payload": captcha,
+		"croypto":         salt,
+		"captcha_code":    "",
+		"type":            "UsernamePassword",
+		"_eventId":        "submit",
+		"geolocation":     "",
 	}, map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 || strings.Contains(res.Text, "帐号登录或动态码登录") {
 		return errors.New("webvpn login error")

@@ -82,11 +82,11 @@ type UserService interface {
 	SetInfo(uid int, nickname, avatarMid, motto string) error    // 修改用户信息
 
 	// 认证相关
-	Login(sid string, pwd string) (fakeCookie string, err error)                                                                 // 登录
-	WebvpnVerifyInit(sid string) (data webvpn.InitLoginReturn, captcha string, err error)                                        // Webvpn登录初始化
-	WebvpnVerify(sid string, pwd string, execution string, cookie string, captcha string) (token string, code string, err error) // Webvpn登录验证
-	MailVerify(sid string) (token string, err error)                                                                             // 邮箱验证
-	Register(token string, code string, pwd string, loginMode bool) (fakeCookie string, err error)                               // 注册
+	Login(sid string, pwd string) (fakeCookie string, err error)                                                                              // 登录
+	WebvpnVerifyInit(sid string) (data webvpn.InitLoginReturn, captcha string, err error)                                                     // Webvpn登录初始化
+	WebvpnVerify(sid string, salt string, pwd string, execution string, cookie string, captcha string) (token string, code string, err error) // Webvpn登录验证
+	MailVerify(sid string) (token string, err error)                                                                                          // 邮箱验证
+	Register(token string, code string, pwd string, loginMode bool) (fakeCookie string, err error)                                            // 注册
 
 	// 关注相关
 	GetFollowAPI(followUid, myUid uint) (FollowAPI, error) // 获取关注信息

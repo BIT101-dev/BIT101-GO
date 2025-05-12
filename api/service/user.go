@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2025-03-19 00:27:15
+ * @LastEditTime: 2025-05-12 20:57:48
  * @Description: 用户模块业务响应
  */
 package service
@@ -14,7 +14,6 @@ import (
 	"BIT101-GO/pkg/mail"
 	"BIT101-GO/pkg/webvpn"
 	"crypto/md5"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -236,23 +235,24 @@ func (s *UserService) WebvpnVerifyInit(sid string) (data webvpn.InitLoginReturn,
 	if err != nil {
 		return webvpn.InitLoginReturn{}, "", errors.New("初始化WebVPN验证失败Orz")
 	}
-	needCaptcha, err := webvpn.NeedCaptcha(sid)
-	if err != nil {
-		return webvpn.InitLoginReturn{}, "", errors.New("检查是否需要验证失败Orz")
-	}
-	if needCaptcha {
-		img, err := webvpn.CaptchaImage(data.Cookie)
-		if err != nil {
-			return webvpn.InitLoginReturn{}, "", errors.New("获取验证码图片失败Orz")
-		}
-		captcha = "data:image/png;base64," + base64.StdEncoding.EncodeToString(img)
-	}
+	// TODO: captcha
+	// needCaptcha, err := webvpn.NeedCaptcha(sid)
+	// if err != nil {
+	// 	return webvpn.InitLoginReturn{}, "", errors.New("检查是否需要验证失败Orz")
+	// }
+	// if needCaptcha {
+	// 	img, err := webvpn.CaptchaImage(data.Cookie)
+	// 	if err != nil {
+	// 		return webvpn.InitLoginReturn{}, "", errors.New("获取验证码图片失败Orz")
+	// 	}
+	// 	captcha = "data:image/png;base64," + base64.StdEncoding.EncodeToString(img)
+	// }
 	return data, captcha, nil
 }
 
 // WebvpnVerify WebVPN验证
-func (s *UserService) WebvpnVerify(sid string, pwd string, execution string, cookie string, captcha string) (token string, code string, err error) {
-	err = webvpn.Login(sid, pwd, execution, cookie, captcha)
+func (s *UserService) WebvpnVerify(sid string, salt string, pwd string, execution string, cookie string, captcha string) (token string, code string, err error) {
+	err = webvpn.Login(sid, salt, pwd, execution, cookie, captcha)
 	if err != nil {
 		return "", "", errors.New("统一身份认证失败Orz")
 	}

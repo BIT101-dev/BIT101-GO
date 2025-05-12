@@ -1,7 +1,7 @@
 /*
  * @Author: flwfdd
  * @Date: 2023-03-13 11:11:38
- * @LastEditTime: 2025-03-11 15:46:54
+ * @LastEditTime: 2025-05-12 20:59:35
  * @Description: 用户模块业务响应
  */
 package handler
@@ -87,6 +87,7 @@ func (h *UserHandler) WebvpnVerifyInitHandler(c *gin.Context) {
 func (h *UserHandler) WebvpnVerifyHandler(c *gin.Context) {
 	type Request struct {
 		Sid       string `json:"sid" binding:"required"`       // 学号
+		Salt      string `json:"salt" binding:"required"`      // 照搬webvpn的salt
 		Password  string `json:"password" binding:"required"`  // EncryptedPassword.js加密后的密码
 		Execution string `json:"execution" binding:"required"` // 照搬webvpn的execution
 		Cookie    string `json:"cookie" binding:"required"`    // 照搬webvpn的cookie
@@ -103,7 +104,7 @@ func (h *UserHandler) WebvpnVerifyHandler(c *gin.Context) {
 		return
 	}
 
-	token, code, err := h.UserSvc.WebvpnVerify(query.Sid, query.Password, query.Execution, query.Cookie, query.Captcha)
+	token, code, err := h.UserSvc.WebvpnVerify(query.Sid, query.Salt, query.Password, query.Execution, query.Cookie, query.Captcha)
 	if common.HandleError(c, err) {
 		return
 	}
