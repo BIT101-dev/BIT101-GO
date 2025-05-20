@@ -22,19 +22,16 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// 检查是否实现接口
-var _ types.ReactionService = (*ReactionService)(nil)
-
 // ReactionService 点赞服务
 type ReactionService struct {
-	UserSvc    types.UserService
-	ImageSvc   types.ImageService
-	MessageSvc types.MessageService
-	GorseSvc   types.GorseService
+	UserSvc    *UserService
+	ImageSvc   *ImageService
+	MessageSvc *MessageService
+	GorseSvc   *GorseService
 }
 
 // NewReactionService 创建点赞服务
-func NewReactionService(userSvc types.UserService, imageSvc types.ImageService, messageSvc types.MessageService, gorseSvc types.GorseService) *ReactionService {
+func NewReactionService(userSvc *UserService, imageSvc *ImageService, messageSvc *MessageService, gorseSvc *GorseService) *ReactionService {
 	s := &ReactionService{
 		UserSvc:    userSvc,
 		ImageSvc:   imageSvc,

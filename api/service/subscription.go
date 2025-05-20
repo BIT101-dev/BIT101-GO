@@ -14,16 +14,13 @@ import (
 	"log/slog"
 )
 
-// 检查是否实现了SubscriptionService接口
-var _ types.SubscriptionService = (*SubscriptionService)(nil)
-
 // SubscriptionService 订阅服务
 type SubscriptionService struct {
-	messageSvc types.MessageService
+	messageSvc *MessageService
 }
 
 // NewSubscriptionService 创建订阅服务
-func NewSubscriptionService(messageSvc types.MessageService) *SubscriptionService {
+func NewSubscriptionService(messageSvc *MessageService) *SubscriptionService {
 	return &SubscriptionService{messageSvc}
 }
 

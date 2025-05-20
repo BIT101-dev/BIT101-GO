@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"BIT101-GO/database"
 	"BIT101-GO/pkg/webvpn"
@@ -17,10 +18,10 @@ import (
 )
 
 type CourseHandler struct {
-	CourseSvc types.CourseService
+	CourseSvc *service.CourseService
 }
 
-func NewCourseHandler(courseSvc types.CourseService) *CourseHandler {
+func NewCourseHandler(courseSvc *service.CourseService) *CourseHandler {
 	return &CourseHandler{courseSvc}
 }
 

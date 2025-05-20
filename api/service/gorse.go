@@ -19,8 +19,6 @@ import (
 	"github.com/zhenghaoz/gorse/client"
 )
 
-var _ types.GorseService = (*GorseService)(nil)
-
 type GorseService struct {
 	client        *client.GorseClient
 	syncInterval  time.Duration

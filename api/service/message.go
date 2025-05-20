@@ -21,21 +21,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// 检查实现了MessageService接口
-var _ types.MessageService = (*MessageService)(nil)
-
 // MessageService 消息模块服务
 type MessageService struct {
-	UserSvc types.UserService
+	UserSvc *UserService
 }
 
 // NewMessageService 创建消息模块服务
-func NewMessageService(userSvc types.UserService) *MessageService {
+func NewMessageService(userSvc *UserService) *MessageService {
 	return &MessageService{userSvc}
 }
 
 // SetUserService 设置用户服务
-func (s *MessageService) SetUserService(userSvc types.UserService) {
+func (s *MessageService) SetUserService(userSvc *UserService) {
 	s.UserSvc = userSvc
 }
 

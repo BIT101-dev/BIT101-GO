@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"BIT101-GO/database"
 	"strconv"
@@ -17,10 +18,10 @@ import (
 )
 
 type PosterHandler struct {
-	posterSvc types.PosterService
+	posterSvc *service.PosterService
 }
 
-func NewPosterHandler(posterSvc types.PosterService) *PosterHandler {
+func NewPosterHandler(posterSvc *service.PosterService) *PosterHandler {
 	return &PosterHandler{posterSvc: posterSvc}
 }
 

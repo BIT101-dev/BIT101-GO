@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"BIT101-GO/database"
 
@@ -17,11 +18,11 @@ import (
 
 // SubscriptionHandler 订阅处理器
 type SubscriptionHandler struct {
-	SubscriptionSvc types.SubscriptionService
+	SubscriptionSvc *service.SubscriptionService
 }
 
 // NewSubscriptionHandler 创建订阅处理器
-func NewSubscriptionHandler(subscriptionSvc types.SubscriptionService) *SubscriptionHandler {
+func NewSubscriptionHandler(subscriptionSvc *service.SubscriptionService) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		SubscriptionSvc: subscriptionSvc,
 	}

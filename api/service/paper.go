@@ -20,16 +20,14 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var _ types.PaperService = (*PaperService)(nil)
-
 type PaperService struct {
-	userSvc         types.UserService
-	reactionSvc     types.ReactionService
-	meilisearchSvc  types.MeilisearchService
-	subscriptionSvc types.SubscriptionService
+	userSvc         *UserService
+	reactionSvc     *ReactionService
+	meilisearchSvc  *MeilisearchService
+	subscriptionSvc *SubscriptionService
 }
 
-func NewPaperService(userSvc types.UserService, reactionSvc types.ReactionService, meilisearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *PaperService {
+func NewPaperService(userSvc *UserService, reactionSvc *ReactionService, meilisearchSvc *MeilisearchService, subscriptionSvc *SubscriptionService) *PaperService {
 	s := PaperService{
 		userSvc:         userSvc,
 		reactionSvc:     reactionSvc,

@@ -8,18 +8,18 @@ package handler
 
 import (
 	"BIT101-GO/api/common"
-	"BIT101-GO/api/types"
+	"BIT101-GO/api/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 // 变量模块接口
 type VariableHandler struct {
-	VariableService types.VariableService
+	VariableService *service.VariableService
 }
 
 // 创建变量模块接口
-func NewVariableHandler(variableService types.VariableService) *VariableHandler {
+func NewVariableHandler(variableService *service.VariableService) *VariableHandler {
 	return &VariableHandler{variableService}
 }
 

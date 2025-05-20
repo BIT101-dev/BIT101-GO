@@ -10,16 +10,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// 检查实现了ManageService接口
-var _ types.ManageService = (*ManageService)(nil)
-
 // ManageService 管理模块服务
 type ManageService struct {
-	UserSvc types.UserService
+	UserSvc *UserService
 }
 
 // NewManageService 创建管理模块服务
-func NewManageService(userSvc types.UserService) *ManageService {
+func NewManageService(userSvc *UserService) *ManageService {
 	return &ManageService{userSvc}
 }
 

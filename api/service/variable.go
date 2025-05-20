@@ -1,13 +1,9 @@
 package service
 
 import (
-	"BIT101-GO/api/types"
 	"BIT101-GO/database"
 	"errors"
 )
-
-// 检查实现了VariableService接口
-var _ types.VariableService = (*VariableService)(nil)
 
 // VariableService 变量模块服务
 type VariableService struct{}

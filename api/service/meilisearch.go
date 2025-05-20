@@ -7,7 +7,6 @@
 package service
 
 import (
-	"BIT101-GO/api/types"
 	"BIT101-GO/config"
 	"BIT101-GO/database"
 	"encoding/json"
@@ -19,8 +18,6 @@ import (
 
 	"github.com/meilisearch/meilisearch-go"
 )
-
-var _ types.MeilisearchService = (*MeilisearchService)(nil)
 
 type MeilisearchService struct {
 	client        *meilisearch.Client

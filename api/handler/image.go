@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"BIT101-GO/config"
 	"bytes"
@@ -20,11 +21,11 @@ import (
 
 // ImageHandler 图片模块接口
 type ImageHandler struct {
-	ImageSvc types.ImageService
+	ImageSvc *service.ImageService
 }
 
 // NewImageHandler 创建图片模块接口
-func NewImageHandler(s types.ImageService) ImageHandler {
+func NewImageHandler(s *service.ImageService) ImageHandler {
 	return ImageHandler{s}
 }
 

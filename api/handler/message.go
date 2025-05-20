@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 
 	"github.com/SherClockHolmes/webpush-go"
@@ -17,11 +18,11 @@ import (
 
 // MessageHandler 消息模块接口
 type MessageHandler struct {
-	MessageSvc types.MessageService
+	MessageSvc *service.MessageService
 }
 
 // NewMessageHandler 创建消息模块接口
-func NewMessageHandler(s types.MessageService) MessageHandler {
+func NewMessageHandler(s *service.MessageService) MessageHandler {
 	return MessageHandler{s}
 }
 

@@ -25,19 +25,17 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-var _ types.PosterService = (*PosterService)(nil)
-
 type PosterService struct {
-	userSvc         types.UserService
-	imageSvc        types.ImageService
-	reactionSvc     types.ReactionService
-	messageSvc      types.MessageService
-	gorseSvc        types.GorseService
-	meilisearchSvc  types.MeilisearchService
-	subscriptionSvc types.SubscriptionService
+	userSvc         *UserService
+	imageSvc        *ImageService
+	reactionSvc     *ReactionService
+	messageSvc      *MessageService
+	gorseSvc        *GorseService
+	meilisearchSvc  *MeilisearchService
+	subscriptionSvc *SubscriptionService
 }
 
-func NewPosterService(userSvc types.UserService, imageSvc types.ImageService, reactionSvc types.ReactionService, messageSvc types.MessageService, gorseSvc types.GorseService, meilisearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *PosterService {
+func NewPosterService(userSvc *UserService, imageSvc *ImageService, reactionSvc *ReactionService, messageSvc *MessageService, gorseSvc *GorseService, meilisearchSvc *MeilisearchService, subscriptionSvc *SubscriptionService) *PosterService {
 	s := PosterService{userSvc: userSvc, imageSvc: imageSvc, reactionSvc: reactionSvc, messageSvc: messageSvc, gorseSvc: gorseSvc, meilisearchSvc: meilisearchSvc, subscriptionSvc: subscriptionSvc}
 	types.RegisterObjHandler(&s)
 	go func() {

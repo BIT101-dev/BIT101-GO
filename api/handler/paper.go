@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"strconv"
 
@@ -16,10 +17,10 @@ import (
 )
 
 type PaperHandler struct {
-	paperSvc types.PaperService
+	paperSvc *service.PaperService
 }
 
-func NewPaperHandler(paperSvc types.PaperService) *PaperHandler {
+func NewPaperHandler(paperSvc *service.PaperService) *PaperHandler {
 	return &PaperHandler{paperSvc: paperSvc}
 }
 

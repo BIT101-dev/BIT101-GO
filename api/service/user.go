@@ -24,17 +24,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// 检查接口实现
-var _ types.UserService = (*UserService)(nil)
-
 // UserService 用户模块服务
 type UserService struct {
-	imageSvc   types.ImageService
-	messageSvc types.MessageService
+	imageSvc   *ImageService
+	messageSvc *MessageService
 }
 
 // NewUserService 创建用户模块服务
-func NewUserService(imageSvc types.ImageService, messageSvc types.MessageService) *UserService {
+func NewUserService(imageSvc *ImageService, messageSvc *MessageService) *UserService {
 	s := &UserService{imageSvc, messageSvc}
 	types.RegisterObjHandler(s)
 	return s
@@ -191,7 +188,7 @@ func (s *UserService) GetUserAPIMap(uidMap map[int]bool) (map[int]types.UserAPI,
 // targetCreator 创建目标数据的函数
 // 接口方法不支持泛型T^T
 func FillUsers[S, T any](
-	userSvc types.UserService,
+	userSvc *UserService,
 	sources []S,
 	uidExtractor func(S) int,
 	targetCreator func(S, types.UserAPI) T,

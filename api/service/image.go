@@ -18,9 +18,6 @@ import (
 	"path/filepath"
 )
 
-// 检查实现了ImageService接口
-var _ types.ImageService = (*ImageService)(nil)
-
 // ImageService 图片模块服务
 type ImageService struct{}
 

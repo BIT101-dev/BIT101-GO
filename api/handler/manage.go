@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"BIT101-GO/database"
 
@@ -17,11 +18,11 @@ import (
 
 // ManageHandler 管理模块接口
 type ManageHandler struct {
-	ManageSvc types.ManageService
+	ManageSvc *service.ManageService
 }
 
 // NewManageHandler 创建管理模块接口
-func NewManageHandler(s types.ManageService) ManageHandler {
+func NewManageHandler(s *service.ManageService) ManageHandler {
 	return ManageHandler{s}
 }
 

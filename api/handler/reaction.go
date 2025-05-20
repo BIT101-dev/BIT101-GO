@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"errors"
 
@@ -17,11 +18,11 @@ import (
 
 // ReactionHandler 交互模块响应
 type ReactionHandler struct {
-	ReactionSvc types.ReactionService
+	ReactionSvc *service.ReactionService
 }
 
 // NewReactionHandler 创建交互模块响应
-func NewReactionHandler(reactionSvc types.ReactionService) *ReactionHandler {
+func NewReactionHandler(reactionSvc *service.ReactionService) *ReactionHandler {
 	return &ReactionHandler{ReactionSvc: reactionSvc}
 }
 

@@ -24,18 +24,15 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// 检查接口是否实现
-var _ types.CourseService = (*CourseService)(nil)
-
 // CourseService 课程服务
 type CourseService struct {
-	reactionSvc     types.ReactionService
-	meiliSearchSvc  types.MeilisearchService
-	subscriptionSvc types.SubscriptionService
+	reactionSvc     *ReactionService
+	meiliSearchSvc  *MeilisearchService
+	subscriptionSvc *SubscriptionService
 }
 
 // NewCourseService 创建课程服务
-func NewCourseService(reactionSvc types.ReactionService, meiliSearchSvc types.MeilisearchService, subscriptionSvc types.SubscriptionService) *CourseService {
+func NewCourseService(reactionSvc *ReactionService, meiliSearchSvc *MeilisearchService, subscriptionSvc *SubscriptionService) *CourseService {
 	s := CourseService{
 		reactionSvc:     reactionSvc,
 		meiliSearchSvc:  meiliSearchSvc,

@@ -9,6 +9,7 @@ package handler
 import (
 	"BIT101-GO/api/common"
 	"BIT101-GO/api/middleware"
+	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
 	"strconv"
 
@@ -17,11 +18,11 @@ import (
 
 // UserHandler 用户模块接口
 type UserHandler struct {
-	UserSvc types.UserService
+	UserSvc *service.UserService
 }
 
 // NewUserHandler 创建用户模块接口
-func NewUserHandler(s types.UserService) UserHandler {
+func NewUserHandler(s *service.UserService) UserHandler {
 	return UserHandler{s}
 }
 
