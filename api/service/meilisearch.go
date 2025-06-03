@@ -20,7 +20,7 @@ import (
 )
 
 type MeilisearchService struct {
-	client        *meilisearch.Client
+	client        meilisearch.ServiceManager
 	syncInterval  time.Duration
 	syncBatchSize int
 }
@@ -47,7 +47,7 @@ func (s *MeilisearchService) handleError(operation string, indexName string, err
 
 // waitForTask 等待任务完成并处理可能的错误
 func (s *MeilisearchService) waitForTask(taskUID int64, operation string, indexName string) error {
-	task, err := s.client.WaitForTask(taskUID)
+	task, err := s.client.WaitForTask(taskUID, 0)
 	if err != nil {
 		err := fmt.Errorf("wait for task %d failed: %w", taskUID, err)
 		return s.handleError(operation, indexName, err)
@@ -281,7 +281,7 @@ func (s *MeilisearchService) sync() {
 
 // initIndex 创建并配置索引
 func (s *MeilisearchService) initIndex(indexName, primaryKey string, sortAttr []string, filterAttr []string, searchAttr []string) {
-	var indexToUpdate *meilisearch.Index
+	var indexToUpdate *meilisearch.IndexResult
 	// 检查索引是否存在
 	indexToUpdate, err := s.client.GetIndex(indexName)
 	if err != nil {
@@ -339,10 +339,8 @@ func (s *MeilisearchService) initIndex(indexName, primaryKey string, sortAttr []
 
 // init 初始化
 func (s *MeilisearchService) init() {
-	s.client = meilisearch.NewClient(meilisearch.ClientConfig{
-		Host:   config.Get().Meilisearch.Url,
-		APIKey: config.Get().Meilisearch.MasterKey,
-	})
+	s.client = meilisearch.New(config.Get().Meilisearch.Url, meilisearch.WithAPIKey(config.Get().Meilisearch.MasterKey))
+	s.client.ExperimentalFeatures().SetContainsFilter(true).Update()
 	s.syncInterval = time.Duration(config.Get().SyncInterval) * time.Second
 	s.syncBatchSize = 1000
 
@@ -353,7 +351,7 @@ func (s *MeilisearchService) init() {
 	// 可筛选参数
 	filterAttrCourse := []string{}
 	filterAttrPaper := []string{}
-	filterAttrPoster := []string{"uid", "public", "anonymous"}
+	filterAttrPoster := []string{"uid", "public", "anonymous", "tags"}
 	// 可搜索参数
 	searchAttrCourse := []string{"name", "number", "teachers_name", "teachers_number", "teachers", "comments_text"}
 	searchAttrPaper := []string{"title", "intro", "content", "comments_text"}

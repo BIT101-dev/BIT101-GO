@@ -8,49 +8,49 @@ services:
     environment:
       POSTGRES_DB: bit101
       POSTGRES_USER: bit101
-      POSTGRES_PASSWORD: BIT101  # 修改与config.yml对应
+      POSTGRES_PASSWORD: BIT101 # 修改与config.yml对应
     volumes:
       - ./create_gorse_db.sh:/docker-entrypoint-initdb.d/01-create_gorse_db.sh # 创建gorse数据库
       - ./init.sql:/docker-entrypoint-initdb.d/02-init.sql # 初始化数据库
       - ../data/postgres:/var/lib/postgresql/data
-  
+
   redis:
     image: redis:latest
     container_name: bit101_redis
     restart: unless-stopped
     ports:
       - 6379:6379
-  
+
   meilisearch:
-    image: getmeili/meilisearch:v1.4
+    image: getmeili/meilisearch:v1.14
     container_name: bit101_meilisearch
     restart: unless-stopped
     ports:
       - 7700:7700
     environment:
-      - MEILI_MASTER_KEY=BIT101  # 修改与config.yml对应
-      - MEILI_ENV=development  # 生产环境修改为production
+      - MEILI_MASTER_KEY=BIT101 # 修改与config.yml对应
+      - MEILI_ENV=development # 生产环境修改为production
 
   gorse:
     image: zhenghaoz/gorse-in-one:0.4.15
     container_name: bit101_gorse
     restart: unless-stopped
     ports:
-      - 8086:8086   # gRPC
-      - 8088:8088   # HTTP
-    environment:  # 修改与上面配置对应
+      - 8086:8086 # gRPC
+      - 8088:8088 # HTTP
+    environment:
+      # 修改与上面配置对应
       GORSE_CACHE_STORE: redis://redis:6379
       GORSE_DATA_STORE: postgres://bit101:BIT101@postgres:5432/gorse?sslmode=disable
     command: >
-      -c /etc/gorse/config.toml
-      --log-path /var/log/gorse/master.log
-      --cache-path /var/lib/gorse/master_cache.data
+      -c /etc/gorse/config.toml --log-path /var/log/gorse/master.log --cache-path /var/lib/gorse/master_cache.data
     volumes:
-      - ./gorse_config.toml:/etc/gorse/config.toml  # 挂载配置文件
+      - ./gorse_config.toml:/etc/gorse/config.toml # 挂载配置文件
     depends_on:
       - postgres
       - redis
-    deploy: # 限制CPU资源
+    deploy:
+      # 限制CPU资源
       resources:
         limits:
           cpus: '0.75'

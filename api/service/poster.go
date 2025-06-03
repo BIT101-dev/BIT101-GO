@@ -389,7 +389,7 @@ func (s *PosterService) getHotPosters(page uint) ([]uint, error) {
 }
 
 // GetList 获取帖子列表
-func (s *PosterService) GetList(mode string, page uint, keyword, order string, uid uint, noAnonymous bool, onlyPublic bool) ([]types.PosterAPI, error) {
+func (s *PosterService) GetList(mode string, page uint, keyword, order string, uid uint, noAnonymous bool, onlyPublic bool, hideBot bool) ([]types.PosterAPI, error) {
 	// recommend/hot模式 通过推荐系统获取
 	if mode == "" || mode == "recommend" {
 		ids, err := s.gorseSvc.GetRecommend(uid, page)
@@ -453,9 +453,13 @@ func (s *PosterService) GetList(mode string, page uint, keyword, order string, u
 			filters = append(filters, "public = true")
 		}
 	}
+	if hideBot {
+		filters = append(filters, "tags NOT CONTAINS '通知' OR tags NOT CONTAINS '新闻' OR tags NOT CONTAINS 'bot'")
+	}
 	var posters []database.Poster
 	err := s.meilisearchSvc.Search(&posters, s.GetObjType(), keyword, page, config.Get().PostPageSize, orders, filters)
 	if err != nil {
+		slog.Error("poster: search failed", "error", err)
 		return nil, errors.New("搜索失败Orz")
 	}
 	return s.posters2PosterAPIs(posters), nil

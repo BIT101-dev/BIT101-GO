@@ -52,7 +52,7 @@ func (h *PosterHandler) CreateHandler(c *gin.Context) {
 		Title     string   `json:"title" binding:"required"`
 		Text      string   `json:"text"`
 		ImageMids []string `json:"image_mids"`
-		Plugins   string   `json:"plugins"`
+		Plugins   string   `json:"plugins" default:"[]"`
 		Anonymous bool     `json:"anonymous"`
 		Tags      []string `json:"tags"`
 		ClaimID   uint     `json:"claim_id"`
@@ -116,11 +116,12 @@ func (h *PosterHandler) EditHandler(c *gin.Context) {
 // GetListHandler 获取帖子列表
 func (h *PosterHandler) GetListHandler(c *gin.Context) {
 	type Request struct {
-		Mode   string `form:"mode"` //recommend | search | follow | hot 默认为recommend
-		Page   uint   `form:"page"`
-		Search string `form:"search"`
-		Order  string `form:"order"` // comment | like | new 默认为new
-		Uid    int    `form:"uid"`   // 0为个人主页（显示匿名和未公开的帖子）
+		Mode    string `form:"mode"` //recommend | search | follow | hot 默认为recommend
+		Page    uint   `form:"page"`
+		Search  string `form:"search"`
+		Order   string `form:"order"`    // comment | like | new 默认为new
+		Uid     int    `form:"uid"`      // 0为个人主页（显示匿名和未公开的帖子）
+		HideBot bool   `form:"hide_bot"` // 隐藏bot帖子
 	}
 	type Response []types.PosterAPI
 	var query Request
@@ -148,7 +149,7 @@ func (h *PosterHandler) GetListHandler(c *gin.Context) {
 		}
 	}
 
-	posterAPIs, err := h.posterSvc.GetList(query.Mode, query.Page, query.Search, query.Order, uint(query.Uid), noAnonymous, onlyPublic)
+	posterAPIs, err := h.posterSvc.GetList(query.Mode, query.Page, query.Search, query.Order, uint(query.Uid), noAnonymous, onlyPublic, query.HideBot)
 	if common.HandleError(c, err) {
 		return
 	}
