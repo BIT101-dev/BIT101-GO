@@ -18,6 +18,10 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+var (
+	ErrNeedReview = errors.New("need review") // 需要评教
+)
+
 func GetScore(cookie string, detail bool) ([][]string, error) {
 	// 预登录
 	pre_url := "https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b/cas/login?service=http%3A%2F%2Fjwms.bit.edu.cn%2F"
@@ -30,6 +34,9 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 	res, err := request.Get(score_url, map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
 		return nil, errors.New("webvpn get_score error")
+	}
+	if strings.Contains(res.Text, "评教") {
+		return nil, ErrNeedReview
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(res.Text))
 	if err != nil {

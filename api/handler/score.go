@@ -43,6 +43,8 @@ func (h *ScoreHandler) GetScoreHandler(c *gin.Context) {
 	if err != nil {
 		if err == webvpn.ErrCookieInvalid {
 			c.JSON(500, gin.H{"msg": "未通过身份认证Orz"})
+		} else if err == webvpn.ErrNeedReview {
+			c.JSON(500, gin.H{"msg": "请先完成评教Orz"})
 		} else {
 			c.JSON(500, gin.H{"msg": "查询成绩出错Orz"})
 		}
