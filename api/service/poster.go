@@ -174,6 +174,10 @@ func (s *PosterService) Get(id, uid uint, admin bool) (types.PosterInfo, error) 
 			return types.PosterInfo{}, errors.New("获取用户信息失败Orz")
 		}
 	}
+	// 如果不是自己的帖子且不是管理员 则无法查看非公开的帖子
+	if !poster.Public && !own {
+		return types.PosterInfo{}, errors.New("没有权限查看Orz")
+	}
 	subscription, err := s.subscriptionSvc.GetSubscriptionLevel(uid, fmt.Sprintf("%s%v", s.GetObjType(), poster.ID))
 	if err != nil {
 		slog.Error("poster: get subscription level failed", "error", err.Error())
