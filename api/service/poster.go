@@ -421,7 +421,13 @@ func (s *PosterService) GetList(mode string, page uint, keyword, order string, u
 		if err != nil {
 			return nil, errors.New("获取帖子失败Orz")
 		}
-		return s.posters2PosterAPIs(posters), nil
+		publicPosters := make([]database.Poster, 0, len(posters))
+		for i := range posters {
+			if posters[i].Public {
+				publicPosters = append(publicPosters, posters[i])
+			}
+		}
+		return s.posters2PosterAPIs(publicPosters), nil
 	}
 	// follow/search模式
 	var orders []string
