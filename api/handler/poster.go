@@ -149,6 +149,11 @@ func (h *PosterHandler) GetListHandler(c *gin.Context) {
 		}
 	}
 
+	if query.Mode != "" && query.Mode != "recommend" && query.Mode != "search" && query.Mode != "follow" && query.Mode != "hot" {
+		c.JSON(400, gin.H{"msg": "参数错误awa"})
+		return
+	}
+
 	posterAPIs, err := h.posterSvc.GetList(query.Mode, query.Page, query.Search, query.Order, uint(query.Uid), noAnonymous, onlyPublic, query.HideBot)
 	if common.HandleError(c, err) {
 		return
