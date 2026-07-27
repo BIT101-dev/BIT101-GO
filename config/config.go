@@ -23,7 +23,12 @@ type Config struct {
 	VerifyCodeExpire int64 `yaml:"verify_code_expire"`
 	LoginExpire      int64 `yaml:"login_expire"`
 	SyncInterval     int64 `yaml:"sync_interval"`
-	Mail             struct {
+	RegistrationJWT  struct {
+		PublicKeyFile string `yaml:"public_key_file"`
+		Issuer        string
+		Audience      string
+	} `yaml:"registration_jwt"`
+	Mail struct {
 		Host     string
 		User     string
 		Password string

@@ -142,12 +142,13 @@ func (h *UserHandler) MailVerifyHandler(c *gin.Context) {
 	})
 }
 
-// RegisterHandler 注册接口
+// RegisterHandler 注册接口, 同时支持SSO和邮箱注册
 func (h *UserHandler) RegisterHandler(c *gin.Context) {
 	type Request struct {
 		Password  string `json:"password" binding:"required"` // MD5密码
-		Token     string `json:"token" binding:"required"`    // token
-		Code      string `json:"code" binding:"required"`     // 验证码
+		JWT       string `json:"jwt"`                         // 统一身份验证JWT
+		Token     string `json:"token"`                       // 邮箱验证token
+		Code      string `json:"code"`                        // 邮箱验证码
 		LoginMode bool   `json:"login_mode"`                  // 是否使用不强制修改密码的登录模式
 	}
 
@@ -161,7 +162,13 @@ func (h *UserHandler) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	fakeCookie, err := h.UserSvc.Register(query.Token, query.Code, query.Password, query.LoginMode)
+	fakeCookie, err := h.UserSvc.Register(
+		query.JWT,
+		query.Token,
+		query.Code,
+		query.Password,
+		query.LoginMode,
+	)
 	if common.HandleError(c, err) {
 		return
 	}
