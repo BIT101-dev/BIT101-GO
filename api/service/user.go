@@ -274,11 +274,30 @@ func (s *UserService) MailVerify(sid string) (token string, err error) {
 }
 
 // Register 注册
-func (s *UserService) Register(token string, code string, pwd string, loginMode bool) (fakeCookie string, err error) {
-	// 验证token
-	sid, ok, _, _ := common.VeirifyUserToken(token, config.Get().Key+code)
-	if !ok {
-		return "", errors.New("验证码无效Orz")
+func (s *UserService) Register(registrationJWT string, token string, code string, pwd string, loginMode bool) (fakeCookie string, err error) {
+	var sid string
+	switch {
+	// 统一身份认证注册
+	case registrationJWT != "" && token == "" && code == "":
+		cfg := config.Get().RegistrationJWT
+		sid, err = common.VerifyRegistrationJWT(
+			registrationJWT,
+			cfg.PublicKeyFile,
+			cfg.Issuer,
+			cfg.Audience,
+		)
+		if err != nil {
+			return "", errors.New("统一身份认证凭证无效Orz")
+		}
+	// 邮箱注册
+	case registrationJWT == "" && token != "" && code != "":
+		var ok bool
+		sid, ok, _, _ = common.VeirifyUserToken(token, config.Get().Key+code)
+		if !ok {
+			return "", errors.New("验证码无效Orz")
+		}
+	default:
+		return "", errors.New("注册认证参数无效Orz")
 	}
 
 	// 查询用户是否已经注册过
