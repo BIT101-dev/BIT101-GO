@@ -8,6 +8,7 @@ package request
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	net_url "net/url"
@@ -19,15 +20,27 @@ type Response struct {
 	Text    string
 	Content []byte
 	Header  http.Header
+	URL     string
 }
 
-func request(request_type string, url string, headers map[string]string, request_body io.Reader) (Response, error) {
-	req, _ := http.NewRequest(request_type, url, request_body)
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
+func request(client HTTPClient, request_type string, url string, headers map[string]string, request_body io.Reader) (Response, error) {
+	return requestWithContext(context.Background(), client, request_type, url, headers, request_body)
+}
+
+func requestWithContext(ctx context.Context, client HTTPClient, request_type string, url string, headers map[string]string, request_body io.Reader) (Response, error) {
+	req, err := http.NewRequestWithContext(ctx, request_type, url, request_body)
+	if err != nil {
+		return Response{}, err
+	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return Response{}, err
 	}
@@ -37,18 +50,39 @@ func request(request_type string, url string, headers map[string]string, request
 	if err != nil {
 		return Response{}, err
 	}
-	return Response{res.StatusCode, string(body), body, res.Header}, nil
+	finalURL := *res.Request.URL
+	finalURL.RawQuery = ""
+	finalURL.ForceQuery = false
+	finalURL.Fragment = ""
+	finalURL.User = nil
+	return Response{res.StatusCode, string(body), body, res.Header, finalURL.String()}, nil
 }
 
 func Get(url string, headers map[string]string) (Response, error) {
-	return request("GET", url, headers, nil)
+	return GetWithClient(http.DefaultClient, url, headers)
+}
+
+func GetWithClient(client HTTPClient, url string, headers map[string]string) (Response, error) {
+	return request(client, "GET", url, headers, nil)
+}
+
+func GetWithClientContext(ctx context.Context, client HTTPClient, url string, headers map[string]string) (Response, error) {
+	return requestWithContext(ctx, client, "GET", url, headers, nil)
 }
 
 func Post(url string, headers map[string]string) (Response, error) {
-	return request("POST", url, headers, nil)
+	return PostWithClient(http.DefaultClient, url, headers)
+}
+
+func PostWithClient(client HTTPClient, url string, headers map[string]string) (Response, error) {
+	return request(client, "POST", url, headers, nil)
 }
 
 func PostForm(url string, form map[string]string, headers map[string]string) (Response, error) {
+	return PostFormWithClient(http.DefaultClient, url, form, headers)
+}
+
+func PostFormWithClient(client HTTPClient, url string, form map[string]string, headers map[string]string) (Response, error) {
 	formValues := net_url.Values{}
 	for k, v := range form {
 		formValues.Set(k, v)
@@ -57,14 +91,14 @@ func PostForm(url string, form map[string]string, headers map[string]string) (Re
 	formDataBytes := []byte(formDataStr)
 	formBytesReader := bytes.NewReader(formDataBytes)
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
-	return request("POST", url, headers, formBytesReader)
+	return request(client, "POST", url, headers, formBytesReader)
 }
 
 func PostJSON(url string, data string, headers map[string]string) (Response, error) {
 	headers["Content-Type"] = "application/json; charset=UTF-8"
-	return request("POST", url, headers, strings.NewReader(data))
+	return request(http.DefaultClient, "POST", url, headers, strings.NewReader(data))
 }
 
 func Put(url string, data []byte, headers map[string]string) (Response, error) {
-	return request("PUT", url, headers, bytes.NewBuffer(data))
+	return request(http.DefaultClient, "PUT", url, headers, bytes.NewBuffer(data))
 }

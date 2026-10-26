@@ -39,7 +39,7 @@ func (h *ScoreHandler) GetScoreHandler(c *gin.Context) {
 		common.HandleErrorWithCode(c, webvpn.ErrCookieInvalid, 400)
 		return
 	}
-	table, err := webvpn.GetScore(cookie, query.Detail)
+	table, err := webvpn.GetScoreContext(c.Request.Context(), cookie, query.Detail)
 	if err != nil {
 		if err == webvpn.ErrCookieInvalid {
 			c.JSON(500, gin.H{"msg": "未通过身份认证Orz"})
@@ -60,7 +60,7 @@ func (h *ScoreHandler) GetReportHandler(c *gin.Context) {
 		common.HandleErrorWithCode(c, webvpn.ErrCookieInvalid, 400)
 		return
 	}
-	imgs, err := webvpn.GetReport(cookie)
+	imgs, err := webvpn.GetReportContext(c.Request.Context(), cookie)
 	if err != nil {
 		if err == webvpn.ErrCookieInvalid {
 			c.JSON(500, gin.H{"msg": "未通过身份认证Orz"})

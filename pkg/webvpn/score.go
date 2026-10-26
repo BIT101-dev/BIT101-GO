@@ -23,15 +23,27 @@ var (
 )
 
 func GetScore(cookie string, detail bool) ([][]string, error) {
+	return GetScoreContext(context.Background(), cookie, detail)
+}
+
+func GetScoreContext(ctx context.Context, cookie string, detail bool) ([][]string, error) {
+	return NewClient().GetScoreContext(ctx, cookie, detail)
+}
+
+func (c *Client) GetScore(cookie string, detail bool) ([][]string, error) {
+	return c.GetScoreContext(context.Background(), cookie, detail)
+}
+
+func (c *Client) GetScoreContext(ctx context.Context, cookie string, detail bool) ([][]string, error) {
 	// 预登录
 	pre_url := "https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b/cas/login?service=http%3A%2F%2Fjwms.bit.edu.cn%2F"
-	_, err := preCheck(pre_url, cookie)
+	_, err := c.preCheck(pre_url, cookie)
 	if err != nil {
 		return nil, err
 	}
 	// 获取成绩列表
 	score_url := "https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421fae04c8f69326144300d8db9d6562d/jsxsd/kscj/cjcx_list"
-	res, err := request.Get(score_url, map[string]string{"Cookie": cookie})
+	res, err := request.GetWithClient(c, score_url, map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
 		return nil, errors.New("webvpn get_score error")
 	}
@@ -43,16 +55,20 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 		return nil, err
 	}
 	rows := doc.Find("#dataList tr").Nodes
+	if len(rows) == 0 {
+		if strings.Contains(res.Text, "帐号登录或动态码登录") {
+			return nil, ErrCookieInvalid
+		}
+		return nil, fmt.Errorf("webvpn score table not found: upstream=%s", res.URL)
+	}
 	head := make([]string, 0)
 	head_map := make(map[string]int)
 	data := make([]map[string]string, 0)
-	type chData struct {
+	type detailJob struct {
 		index int
-		data  map[string]string
+		url   string
 	}
-	ch := make(chan *chData, 24)
-	ch_count := 0
-	ctx, cancel := context.WithCancel(context.Background())
+	jobs := make([]detailJob, 0)
 	// 获取头
 	goquery.NewDocumentFromNode(rows[0]).Children().Each(func(i int, s *goquery.Selection) {
 		text := s.Get(0).FirstChild.Data
@@ -69,40 +85,7 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 				detail_url := re.FindString(a.AttrOr("onclick", ""))
 				if detail_url != "" && detail { //查询详细信息
 					detail_url = "https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421fae04c8f69326144300d8db9d6562d" + strings.ReplaceAll(detail_url, "&amp;", "&")
-					ch_count++
-					// 开启协程查询详细信息 传回一个map[string]string 出错则传回nil
-					go func(ctx context.Context, index int, url string) {
-						mp := make(map[string]string)
-						res, err := request.Get(url, map[string]string{"Cookie": cookie})
-						if err != nil || res.Code != 200 {
-							select {
-							case <-ctx.Done():
-							default:
-								ch <- nil
-							}
-							return
-						}
-						doc, err := goquery.NewDocumentFromReader(strings.NewReader(res.Text))
-						if err != nil {
-							select {
-							case <-ctx.Done():
-							default:
-								ch <- nil
-							}
-							return
-						}
-						doc.Find("td").Each(func(i int, s *goquery.Selection) {
-							if strings.Contains(s.Text(), "：") {
-								arr := strings.Split(s.Text(), "：")
-								mp[arr[0]] = arr[1]
-							}
-						})
-						select {
-						case <-ctx.Done():
-						default:
-							ch <- &chData{index, mp}
-						}
-					}(ctx, row_index, detail_url)
+					jobs = append(jobs, detailJob{row_index, detail_url})
 				}
 				data[row_index][head[i]] = strings.TrimSpace(a.Text())
 			} else {
@@ -113,19 +96,34 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 			}
 		})
 	}
-	// 等待详细信息
-	for i := 0; i < ch_count; i++ {
-		detail_data := <-ch
-		if detail_data == nil {
-			cancel()
+	details, err := parallelMap(ctx, jobs, func(ctx context.Context, job detailJob) (map[string]string, error) {
+		res, err := request.GetWithClientContext(ctx, c, job.url, map[string]string{"Cookie": cookie})
+		if err != nil || res.Code != 200 {
 			return nil, errors.New("webvpn get score detail error")
 		}
-		for k, v := range detail_data.data {
+		doc, err := goquery.NewDocumentFromReader(strings.NewReader(res.Text))
+		if err != nil {
+			return nil, err
+		}
+		result := make(map[string]string)
+		doc.Find("td").Each(func(i int, s *goquery.Selection) {
+			if strings.Contains(s.Text(), "：") {
+				arr := strings.Split(s.Text(), "：")
+				result[arr[0]] = arr[1]
+			}
+		})
+		return result, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	for i, detail := range details {
+		for k, v := range detail {
 			if _, ok := head_map[k]; !ok {
 				head_map[k] = len(head)
 				head = append(head, k)
 			}
-			data[detail_data.index][k] = v
+			data[jobs[i].index][k] = v
 		}
 	}
 	// 将字典转为表格
@@ -138,18 +136,29 @@ func GetScore(cookie string, detail bool) ([][]string, error) {
 			table[i+1][head_map[k]] = v
 		}
 	}
-	cancel()
 	return table, nil
 }
 
 func GetReport(cookie string) ([]string, error) {
+	return GetReportContext(context.Background(), cookie)
+}
+
+func GetReportContext(ctx context.Context, cookie string) ([]string, error) {
+	return NewClient().GetReportContext(ctx, cookie)
+}
+
+func (c *Client) GetReport(cookie string) ([]string, error) {
+	return c.GetReportContext(context.Background(), cookie)
+}
+
+func (c *Client) GetReportContext(ctx context.Context, cookie string) ([]string, error) {
 	// 预登录
-	_, err := preCheck("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/Account/ExternalLogin", cookie)
+	_, err := c.preCheck("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/Account/ExternalLogin", cookie)
 	if err != nil {
 		return nil, err
 	}
 	// 获取成绩单
-	res, err := request.Get("https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/ScoreReport2/Index?GPA=1", map[string]string{"Cookie": cookie})
+	res, err := request.GetWithClient(c, "https://webvpn.bit.edu.cn/http/77726476706e69737468656265737421a1a70fcc69682601265c/cjd/ScoreReport2/Index?GPA=1", map[string]string{"Cookie": cookie})
 	if err != nil || res.Code != 200 {
 		return nil, errors.New("webvpn get report error")
 	}
@@ -161,45 +170,20 @@ func GetReport(cookie string) ([]string, error) {
 	doc.Find("main img").Each(func(i int, s *goquery.Selection) {
 		urls = append(urls, s.AttrOr("src", ""))
 	})
-
-	// 并发获取成绩单图片
-	type chData struct {
-		index int
-		data  string
-	}
-	ch := make(chan *chData, 24)
-	ctx, cancel := context.WithCancel(context.Background())
-	imgs := make([]string, len(urls))
-	for i, url := range urls {
-		go func(ctx context.Context, index int, url string) {
-			res, err := request.Get(url, map[string]string{"Cookie": cookie})
-			if err != nil || res.Code != 200 {
-				select {
-				case <-ctx.Done():
-				default:
-					ch <- nil
-				}
-				return
-			}
-			select {
-			case <-ctx.Done():
-			default:
-				ch <- &chData{index, base64.StdEncoding.EncodeToString(res.Content)}
-			}
-		}(ctx, i, "https://webvpn.bit.edu.cn"+url)
-	}
-
-	// 接收图片
-	for i := 0; i < len(urls); i++ {
-		data := <-ch
-		if data == nil {
-			cancel()
-			return nil, errors.New("webvpn get report img error")
+	if len(urls) == 0 {
+		if strings.Contains(res.Text, "帐号登录或动态码登录") {
+			return nil, ErrCookieInvalid
 		}
-		imgs[data.index] = "data:image/png;base64," + data.data
+		return nil, fmt.Errorf("webvpn report images not found: upstream=%s", res.URL)
 	}
-	cancel()
-	return imgs, nil
+
+	return parallelMap(ctx, urls, func(ctx context.Context, url string) (string, error) {
+		res, err := request.GetWithClientContext(ctx, c, "https://webvpn.bit.edu.cn"+url, map[string]string{"Cookie": cookie})
+		if err != nil || res.Code != 200 {
+			return "", errors.New("webvpn get report img error")
+		}
+		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(res.Content), nil
+	})
 }
 
 // 获取课程历史 接口同查询成绩详情

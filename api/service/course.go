@@ -434,7 +434,12 @@ func getBuildingCoord(jasmc string) (float64, float64, bool) {
 
 // GetCourseSchedule 获取课程表
 func (s *CourseService) GetCourseSchedule(cookie, term string) (url, note string, err error) {
-	schedule, err := webvpn.GetSchedule(cookie, term)
+	var schedule webvpn.GetScheduleResponse
+	if config.Get().Proxy.Enable {
+		schedule, err = webvpn.ProxySchedule(cookie, term)
+	} else {
+		schedule, err = webvpn.GetSchedule(cookie, term)
+	}
 	if err != nil {
 		return "", "", err
 	}

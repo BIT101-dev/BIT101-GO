@@ -1,7 +1,9 @@
+host: "" #监听地址，默认所有网卡
 port: 8080 #启动端口
 proxy: #代理请求
   enable: false #是否开启代理
   url: https://service-h5igxl6r-1255944436.bj.apigw.tencentcs.com/release #代理服务链接
+  token: "" #独立代理访问密钥
 key: "BIT101" #加密密钥
 verify_code_expire: 300 #验证码有效期 单位秒
 login_expire: 2073600 #登录有效期 单位秒

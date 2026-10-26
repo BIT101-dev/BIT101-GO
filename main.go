@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,6 +43,9 @@ var LOGO = `
 func runServer() {
 	// 获取配置
 	cfg := config.Get()
+	if cfg.Proxy.Enable && (cfg.Proxy.Url == "" || cfg.Proxy.Token == "") {
+		panic("proxy.url and proxy.token are required when proxy is enabled")
+	}
 
 	// 初始化Gin
 	if cfg.ReleaseMode {
@@ -52,10 +56,13 @@ func runServer() {
 	// 进行依赖注入并注册路由
 	api.SetupContainer()
 	api.RegisterRouter(app)
+	if cfg.Saver.Local.Enable {
+		app.Static("/tmp", filepath.Join(cfg.Saver.Local.Path, "tmp"))
+	}
 
 	// 启动服务
-	fmt.Println("BIT101-GO will run on port " + cfg.Port)
-	app.Run(":" + cfg.Port)
+	fmt.Println("BIT101-GO will run on " + cfg.Host + ":" + cfg.Port)
+	app.Run(cfg.Host + ":" + cfg.Port)
 }
 
 func main() {

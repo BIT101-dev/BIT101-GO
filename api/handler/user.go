@@ -61,10 +61,11 @@ func (h *UserHandler) WebvpnVerifyInitHandler(c *gin.Context) {
 	}
 
 	type Response struct {
-		Salt      string `json:"salt"`      // 照搬webvpn的salt
-		Execution string `json:"execution"` // 照搬webvpn的execution
-		Cookie    string `json:"cookie"`    // 照搬webvpn的cookie
-		Captcha   string `json:"captcha"`   // webpn验证码图片base64
+		Salt        string `json:"salt"`      // 照搬webvpn的salt
+		Execution   string `json:"execution"` // 照搬webvpn的execution
+		Cookie      string `json:"cookie"`    // 照搬webvpn的cookie
+		Fingerprint string `json:"fingerprint"`
+		Captcha     string `json:"captcha"`   // webpn验证码图片base64
 	}
 	var query Request
 	if common.HandleErrorWithCode(c, c.ShouldBindJSON(&query), 400) {
@@ -77,43 +78,47 @@ func (h *UserHandler) WebvpnVerifyInitHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, Response{
-		Salt:      data.Salt,
-		Execution: data.Execution,
-		Cookie:    data.Cookie,
-		Captcha:   captcha,
+		Salt:        data.Salt,
+		Execution:   data.Execution,
+		Cookie:      data.Cookie,
+		Fingerprint: data.Fingerprint,
+		Captcha:     captcha,
 	})
 }
 
 // WebvpnVerifyHandler webvpn验证接口
 func (h *UserHandler) WebvpnVerifyHandler(c *gin.Context) {
 	type Request struct {
-		Sid       string `json:"sid" binding:"required"`       // 学号
-		Salt      string `json:"salt" binding:"required"`      // 照搬webvpn的salt
-		Password  string `json:"password" binding:"required"`  // EncryptedPassword.js加密后的密码
-		Execution string `json:"execution" binding:"required"` // 照搬webvpn的execution
-		Cookie    string `json:"cookie" binding:"required"`    // 照搬webvpn的cookie
-		Captcha   string `json:"captcha"`                      // 验证码结果
+		Sid         string `json:"sid" binding:"required"`       // 学号
+		Salt        string `json:"salt" binding:"required"`      // 照搬webvpn的salt
+		Password    string `json:"password" binding:"required"`  // EncryptedPassword.js加密后的密码
+		Execution   string `json:"execution" binding:"required"` // 照搬webvpn的execution
+		Cookie      string `json:"cookie" binding:"required"`    // 照搬webvpn的cookie
+		Captcha     string `json:"captcha"`                      // 验证码结果
+		Fingerprint string `json:"fingerprint"`
 	}
 
 	type Response struct {
-		Token string `json:"token"` // webvpn验证成功后的token
-		Code  string `json:"code"`  // 用于注册的验证码
-		Msg   string `json:"msg"`
+		Token        string `json:"token"` // webvpn验证成功后的token
+		Code         string `json:"code"`  // 用于注册的验证码
+		WebvpnCookie string `json:"webvpn_cookie"`
+		Msg          string `json:"msg"`
 	}
 	var query Request
 	if common.HandleErrorWithCode(c, c.ShouldBindJSON(&query), 400) {
 		return
 	}
 
-	token, code, err := h.UserSvc.WebvpnVerify(query.Sid, query.Salt, query.Password, query.Execution, query.Cookie, query.Captcha)
+	token, code, schoolCookie, err := h.UserSvc.WebvpnVerify(query.Sid, query.Salt, query.Password, query.Execution, query.Cookie, query.Captcha, query.Fingerprint)
 	if common.HandleError(c, err) {
 		return
 	}
 
 	c.JSON(200, Response{
-		Token: token,
-		Code:  code,
-		Msg:   "统一身份认证成功OvO",
+		Token:        token,
+		Code:         code,
+		WebvpnCookie: schoolCookie,
+		Msg:          "统一身份认证成功OvO",
 	})
 }
 

@@ -14,10 +14,12 @@ import (
 )
 
 type Config struct {
+	Host  string
 	Port  string
 	Proxy struct {
 		Enable bool
 		Url    string
+		Token  string
 	}
 	Key              string
 	VerifyCodeExpire int64 `yaml:"verify_code_expire"`

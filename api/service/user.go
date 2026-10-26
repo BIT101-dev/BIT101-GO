@@ -228,7 +228,10 @@ func (s *UserService) Login(sid string, pwd string) (fakeCookie string, err erro
 
 // WebvpnVerifyInit 初始化WebVPN验证 captcha验证码图片base64为空则不需要验证码
 func (s *UserService) WebvpnVerifyInit(sid string) (data webvpn.InitLoginReturn, captcha string, err error) {
-	data, err = webvpn.InitLogin()
+	if config.Get().Proxy.Enable {
+		return webvpn.ProxyVerifyInit(sid)
+	}
+	data, err = webvpn.NewClient().InitLogin()
 	if err != nil {
 		return webvpn.InitLoginReturn{}, "", errors.New("初始化WebVPN验证失败Orz")
 	}
@@ -248,16 +251,26 @@ func (s *UserService) WebvpnVerifyInit(sid string) (data webvpn.InitLoginReturn,
 }
 
 // WebvpnVerify WebVPN验证
-func (s *UserService) WebvpnVerify(sid string, salt string, pwd string, execution string, cookie string, captcha string) (token string, code string, err error) {
-	err = webvpn.Login(sid, salt, pwd, execution, cookie, captcha)
+func (s *UserService) WebvpnVerify(sid string, salt string, pwd string, execution string, cookie string, captcha string, fingerprint string) (token string, code string, schoolCookie string, err error) {
+	if config.Get().Proxy.Enable {
+		schoolCookie, err = webvpn.ProxyVerify(sid, salt, pwd, execution, cookie, captcha, fingerprint)
+	} else {
+		client := webvpn.NewClient()
+		client.SetFingerprint(fingerprint)
+		err = client.Login(sid, salt, pwd, execution, cookie, captcha)
+		schoolCookie = client.Cookie()
+	}
 	if err != nil {
-		return "", "", errors.New("统一身份认证失败Orz")
+		return "", "", "", errors.New("统一身份认证失败Orz")
+	}
+	if schoolCookie == "" {
+		return "", "", "", errors.New("学校会话为空Orz")
 	}
 	//生成验证码
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	code = fmt.Sprintf("%06v", rnd.Int31n(1000000))
 	token = common.NewUserToken(sid, config.Get().VerifyCodeExpire, config.Get().Key+code, -1)
-	return token, code, nil
+	return token, code, schoolCookie, nil
 }
 
 // MailVerify 邮箱验证
