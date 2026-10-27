@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -35,16 +36,11 @@ func InitLogin() (InitLoginReturn, error) {
 }
 
 func (c *Client) InitLogin() (InitLoginReturn, error) {
-	if !c.hasWebVPNTicket() {
-		if err := c.establishWebVPN(); err != nil {
-			return InitLoginReturn{}, err
-		}
-	}
 	return c.initLogin(casLoginURL)
 }
 
 func (c *Client) initLogin(loginURL string) (InitLoginReturn, error) {
-	res, err := request.PostWithClient(c, loginURL, nil)
+	res, err := request.GetWithClient(c, loginURL, nil)
 	if err != nil || res.Code != 200 {
 		return InitLoginReturn{}, errors.New("webvpn init login error")
 	}
@@ -75,12 +71,7 @@ func Login(username string, salt string, password string, execution string, cook
 }
 
 func (c *Client) Login(username string, salt string, password string, execution string, cookie string, captcha string) error {
-	if !c.hasWebVPNTicket() && !hasWebVPNTicketCookie(cookie) {
-		if err := c.establishWebVPN(); err != nil {
-			return err
-		}
-	}
-	res, err := request.PostFormWithClient(c, webvpnLoginURL, map[string]string{
+	form := map[string]string{
 		"username":        username,
 		"password":        password,
 		"execution":       execution,
@@ -90,17 +81,79 @@ func (c *Client) Login(username string, salt string, password string, execution 
 		"type":            "UsernamePassword",
 		"_eventId":        "submit",
 		"geolocation":     "",
-	}, map[string]string{"Cookie": cookie})
+	}
+	risk, err := c.riskFields(salt, cookie)
+	if err != nil {
+		return err
+	}
+	for name, value := range risk {
+		form[name] = value
+	}
+	res, err := request.PostFormWithClient(noRedirectClient{client: c}, casLoginURL, form, map[string]string{
+		"Cookie":  cookie,
+		"Origin":  "https://sso.bit.edu.cn",
+		"Referer": casLoginURL,
+	})
 	if err != nil {
 		return fmt.Errorf("webvpn login request: %w", err)
 	}
-	if res.Code != 200 {
-		return fmt.Errorf("webvpn login rejected: status=%d upstream=%s", res.Code, res.URL)
+	if isSecondFactorPage(res) {
+		return c.prepareSecondFactor(username, res)
 	}
-	if isCASLoginPage(res) {
-		return fmt.Errorf("webvpn login rejected: upstream=%s form=%t", res.URL, strings.Contains(res.Text, "login-page-flowkey"))
+	if res.Code < 300 || res.Code >= 400 {
+		if isCASLoginPage(res) {
+			return loginRejection(res, c.riskMode, execution)
+		}
+		return fmt.Errorf("webvpn login rejected: status=%d risk=%s", res.Code, c.riskMode)
+	}
+	return c.finishLogin(res)
+}
+
+func (c *Client) finishLogin(res request.Response) error {
+	callback, err := loginCallback(res)
+	if err != nil {
+		return err
+	}
+	if !c.hasWebVPNTicket() {
+		if err := c.establishWebVPN(); err != nil {
+			return err
+		}
+	}
+	res, err = request.GetWithClient(c, callback, nil)
+	if err != nil {
+		return fmt.Errorf("webvpn callback request: %w", err)
+	}
+	if res.Code != 200 || isCASLoginPage(res) || !c.hasWebVPNTicket() {
+		return fmt.Errorf("webvpn callback rejected: status=%d risk=%s", res.Code, c.riskMode)
 	}
 	return nil
+}
+
+func loginCallback(res request.Response) (string, error) {
+	location := res.Header.Get("Location")
+	if location == "" {
+		return "", errors.New("webvpn login callback missing")
+	}
+	base, _ := url.Parse(casLoginURL)
+	callback, err := url.Parse(location)
+	if err != nil {
+		return "", errors.New("webvpn login callback invalid")
+	}
+	callback = base.ResolveReference(callback)
+	if callback.Scheme != "https" || callback.User != nil ||
+		!strings.HasSuffix(callback.Hostname(), ".bit.edu.cn") ||
+		(callback.Port() != "" && callback.Port() != "443") || callback.Query().Get("ticket") == "" {
+		return "", errors.New("webvpn login callback invalid")
+	}
+	return callback.String(), nil
+}
+
+func loginRejection(res request.Response, riskMode string, execution string) error {
+	doc, _ := goquery.NewDocumentFromReader(strings.NewReader(res.Text))
+	code := strings.TrimSpace(doc.Find("#login-error-code").Text())
+	messagePresent := strings.TrimSpace(doc.Find("#login-error-msg").Text()) != ""
+	flowReplaced := doc.Find("#login-page-flowkey").Text() != execution
+	return fmt.Errorf("webvpn login rejected: status=%d code=%s risk=%s message=%t flow_replaced=%t", res.Code, code, riskMode, messagePresent, flowReplaced)
 }
 
 func isCASLoginPage(res request.Response) bool {

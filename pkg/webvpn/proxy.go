@@ -26,9 +26,21 @@ var proxyHTTPClient = &http.Client{
 }
 
 type proxyVerifyResponse struct {
-	Success bool   `json:"success"`
-	Status  string `json:"status"`
-	Cookie  string `json:"webvpn_cookie"`
+	Success     bool   `json:"success"`
+	Status      string `json:"status"`
+	Cookie      string `json:"webvpn_cookie"`
+	Challenge   string `json:"challenge"`
+	MaskedPhone string `json:"masked_phone"`
+	Sid         string `json:"sid"`
+}
+
+type SMSRequiredError struct {
+	Challenge   string
+	MaskedPhone string
+}
+
+func (e *SMSRequiredError) Error() string {
+	return "学校要求短信二次验证"
 }
 
 func proxyEndpoint(path string) (string, error) {
@@ -123,9 +135,48 @@ func ProxyVerify(sid string, salt string, pwd string, execution string, cookie s
 		return "", err
 	}
 	if !result.Success {
+		if result.Status == "sms_required" && result.Challenge != "" {
+			return "", &SMSRequiredError{Challenge: result.Challenge, MaskedPhone: result.MaskedPhone}
+		}
 		return "", fmt.Errorf("proxy verify failed: %s", result.Status)
 	}
 	return OpenSessionCookie(result.Cookie, config.Get().Proxy.Token)
+}
+
+func ProxyVerifySMS(challenge string, code string) (string, string, error) {
+	if challenge == "" || code == "" {
+		return "", "", errors.New("missing SMS challenge or code")
+	}
+	endpoint, err := proxyEndpoint("/internal/webvpn/verify_sms")
+	if err != nil {
+		return "", "", err
+	}
+	body, _ := json.Marshal(map[string]string{"challenge": challenge, "code": code})
+	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := proxyDo(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("proxy SMS verify status %d", resp.StatusCode)
+	}
+	var result proxyVerifyResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result); err != nil {
+		return "", "", err
+	}
+	if !result.Success {
+		return "", "", errors.New(result.Status)
+	}
+	if result.Sid == "" {
+		return "", "", errors.New("proxy SMS verify returned empty sid")
+	}
+	cookie, err := OpenSessionCookie(result.Cookie, config.Get().Proxy.Token)
+	return result.Sid, cookie, err
 }
 
 func ProxySchedule(cookie string, term string) (GetScheduleResponse, error) {

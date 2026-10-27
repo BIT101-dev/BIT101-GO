@@ -32,6 +32,30 @@ func EncryptPassword(plaintext string, salt string) (string, error) {
 	return base64.StdEncoding.EncodeToString(output), nil
 }
 
+func decryptSchoolPassword(ciphertext []byte, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) == 0 || len(ciphertext)%block.BlockSize() != 0 {
+		return nil, errors.New("invalid AES ciphertext length")
+	}
+	plaintext := make([]byte, len(ciphertext))
+	for offset := 0; offset < len(ciphertext); offset += block.BlockSize() {
+		block.Decrypt(plaintext[offset:offset+block.BlockSize()], ciphertext[offset:offset+block.BlockSize()])
+	}
+	padding := int(plaintext[len(plaintext)-1])
+	if padding == 0 || padding > block.BlockSize() || padding > len(plaintext) {
+		return nil, errors.New("invalid AES padding")
+	}
+	for _, value := range plaintext[len(plaintext)-padding:] {
+		if int(value) != padding {
+			return nil, errors.New("invalid AES padding")
+		}
+	}
+	return plaintext[:len(plaintext)-padding], nil
+}
+
 func SealSessionCookie(plaintext string, secret string) (string, error) {
 	if plaintext == "" {
 		return "", errors.New("empty session cookie")

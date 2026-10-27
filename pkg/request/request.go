@@ -95,8 +95,12 @@ func PostFormWithClient(client HTTPClient, url string, form map[string]string, h
 }
 
 func PostJSON(url string, data string, headers map[string]string) (Response, error) {
+	return PostJSONWithClient(http.DefaultClient, url, data, headers)
+}
+
+func PostJSONWithClient(client HTTPClient, url string, data string, headers map[string]string) (Response, error) {
 	headers["Content-Type"] = "application/json; charset=UTF-8"
-	return request(http.DefaultClient, "POST", url, headers, strings.NewReader(data))
+	return request(client, "POST", url, headers, strings.NewReader(data))
 }
 
 func Put(url string, data []byte, headers map[string]string) (Response, error) {

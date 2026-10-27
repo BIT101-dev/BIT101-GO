@@ -141,6 +141,7 @@ func RegisterRouter(router *gin.Engine) {
 		userRouter.POST("/login", userHandler.LoginHandler)
 		userRouter.POST("/webvpn_verify_init", userHandler.WebvpnVerifyInitHandler)
 		userRouter.POST("/webvpn_verify", userHandler.WebvpnVerifyHandler)
+		userRouter.POST("/webvpn_verify_sms", userHandler.WebvpnVerifySMSHandler)
 		userRouter.POST("/mail_verify", userHandler.MailVerifyHandler)
 		userRouter.POST("/register", userHandler.RegisterHandler)
 		userRouter.GET("/info", middleware.CheckLogin(false), userHandler.OldUserGetInfo)

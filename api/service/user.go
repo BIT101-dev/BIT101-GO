@@ -261,16 +261,40 @@ func (s *UserService) WebvpnVerify(sid string, salt string, pwd string, executio
 		schoolCookie = client.Cookie()
 	}
 	if err != nil {
+		var sms *webvpn.SMSRequiredError
+		if errors.As(err, &sms) {
+			return "", "", "", sms
+		}
 		return "", "", "", errors.New("统一身份认证失败Orz")
 	}
-	if schoolCookie == "" {
-		return "", "", "", errors.New("学校会话为空Orz")
+	token, code, err = newWebvpnProof(sid, schoolCookie)
+	return token, code, schoolCookie, err
+}
+
+func (s *UserService) WebvpnVerifySMS(challenge string, smsCode string) (string, string, string, error) {
+	sid, schoolCookie, err := webvpn.ProxyVerifySMS(challenge, smsCode)
+	if err != nil {
+		switch err.Error() {
+		case "invalid_challenge":
+			return "", "", "", errors.New("短信验证已过期，请重新认证")
+		case "sms_rejected":
+			return "", "", "", errors.New("短信验证码错误或已失效")
+		default:
+			return "", "", "", errors.New("短信验证失败，请稍后重试")
+		}
 	}
-	//生成验证码
+	token, code, err := newWebvpnProof(sid, schoolCookie)
+	return token, code, schoolCookie, err
+}
+
+func newWebvpnProof(sid string, schoolCookie string) (string, string, error) {
+	if schoolCookie == "" {
+		return "", "", errors.New("学校会话为空Orz")
+	}
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-	code = fmt.Sprintf("%06v", rnd.Int31n(1000000))
-	token = common.NewUserToken(sid, config.Get().VerifyCodeExpire, config.Get().Key+code, -1)
-	return token, code, schoolCookie, nil
+	code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
+	token := common.NewUserToken(sid, config.Get().VerifyCodeExpire, config.Get().Key+code, -1)
+	return token, code, nil
 }
 
 // MailVerify 邮箱验证

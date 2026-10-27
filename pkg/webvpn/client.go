@@ -16,6 +16,7 @@ import (
 type Client struct {
 	httpClient  *http.Client
 	fingerprint string
+	riskMode    string
 	restoreOnce sync.Once
 }
 
@@ -46,8 +47,25 @@ func (c *Client) http() *http.Client {
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.do(req, true)
+}
+
+type noRedirectClient struct {
+	client *Client
+}
+
+func (c noRedirectClient) Do(req *http.Request) (*http.Response, error) {
+	return c.client.do(req, false)
+}
+
+func (c *Client) do(req *http.Request, followRedirects bool) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	for name, value := range browserHeaders {
+		if req.Header.Get(name) == "" {
+			req.Header.Set(name, value)
+		}
+	}
 	if c.http().Jar != nil && req.Header.Get("Cookie") != "" {
-		req = req.Clone(req.Context())
 		c.restoreOnce.Do(func() {
 			cookies := req.Cookies()
 			for _, cookie := range cookies {
@@ -58,6 +76,11 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 		req.Header.Del("Cookie")
 	}
 	client := *c.http()
+	if !followRedirects {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
 	fingerprintHandled := false
 	for {
 		original := req.Clone(req.Context())
@@ -167,16 +190,6 @@ func (c *Client) hasWebVPNTicket() bool {
 			continue
 		}
 		if cookie.Name == "wengine_vpn_ticket" || cookie.Name == "wengine_vpn_ticketwebvpn_bit_edu_cn" {
-			return true
-		}
-	}
-	return false
-}
-
-func hasWebVPNTicketCookie(header string) bool {
-	for _, part := range strings.Split(header, ";") {
-		name, value, found := strings.Cut(strings.TrimSpace(part), "=")
-		if found && value != "" && (name == "wengine_vpn_ticket" || name == "wengine_vpn_ticketwebvpn_bit_edu_cn") {
 			return true
 		}
 	}

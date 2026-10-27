@@ -11,6 +11,7 @@ import (
 	"BIT101-GO/api/middleware"
 	"BIT101-GO/api/service"
 	"BIT101-GO/api/types"
+	"BIT101-GO/pkg/webvpn"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -65,7 +66,7 @@ func (h *UserHandler) WebvpnVerifyInitHandler(c *gin.Context) {
 		Execution   string `json:"execution"` // 照搬webvpn的execution
 		Cookie      string `json:"cookie"`    // 照搬webvpn的cookie
 		Fingerprint string `json:"fingerprint"`
-		Captcha     string `json:"captcha"`   // webpn验证码图片base64
+		Captcha     string `json:"captcha"` // webpn验证码图片base64
 	}
 	var query Request
 	if common.HandleErrorWithCode(c, c.ShouldBindJSON(&query), 400) {
@@ -98,27 +99,47 @@ func (h *UserHandler) WebvpnVerifyHandler(c *gin.Context) {
 		Fingerprint string `json:"fingerprint"`
 	}
 
-	type Response struct {
-		Token        string `json:"token"` // webvpn验证成功后的token
-		Code         string `json:"code"`  // 用于注册的验证码
-		WebvpnCookie string `json:"webvpn_cookie"`
-		Msg          string `json:"msg"`
-	}
 	var query Request
 	if common.HandleErrorWithCode(c, c.ShouldBindJSON(&query), 400) {
 		return
 	}
 
 	token, code, schoolCookie, err := h.UserSvc.WebvpnVerify(query.Sid, query.Salt, query.Password, query.Execution, query.Cookie, query.Captcha, query.Fingerprint)
+	if sms, ok := err.(*webvpn.SMSRequiredError); ok {
+		c.JSON(409, gin.H{
+			"msg":          "需要完成短信二次验证",
+			"challenge":    sms.Challenge,
+			"masked_phone": sms.MaskedPhone,
+		})
+		return
+	}
 	if common.HandleError(c, err) {
 		return
 	}
+	writeWebvpnProof(c, token, code, schoolCookie)
+}
 
-	c.JSON(200, Response{
-		Token:        token,
-		Code:         code,
-		WebvpnCookie: schoolCookie,
-		Msg:          "统一身份认证成功OvO",
+func (h *UserHandler) WebvpnVerifySMSHandler(c *gin.Context) {
+	var query struct {
+		Challenge string `json:"challenge" binding:"required"`
+		Code      string `json:"code" binding:"required"`
+	}
+	if common.HandleErrorWithCode(c, c.ShouldBindJSON(&query), 400) {
+		return
+	}
+	token, code, schoolCookie, err := h.UserSvc.WebvpnVerifySMS(query.Challenge, query.Code)
+	if common.HandleError(c, err) {
+		return
+	}
+	writeWebvpnProof(c, token, code, schoolCookie)
+}
+
+func writeWebvpnProof(c *gin.Context, token string, code string, schoolCookie string) {
+	c.JSON(200, gin.H{
+		"token":         token,
+		"code":          code,
+		"webvpn_cookie": schoolCookie,
+		"msg":           "统一身份认证成功OvO",
 	})
 }
 

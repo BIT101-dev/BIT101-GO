@@ -4,6 +4,7 @@ import (
 	"BIT101-GO/pkg/webvpn"
 	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -32,6 +33,9 @@ func main() {
 	authorized.POST("/internal/webvpn/init", handleInit)
 	authorized.POST("/internal/webvpn/verify", func(c *gin.Context) {
 		handleVerify(c, token)
+	})
+	authorized.POST("/internal/webvpn/verify_sms", func(c *gin.Context) {
+		handleVerifySMS(c, token)
 	})
 	authorized.POST("/internal/schedule", handleSchedule)
 	authorized.GET("/score", handleScore)
@@ -131,6 +135,23 @@ func handleVerify(c *gin.Context, proxyToken string) {
 	client := webvpn.NewClient()
 	client.SetFingerprint(input.Fingerprint)
 	if err := client.Login(input.Sid, input.Salt, input.Password, input.Execution, input.Cookie, input.Captcha); err != nil {
+		var secondFactor *webvpn.SecondFactorError
+		if errors.As(err, &secondFactor) {
+			challenge, sealErr := webvpn.SealSecondFactorChallenge(secondFactor.Challenge, proxyToken)
+			if sealErr != nil {
+				log.Printf("SMS challenge encryption failed")
+				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "status": "session_encoding_failed"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"success":      false,
+				"status":       "sms_required",
+				"challenge":    challenge,
+				"masked_phone": secondFactor.Challenge.MaskedPhone,
+				"duration_ms":  time.Since(started).Milliseconds(),
+			})
+			return
+		}
 		log.Printf("verify request failed: %v", err)
 		c.JSON(http.StatusOK, gin.H{
 			"success":     false,
@@ -150,6 +171,46 @@ func handleVerify(c *gin.Context, proxyToken string) {
 		"status":        "success",
 		"webvpn_cookie": cookie,
 		"duration_ms":   time.Since(started).Milliseconds(),
+	})
+}
+
+func handleVerifySMS(c *gin.Context, proxyToken string) {
+	var input struct {
+		Challenge string `json:"challenge" binding:"required"`
+		Code      string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "status": "invalid_request"})
+		return
+	}
+	challenge, err := webvpn.OpenSecondFactorChallenge(input.Challenge, proxyToken)
+	if err != nil {
+		log.Printf("SMS challenge rejected")
+		c.JSON(http.StatusOK, gin.H{"success": false, "status": "invalid_challenge"})
+		return
+	}
+	client := webvpn.NewClient()
+	client.SetFingerprint(challenge.Fingerprint)
+	if err := client.CompleteSecondFactor(challenge, input.Code); err != nil {
+		log.Printf("SMS verification failed: %v", err)
+		status := "verification_failed"
+		if errors.Is(err, webvpn.ErrSMSCodeRejected) {
+			status = "sms_rejected"
+		}
+		c.JSON(http.StatusOK, gin.H{"success": false, "status": status})
+		return
+	}
+	cookie, err := webvpn.SealSessionCookie(client.Cookie(), proxyToken)
+	if err != nil {
+		log.Printf("SMS session encryption failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "status": "session_encoding_failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"status":        "success",
+		"sid":           challenge.Username,
+		"webvpn_cookie": cookie,
 	})
 }
 
