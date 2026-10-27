@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 
@@ -89,6 +90,11 @@ func (c *Client) Login(username string, salt string, password string, execution 
 	for name, value := range risk {
 		form[name] = value
 	}
+	if !c.hasWebVPNTicket() {
+		if err := c.establishWebVPN(); err != nil {
+			return err
+		}
+	}
 	res, err := request.PostFormWithClient(noRedirectClient{client: c}, casLoginURL, form, map[string]string{
 		"Cookie":  cookie,
 		"Origin":  "https://sso.bit.edu.cn",
@@ -126,6 +132,7 @@ func (c *Client) finishLogin(res request.Response) error {
 	if res.Code != 200 || isCASLoginPage(res) || !c.hasWebVPNTicket() {
 		return fmt.Errorf("webvpn callback rejected: status=%d risk=%s", res.Code, c.riskMode)
 	}
+	log.Printf("webvpn login callback succeeded: upstream=%s", res.URL)
 	return nil
 }
 
@@ -194,6 +201,7 @@ func (c *Client) preCheck(url string, cookie string) (request.Response, error) {
 		return res, errors.New("webvpn precheck error")
 	}
 	if isCASLoginPage(res) {
+		log.Printf("webvpn precheck rejected: upstream=%s", res.URL)
 		return res, ErrCookieInvalid
 	}
 	return res, nil

@@ -70,6 +70,10 @@ func (c *Client) do(req *http.Request, followRedirects bool) (*http.Response, er
 			for _, cookie := range req.Cookies() {
 				cookie.Path = "/"
 				c.http().Jar.SetCookies(req.URL, []*http.Cookie{cookie})
+				if req.URL.Hostname() != "webvpn.bit.edu.cn" {
+					webvpnURL, _ := url.Parse("https://webvpn.bit.edu.cn")
+					c.http().Jar.SetCookies(webvpnURL, []*http.Cookie{cookie})
+				}
 				if isSSOCookie(cookie.Name) && req.URL.Hostname() != "sso.bit.edu.cn" {
 					ssoURL, _ := url.Parse("https://sso.bit.edu.cn")
 					c.http().Jar.SetCookies(ssoURL, []*http.Cookie{cookie})
