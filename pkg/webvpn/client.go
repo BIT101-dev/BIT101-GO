@@ -216,7 +216,7 @@ func (c *Client) Cookie() string {
 		return ""
 	}
 	cookies := make(map[string]string)
-	for _, rawURL := range []string{"https://webvpn.bit.edu.cn", webvpnLoginURL, "https://sso.bit.edu.cn", casLoginURL} {
+	for _, rawURL := range []string{"https://webvpn.bit.edu.cn", "https://sso.bit.edu.cn", casLoginURL} {
 		parsed, _ := url.Parse(rawURL)
 		for _, cookie := range c.http().Jar.Cookies(parsed) {
 			if cookie.Value != "" {

@@ -11,7 +11,7 @@ import (
 )
 
 const schoolUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
-const schoolRiskURL = "https://sso.bit.edu.cn/ustc-rba-front/fp"
+const schoolRiskURL = schoolWebVPNCASBase + "/ustc-rba-front/fp"
 
 var browserHeaders = map[string]string{
 	"User-Agent":         schoolUserAgent,
@@ -32,7 +32,7 @@ func (c *Client) riskFields(salt string, cookie string) (map[string]string, erro
 	fingerprint, _ := json.Marshal(schoolRiskFingerprint(device, groupID))
 	res, err := request.PostJSONWithClient(c, schoolRiskURL, string(fingerprint), map[string]string{
 		"Cookie":  cookie,
-		"Origin":  "https://sso.bit.edu.cn",
+		"Origin":  schoolWebVPNOrigin,
 		"Referer": casLoginURL,
 	})
 	if err == nil && res.Code == 200 {

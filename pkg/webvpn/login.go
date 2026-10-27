@@ -28,8 +28,9 @@ type InitLoginReturn struct {
 	Fingerprint string
 }
 
-const casLoginURL = "https://sso.bit.edu.cn/cas/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue"
-const webvpnLoginURL = "https://webvpn.bit.edu.cn/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b/cas/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue"
+const schoolWebVPNOrigin = "https://webvpn.bit.edu.cn"
+const schoolWebVPNCASBase = schoolWebVPNOrigin + "/https/77726476706e69737468656265737421e3e44ed225397c1e7b0c9ce29b5b"
+const casLoginURL = schoolWebVPNCASBase + "/cas/login?service=https%3A%2F%2Fwebvpn.bit.edu.cn%2Flogin%3Fcas_login%3Dtrue"
 
 // 登录初始化
 func InitLogin() (InitLoginReturn, error) {
@@ -37,6 +38,11 @@ func InitLogin() (InitLoginReturn, error) {
 }
 
 func (c *Client) InitLogin() (InitLoginReturn, error) {
+	if !c.hasWebVPNTicket() {
+		if err := c.establishWebVPN(); err != nil {
+			return InitLoginReturn{}, err
+		}
+	}
 	return c.initLogin(casLoginURL)
 }
 
@@ -97,7 +103,7 @@ func (c *Client) Login(username string, salt string, password string, execution 
 	}
 	res, err := request.PostFormWithClient(noRedirectClient{client: c}, casLoginURL, form, map[string]string{
 		"Cookie":  cookie,
-		"Origin":  "https://sso.bit.edu.cn",
+		"Origin":  schoolWebVPNOrigin,
 		"Referer": casLoginURL,
 	})
 	if err != nil {

@@ -19,10 +19,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const schoolSSOBaseURL = "https://sso.bit.edu.cn"
-const secondFactorPhoneURL = schoolSSOBaseURL + "/cas/api/protected/sms/getPhoneNumberByUserId"
-const secondFactorSendURL = schoolSSOBaseURL + "/cas/api/protected/sms/publicNoToken/sendSmsCode"
-const secondFactorCheckURL = schoolSSOBaseURL + "/cas/api/protected/sms/checkToken"
+const secondFactorPhoneURL = schoolWebVPNCASBase + "/cas/api/protected/sms/getPhoneNumberByUserId"
+const secondFactorSendURL = schoolWebVPNCASBase + "/cas/api/protected/sms/publicNoToken/sendSmsCode"
+const secondFactorCheckURL = schoolWebVPNCASBase + "/cas/api/protected/sms/checkToken"
 
 const secondFactorPublicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjVr1zKwohU3xA0afprWLSQvIymaSH/V27MedFc+CecXSnORIFMAp4uEIb4taDq/2X4eMeTI66Mu/rB5GKSFDbExF2Gu4NaO/CNDpf1gHMScUrIFCh4CDqzBnx17kclvezLkIK0T8FVa4cRsINvzjbnA6jUSMaf6Fm1n9wTAtW6QYBjssGOEtCj+c38PTBdFMmJbXp3brt1tEBesz6lb3Fjp76FGvDZ08xtYG8fxYPuiMwKU04eS+mcX/BunwgpU3zwekHYB+PWRIvq0lBry9Wms25sJE5T/RAv5fEuMLbBkfcZK3+7ivSZthTmPpr2Ap/ji70ZZ6u2jvR5VJq+LJHQIDAQAB
@@ -145,7 +144,7 @@ func (c *Client) CompleteSecondFactor(challenge SecondFactorChallenge, code stri
 		"delete":      false,
 		"trustDevice": false,
 	})
-	res, err := request.PostJSONWithClient(c, secondFactorCheckURL, string(payload), protectedSecondFactorHeaders(challenge.Cookie, schoolSSOBaseURL+"/cas/"))
+	res, err := request.PostJSONWithClient(c, secondFactorCheckURL, string(payload), protectedSecondFactorHeaders(challenge.Cookie, schoolWebVPNOrigin+"/cas/"))
 	if err != nil {
 		return err
 	}
@@ -164,7 +163,7 @@ func (c *Client) CompleteSecondFactor(challenge SecondFactorChallenge, code stri
 		"execution":    challenge.Execution,
 		"captcha_code": "",
 		"trustDevice":  "false",
-	}, secondFactorHeaders(challenge.Cookie, schoolSSOBaseURL+"/cas/"))
+	}, secondFactorHeaders(challenge.Cookie, schoolWebVPNOrigin+"/cas/"))
 	if err != nil {
 		return err
 	}
@@ -277,7 +276,7 @@ func secondFactorResponseStatus(res request.Response) (int, string) {
 func secondFactorHeaders(cookie string, referer string) map[string]string {
 	return map[string]string{
 		"Cookie":  cookie,
-		"Origin":  schoolSSOBaseURL,
+		"Origin":  schoolWebVPNOrigin,
 		"Referer": referer,
 	}
 }
