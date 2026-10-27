@@ -121,7 +121,7 @@ func RegisterRouter(router *gin.Engine) {
 	router.Use(limits.RequestSizeLimiter(cfg.Saver.MaxSize << 20))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie"},
+		AllowHeaders: []string{"Content-Type", "fake-cookie", "webvpn-cookie", "X-BIT101-Platform", "X-BIT101-Version"},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
 		MaxAge:       12 * time.Hour,
 	}))
