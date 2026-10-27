@@ -67,11 +67,14 @@ func (c *Client) do(req *http.Request, followRedirects bool) (*http.Response, er
 	}
 	if c.http().Jar != nil && req.Header.Get("Cookie") != "" {
 		c.restoreOnce.Do(func() {
-			cookies := req.Cookies()
-			for _, cookie := range cookies {
+			for _, cookie := range req.Cookies() {
 				cookie.Path = "/"
+				c.http().Jar.SetCookies(req.URL, []*http.Cookie{cookie})
+				if isSSOCookie(cookie.Name) && req.URL.Hostname() != "sso.bit.edu.cn" {
+					ssoURL, _ := url.Parse("https://sso.bit.edu.cn")
+					c.http().Jar.SetCookies(ssoURL, []*http.Cookie{cookie})
+				}
 			}
-			c.http().Jar.SetCookies(req.URL, cookies)
 		})
 		req.Header.Del("Cookie")
 	}
@@ -196,12 +199,20 @@ func (c *Client) hasWebVPNTicket() bool {
 	return false
 }
 
+func isSSOCookie(name string) bool {
+	switch name {
+	case "SESSION", "SOURCEID_TGC", "JSESSIONID", "CASTGC", "device", "riskSystemGroupId":
+		return true
+	}
+	return false
+}
+
 func (c *Client) Cookie() string {
 	if c.http().Jar == nil {
 		return ""
 	}
 	cookies := make(map[string]string)
-	for _, rawURL := range []string{"https://sso.bit.edu.cn", "https://webvpn.bit.edu.cn", casLoginURL, webvpnLoginURL} {
+	for _, rawURL := range []string{"https://webvpn.bit.edu.cn", webvpnLoginURL, "https://sso.bit.edu.cn", casLoginURL} {
 		parsed, _ := url.Parse(rawURL)
 		for _, cookie := range c.http().Jar.Cookies(parsed) {
 			if cookie.Value != "" {
